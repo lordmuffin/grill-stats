@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  grill-stats:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - THERMOWORKS_API_KEY=${THERMOWORKS_API_KEY}
+      - HOMEASSISTANT_URL=${HOMEASSISTANT_URL}
+      - HOMEASSISTANT_TOKEN=${HOMEASSISTANT_TOKEN}
+    volumes:
+      - ./config:/app/config
+    restart: unless-stopped
