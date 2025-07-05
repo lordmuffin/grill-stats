@@ -42,28 +42,38 @@ The platform follows a microservices architecture with clear service boundaries:
 - **API Gateway**: Centralized routing, authentication, and rate limiting
 - **Data Processing Service**: Analytics, alerts, and data transformation
 - **Notification Service**: Multi-channel alerting and escalation
+- **Web UI**: Real-time temperature monitoring dashboard
 
 ## ✨ Features
 
+See the detailed [FEATURES.md](FEATURES.md) for comprehensive documentation of implemented features.
+
 ### 🔄 Real-Time Monitoring
-- **5-minute sync intervals** with ThermoWorks Cloud API
-- **Real-time streaming** via Server-Sent Events
+
+- **OAuth2 authentication** with ThermoWorks Cloud API
+- **Robust API client** with automatic token refresh and error handling
+- **Configurable polling intervals** from 5 seconds to 5 minutes
+- **Real-time temperature charts** with multiple probe support
+- **Device health monitoring** with battery and signal indicators
+- **Disconnected probe detection** with visual indicators
 - **Redis-based caching** for sub-second response times
-- **WebSocket support** for live dashboard updates
 
 ### 📊 Time-Series Data Storage
+
 - **InfluxDB integration** for high-performance time-series data
 - **Configurable retention policies** (1 day, 1 week, 1 month, 1 year)
 - **Aggregation queries** (mean, max, min) with custom intervals
 - **Batch processing** for high-throughput data ingestion
 
 ### 🏠 Home Assistant Integration
+
 - **Automatic sensor creation** with proper device classes
 - **State synchronization** with battery and signal strength
 - **Entity naming conventions** following HA best practices
 - **Service discovery** and health monitoring
 
 ### 🛡️ Security & Observability
+
 - **Zero-trust network policies** with Kubernetes NetworkPolicy
 - **OpenTelemetry instrumentation** for distributed tracing
 - **Structured logging** with JSON formatting
@@ -73,6 +83,7 @@ The platform follows a microservices architecture with clear service boundaries:
 ## 🛠️ Services
 
 ### Device Management Service
+
 **Port**: 8080  
 **Database**: PostgreSQL  
 **Purpose**: Device discovery, registration, and configuration management
@@ -83,8 +94,13 @@ The platform follows a microservices architecture with clear service boundaries:
 - `GET /api/devices/{id}` - Get specific device details
 - `PUT /api/devices/{id}` - Update device configuration
 - `GET /api/devices/{id}/health` - Device health status
+- `GET /api/devices/{id}/temperature` - Current temperature readings
+- `GET /api/devices/{id}/history` - Historical temperature data
+- `POST /api/sync` - Manually trigger data synchronization
+- `GET /api/auth/thermoworks/status` - Check ThermoWorks connection status
 
 ### Temperature Data Service
+
 **Port**: 8080  
 **Database**: InfluxDB + Redis  
 **Purpose**: Real-time temperature data collection and historical analysis
@@ -96,6 +112,18 @@ The platform follows a microservices architecture with clear service boundaries:
 - `GET /api/temperature/stats/{device_id}` - Temperature statistics
 - `GET /api/temperature/stream/{device_id}` - Real-time SSE stream
 - `GET /api/temperature/alerts/{device_id}` - Temperature alerts
+
+### Web UI Service
+
+**Port**: 3000  
+**Purpose**: React-based web interface for temperature monitoring
+
+**Key Features**:
+- Real-time temperature charts
+- Multiple probe visualization
+- Device selection and configuration
+- Historical data viewing
+- Responsive design for mobile and desktop
 
 ## 📋 Prerequisites
 
@@ -130,7 +158,16 @@ cp kubernetes/configmap.yaml.example kubernetes/configmap.yaml
 kubectl apply -f kubernetes/configmap.yaml
 ```
 
-### 3. Deploy Infrastructure
+### 3. Deploy with Kustomize
+```bash
+# Create namespace and RBAC
+kubectl apply -k kustomize/overlays/dev
+
+# Verify deployment
+kubectl get pods -n grill-monitoring-dev
+```
+
+### 4. Deploy Infrastructure
 ```bash
 # Create namespace and RBAC
 kubectl apply -f kubernetes/namespace.yaml
@@ -141,7 +178,7 @@ kubectl apply -f kubernetes/influxdb.yaml
 kubectl apply -f kubernetes/redis.yaml
 ```
 
-### 4. Deploy Microservices
+### 5. Deploy Microservices
 ```bash
 # Deploy core services
 kubectl apply -f kubernetes/device-service.yaml
@@ -151,11 +188,12 @@ kubectl apply -f kubernetes/temperature-service.yaml
 kubectl get pods -n grill-monitoring
 ```
 
-### 5. Access Services
+### 6. Access Services
 ```bash
 # Port forward for local access
 kubectl port-forward -n grill-monitoring svc/device-service 8080:8080
 kubectl port-forward -n grill-monitoring svc/temperature-service 8081:8080
+kubectl port-forward -n grill-monitoring svc/web-ui 3000:3000
 
 # Test endpoints
 curl http://localhost:8080/health
@@ -168,7 +206,9 @@ curl http://localhost:8081/health
 
 #### Required Secrets
 ```yaml
-THERMOWORKS_API_KEY: "your-thermoworks-api-key"
+THERMOWORKS_CLIENT_ID: "your-thermoworks-client-id"
+THERMOWORKS_CLIENT_SECRET: "your-thermoworks-client-secret"
+THERMOWORKS_REDIRECT_URI: "http://localhost:8080/api/auth/thermoworks/callback"
 HOMEASSISTANT_URL: "http://homeassistant:8123"
 HOMEASSISTANT_TOKEN: "your-long-lived-access-token"
 DB_USERNAME: "grill_monitor"
@@ -179,7 +219,7 @@ REDIS_PASSWORD: "redis-authentication-password"
 #### Service Configuration
 ```yaml
 # Sync intervals and thresholds
-SYNC_INTERVAL: "300"  # 5 minutes
+THERMOWORKS_POLLING_INTERVAL: "60"  # 1 minute
 TEMPERATURE_THRESHOLD_HIGH: "250"  # °F
 TEMPERATURE_THRESHOLD_LOW: "32"    # °F
 
@@ -207,16 +247,21 @@ Content-Type: application/json
 Response:
 {
   "status": "success",
-  "devices": [
-    {
-      "device_id": "tw_12345",
-      "name": "Grill Monitor",
-      "device_type": "thermoworks",
-      "active": true,
-      "created_at": "2024-01-01T00:00:00Z"
-    }
-  ],
-  "count": 1
+  "data": {
+    "devices": [
+      {
+        "device_id": "tw_12345",
+        "name": "Grill Monitor",
+        "model": "Signals",
+        "firmware_version": "1.2.3",
+        "last_seen": "2024-01-01T00:00:00Z",
+        "battery_level": 85,
+        "signal_strength": 95,
+        "is_online": true
+      }
+    ],
+    "count": 1
+  }
 }
 ```
 
@@ -227,71 +272,69 @@ GET /api/devices/{device_id}/health
 Response:
 {
   "status": "success",
-  "device_id": "tw_12345",
-  "health": {
-    "battery_level": 85,
-    "signal_strength": 95,
-    "status": "online",
-    "last_seen": "2024-01-01T12:00:00Z"
+  "data": {
+    "device_id": "tw_12345",
+    "health": {
+      "battery_level": 85,
+      "signal_strength": 95,
+      "status": "online",
+      "last_seen": "2024-01-01T12:00:00Z"
+    }
   }
 }
 ```
 
-### Temperature Service API
-
 #### Current Temperature
 ```bash
-GET /api/temperature/current/{device_id}?probe_id=probe1
+GET /api/devices/{device_id}/temperature?probe_id=probe1
 
 Response:
 {
   "status": "success",
   "data": {
-    "device_id": "tw_12345",
-    "probe_id": "probe1",
-    "temperature": 225.5,
-    "unit": "F",
-    "timestamp": "2024-01-01T12:00:00Z",
-    "battery_level": 85,
-    "signal_strength": 95
-  },
-  "source": "api"
+    "readings": [
+      {
+        "device_id": "tw_12345",
+        "probe_id": "probe1",
+        "temperature": 225.5,
+        "unit": "F",
+        "timestamp": "2024-01-01T12:00:00Z",
+        "battery_level": 85,
+        "signal_strength": 95
+      }
+    ],
+    "count": 1,
+    "source": "api"
+  }
 }
 ```
 
 #### Historical Data
 ```bash
-GET /api/temperature/history/{device_id}?start_time=2024-01-01T00:00:00Z&aggregation=mean&interval=1h
+GET /api/devices/{device_id}/history?start_time=2024-01-01T00:00:00Z&end_time=2024-01-02T00:00:00Z&limit=100
 
 Response:
 {
   "status": "success",
-  "data": [
-    {
-      "timestamp": "2024-01-01T12:00:00Z",
-      "temperature": 225.5,
-      "device_id": "tw_12345"
+  "data": {
+    "history": [
+      {
+        "device_id": "tw_12345",
+        "probe_id": "probe1",
+        "temperature": 225.5,
+        "unit": "F",
+        "timestamp": "2024-01-01T12:00:00Z"
+      }
+    ],
+    "count": 24,
+    "query": {
+      "device_id": "tw_12345",
+      "start_time": "2024-01-01T00:00:00Z",
+      "end_time": "2024-01-02T00:00:00Z",
+      "limit": 100
     }
-  ],
-  "count": 24,
-  "query": {
-    "device_id": "tw_12345",
-    "start_time": "2024-01-01T00:00:00Z",
-    "aggregation": "mean",
-    "interval": "1h"
   }
 }
-```
-
-#### Real-Time Stream
-```bash
-GET /api/temperature/stream/{device_id}
-Accept: text/event-stream
-
-Response:
-data: {"device_id":"tw_12345","temperature":225.5,"timestamp":"2024-01-01T12:00:00Z"}
-
-data: {"device_id":"tw_12345","temperature":226.0,"timestamp":"2024-01-01T12:01:00Z"}
 ```
 
 ## 🚢 Deployment
@@ -310,6 +353,11 @@ python main.py
 ```bash
 # Apply all manifests
 kubectl apply -f kubernetes/
+
+# Apply with Kustomize for environment-specific configs
+kubectl apply -k kustomize/overlays/dev  # Development environment
+kubectl apply -k kustomize/overlays/staging  # Staging environment
+kubectl apply -k kustomize/overlays/prod  # Production environment
 
 # Monitor deployment
 kubectl get pods -n grill-monitoring -w
@@ -335,18 +383,36 @@ grill-stats/
 ├── services/
 │   ├── device-service/
 │   │   ├── main.py
-│   │   ├── device_manager.py
 │   │   ├── thermoworks_client.py
 │   │   └── requirements.txt
-│   └── temperature-service/
-│       ├── main.py
-│       ├── temperature_manager.py
-│       └── thermoworks_client.py
+│   ├── temperature-service/
+│   │   ├── main.py
+│   │   ├── temperature_manager.py
+│   │   └── requirements.txt
+│   ├── web-ui/
+│   │   ├── src/
+│   │   │   ├── components/
+│   │   │   │   ├── RealTimeChart.jsx
+│   │   │   │   └── TemperatureDashboard.jsx
+│   │   │   └── utils/
+│   │   │       └── api.js
+│   │   └── package.json
 ├── kubernetes/
 │   ├── namespace.yaml
 │   ├── configmap.yaml
 │   ├── device-service.yaml
 │   └── temperature-service.yaml
+├── kustomize/
+│   ├── base/
+│   │   ├── namespace/
+│   │   ├── databases/
+│   │   ├── core-services/
+│   │   ├── ingress/
+│   │   └── operators/
+│   └── overlays/
+│       ├── dev/
+│       ├── staging/
+│       └── prod/
 ├── tests/
 ├── docs/
 └── README.md
@@ -428,6 +494,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 🆘 Support
 
 ### Documentation
+- [Features Overview](FEATURES.md)
 - [Multi-Agent Implementation Plan](multi-agent-implementation.md)
 - [Claude Code Guidance](CLAUDE.md)
 - [API Reference](docs/api-reference.md)
@@ -446,7 +513,14 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🏷️ Version History
 
-### v1.0.0 (Current)
+### v1.1.0 (Current)
+- ✅ Device Management Service with OAuth2 ThermoWorks integration
+- ✅ Real-time temperature monitoring with Chart.js visualization
+- ✅ Kubernetes Kustomize configurations for multi-environment deployment
+- ✅ Detailed API documentation with OpenAPI/Swagger
+- ✅ Robust error handling and connection status tracking
+
+### v1.0.0
 - ✅ Device Management Service with PostgreSQL
 - ✅ Temperature Data Service with InfluxDB + Redis
 - ✅ Kubernetes manifests with security policies
@@ -455,10 +529,11 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ### Roadmap
 - 🔄 Home Assistant Integration Service
+- 🔄 RFX Gateway support for direct probe connectivity
 - ⏳ API Gateway with Kong/Nginx
 - ⏳ Notification Service with multi-channel alerts
 - ⏳ Data Processing Service with analytics
-- ⏳ Web Dashboard with real-time updates
+- ⏳ Mobile application with push notifications
 
 ---
 

@@ -27,7 +27,9 @@
       "Bash(flake8:*)",
       "Bash(PYTHONPATH=/mnt/c/Users/lordmuffin/Git/grill-stats/services/temperature-service python3 health_check.py)",
       "Bash(podman build:*)",
-      "Bash(podman run:*)"
+      "Bash(podman run:*)",
+      "Bash(git commit:*)",
+      "Bash(grep:*)"
     ],
     "deny": []
   }
