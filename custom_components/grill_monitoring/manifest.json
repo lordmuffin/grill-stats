@@ -1,0 +1,21 @@
+{
+  "domain": "grill_monitoring",
+  "name": "Grill Monitoring",
+  "version": "1.0.0",
+  "documentation": "https://github.com/lordmuffin/grill-stats",
+  "issue_tracker": "https://github.com/lordmuffin/grill-stats/issues",
+  "dependencies": [],
+  "codeowners": ["@lordmuffin"],
+  "requirements": ["aiohttp>=3.8.0", "pydantic>=2.0.0"],
+  "config_flow": true,
+  "integration_type": "hub",
+  "iot_class": "cloud_polling",
+  "quality_scale": "silver",
+  "homekit": {},
+  "zeroconf": [],
+  "dhcp": [],
+  "usb": [],
+  "ssdp": [],
+  "mqtt": [],
+  "bluetooth": []
+}

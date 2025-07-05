@@ -1,0 +1,121 @@
+2025-07-05 06:45:15,556 - EnhancedTestOrchestrator - INFO - 🚀 Starting Enhanced Multi-Agent Parallel Testing
+2025-07-05 06:45:15,556 - Agent-Monolithic - INFO - 🎯 Starting Enhanced Monolithic Application Test
+2025-07-05 06:45:15,557 - Agent-Monolithic - INFO - 🔨 Building enhanced container: grill-stats-enhanced:enhanced
+2025-07-05 06:45:15,558 - Agent-DeviceService - INFO - 🎯 Starting Enhanced Device Service Test
+2025-07-05 06:45:15,558 - Agent-DeviceService - INFO - 🔨 Building enhanced container: device-service-enhanced:enhanced
+2025-07-05 06:45:15,559 - Agent-TemperatureService - INFO - 🎯 Starting Enhanced Temperature Service Test
+2025-07-05 06:45:15,563 - Agent-TemperatureService - INFO - 🔨 Building enhanced container: temperature-service-enhanced:enhanced
+2025-07-05 06:45:17,377 - Agent-Monolithic - INFO - ✅ Build successful: grill-stats-enhanced:enhanced
+2025-07-05 06:45:17,377 - Agent-Monolithic - INFO - 🚀 Starting enhanced container: grill-stats-enhanced
+2025-07-05 06:45:25,764 - Agent-Monolithic - INFO - ✅ Container started: grill-stats-enhanced
+2025-07-05 06:45:25,765 - Agent-Monolithic - INFO - 🔍 Testing enhanced health endpoint: http://localhost:5000/health
+2025-07-05 06:45:25,959 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 1/15)
+2025-07-05 06:45:29,154 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 2/15)
+2025-07-05 06:45:30,956 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 3/15)
+2025-07-05 06:45:34,148 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 4/15)
+2025-07-05 06:45:37,341 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 5/15)
+2025-07-05 06:45:40,532 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 6/15)
+2025-07-05 06:45:43,725 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 7/15)
+2025-07-05 06:45:46,917 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 8/15)
+2025-07-05 06:45:49,503 - Agent-DeviceService - INFO - ✅ Build successful: device-service-enhanced:enhanced
+2025-07-05 06:45:49,506 - Agent-DeviceService - INFO - 🚀 Starting enhanced container: device-service-enhanced
+2025-07-05 06:45:50,109 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 9/15)
+2025-07-05 06:45:50,136 - Agent-TemperatureService - INFO - ✅ Build successful: temperature-service-enhanced:enhanced
+2025-07-05 06:45:50,137 - Agent-TemperatureService - INFO - 🚀 Starting enhanced container: temperature-service-enhanced
+2025-07-05 06:45:53,310 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 10/15)
+2025-07-05 06:45:56,519 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 11/15)
+2025-07-05 06:45:58,230 - Agent-DeviceService - INFO - ✅ Container started: device-service-enhanced
+2025-07-05 06:45:58,233 - Agent-DeviceService - INFO - 🔍 Testing enhanced health endpoint: http://localhost:8080/health
+2025-07-05 06:45:58,434 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 1/15)
+2025-07-05 06:45:58,549 - Agent-TemperatureService - INFO - ✅ Container started: temperature-service-enhanced
+2025-07-05 06:45:58,549 - Agent-TemperatureService - INFO - 🔍 Testing enhanced health endpoint: http://localhost:8081/health
+2025-07-05 06:45:58,744 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 1/15)
+2025-07-05 06:45:59,725 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 12/15)
+2025-07-05 06:46:01,639 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 2/15)
+2025-07-05 06:46:01,938 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 2/15)
+2025-07-05 06:46:01,517 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 13/15)
+2025-07-05 06:46:03,430 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 3/15)
+2025-07-05 06:46:03,722 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 3/15)
+2025-07-05 06:46:04,715 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 14/15)
+2025-07-05 06:46:06,629 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 4/15)
+2025-07-05 06:46:06,920 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 4/15)
+2025-07-05 06:46:07,920 - Agent-Monolithic - ERROR - ❌ Health check failed: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))
+2025-07-05 06:46:09,651 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 5/15)
+2025-07-05 06:46:10,112 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 5/15)
+2025-07-05 06:46:12,658 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 6/15)
+2025-07-05 06:46:13,319 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 6/15)
+2025-07-05 06:46:15,665 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 7/15)
+2025-07-05 06:46:16,533 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 7/15)
+2025-07-05 06:46:18,671 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 8/15)
+2025-07-05 06:46:19,732 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 8/15)
+2025-07-05 06:46:21,678 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 9/15)
+2025-07-05 06:46:22,928 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 9/15)
+2025-07-05 06:46:24,683 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 10/15)
+2025-07-05 06:46:26,139 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 10/15)
+2025-07-05 06:46:27,687 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 11/15)
+2025-07-05 06:46:29,336 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 11/15)
+2025-07-05 06:46:30,691 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 12/15)
+2025-07-05 06:46:32,537 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 12/15)
+2025-07-05 06:46:32,285 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 13/15)
+2025-07-05 06:46:34,323 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 13/15)
+2025-07-05 06:46:35,289 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 14/15)
+2025-07-05 06:46:37,527 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 14/15)
+2025-07-05 06:46:38,296 - Agent-DeviceService - ERROR - ❌ Health check failed: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x785822f06060>: Failed to establish a new connection: [Errno 111] Connection refused'))
+2025-07-05 06:46:40,729 - Agent-TemperatureService - ERROR - ❌ Health check failed: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))
+2025-07-05 06:46:40,732 - EnhancedTestOrchestrator - INFO - 🧹 Cleaning up all enhanced agents
+2025-07-05 06:46:40,737 - Agent-Monolithic - INFO - 🧹 Cleaned up container: grill-stats-enhanced
+2025-07-05 06:46:40,743 - Agent-DeviceService - INFO - 🧹 Cleaned up container: device-service-enhanced
+2025-07-05 06:46:40,748 - Agent-TemperatureService - INFO - 🧹 Cleaned up container: temperature-service-enhanced
+2025-07-05 07:46:18,708 - EnhancedTestOrchestrator - INFO - 🚀 Starting Enhanced Multi-Agent Parallel Testing
+2025-07-05 07:46:18,709 - Agent-Monolithic - INFO - 🎯 Starting Enhanced Monolithic Application Test
+2025-07-05 07:46:18,710 - Agent-Monolithic - INFO - 🔨 Building enhanced container: grill-stats-enhanced:enhanced
+2025-07-05 07:46:18,711 - Agent-DeviceService - INFO - 🎯 Starting Enhanced Device Service Test
+2025-07-05 07:46:18,711 - Agent-DeviceService - INFO - 🔨 Building enhanced container: device-service-enhanced:enhanced
+2025-07-05 07:46:18,713 - Agent-TemperatureService - INFO - 🎯 Starting Enhanced Temperature Service Test
+2025-07-05 07:46:18,713 - Agent-TemperatureService - INFO - 🔨 Building enhanced container: temperature-service-enhanced:enhanced
+2025-07-05 07:46:20,897 - Agent-DeviceService - INFO - ✅ Build successful: device-service-enhanced:enhanced
+2025-07-05 07:46:20,898 - Agent-DeviceService - INFO - 🚀 Starting enhanced container: device-service-enhanced
+2025-07-05 07:46:20,913 - Agent-TemperatureService - INFO - ✅ Build successful: temperature-service-enhanced:enhanced
+2025-07-05 07:46:20,913 - Agent-TemperatureService - INFO - 🚀 Starting enhanced container: temperature-service-enhanced
+2025-07-05 07:46:21,760 - Agent-Monolithic - INFO - ✅ Build successful: grill-stats-enhanced:enhanced
+2025-07-05 07:46:21,761 - Agent-Monolithic - INFO - 🚀 Starting enhanced container: grill-stats-enhanced
+2025-07-05 07:46:22,071 - Agent-Monolithic - ERROR - ❌ Container start failed: Error: creating container storage: the container name "grill-stats-enhanced" is already in use by 818b96ce0f38d524c6155090bcc2e14af8f54eafae72e4eef5e2a9b5b3b1034e. You have to remove that container to be able to reuse that name: that name is already in use, or use --replace to instruct Podman to do so.
+
+2025-07-05 07:46:29,579 - Agent-TemperatureService - INFO - ✅ Container started: temperature-service-enhanced
+2025-07-05 07:46:29,580 - Agent-TemperatureService - INFO - 🔍 Testing enhanced health endpoint: http://localhost:8081/health
+2025-07-05 07:46:29,778 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 1/15)
+2025-07-05 07:46:29,778 - Agent-DeviceService - INFO - ✅ Container started: device-service-enhanced
+2025-07-05 07:46:29,779 - Agent-DeviceService - INFO - 🔍 Testing enhanced health endpoint: http://localhost:8080/health
+2025-07-05 07:46:29,971 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 1/15)
+2025-07-05 07:46:32,974 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 2/15)
+2025-07-05 07:46:33,174 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 2/15)
+2025-07-05 07:46:34,695 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 3/15)
+2025-07-05 07:46:34,888 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 3/15)
+2025-07-05 07:46:37,899 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 4/15)
+2025-07-05 07:46:38,093 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 4/15)
+2025-07-05 07:46:41,101 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 5/15)
+2025-07-05 07:46:41,298 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 5/15)
+2025-07-05 07:46:44,305 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 6/15)
+2025-07-05 07:46:44,309 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 6/15)
+2025-07-05 07:46:47,508 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 7/15)
+2025-07-05 07:46:47,513 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 7/15)
+2025-07-05 07:46:50,710 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 8/15)
+2025-07-05 07:46:50,712 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 8/15)
+2025-07-05 07:46:53,919 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 9/15)
+2025-07-05 07:46:53,923 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 9/15)
+2025-07-05 07:46:57,117 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 10/15)
+2025-07-05 07:46:57,118 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 10/15)
+2025-07-05 07:47:00,414 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 11/15)
+2025-07-05 07:47:00,415 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 11/15)
+2025-07-05 07:47:03,615 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 12/15)
+2025-07-05 07:47:03,616 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 12/15)
+2025-07-05 07:47:05,322 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 13/15)
+2025-07-05 07:47:05,324 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 13/15)
+2025-07-05 07:47:08,520 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 14/15)
+2025-07-05 07:47:08,522 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 14/15)
+2025-07-05 07:47:11,731 - Agent-TemperatureService - ERROR - ❌ Health check failed: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))
+2025-07-05 07:47:11,733 - Agent-DeviceService - ERROR - ❌ Health check failed: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x79dd80ecbb90>: Failed to establish a new connection: [Errno 111] Connection refused'))
+2025-07-05 07:47:11,738 - EnhancedTestOrchestrator - INFO - 🧹 Cleaning up all enhanced agents
+2025-07-05 07:47:11,744 - Agent-Monolithic - INFO - 🧹 Cleaned up container: grill-stats-enhanced
+2025-07-05 07:47:11,752 - Agent-DeviceService - INFO - 🧹 Cleaned up container: device-service-enhanced
+2025-07-05 07:47:11,753 - Agent-TemperatureService - INFO - 🧹 Cleaned up container: temperature-service-enhanced

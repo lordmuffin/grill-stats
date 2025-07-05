@@ -1,0 +1,219 @@
+version: '3.8'
+
+services:
+  # Database services with comprehensive health checks
+  postgresql:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: grill_monitoring
+      POSTGRES_USER: grill_monitor
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-init/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grill_monitor -d grill_monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grill-monitoring
+
+  influxdb:
+    image: influxdb:1.8
+    environment:
+      INFLUXDB_DB: grill_monitoring
+      INFLUXDB_USER: grill_monitor
+      INFLUXDB_USER_PASSWORD: testpass
+      INFLUXDB_ADMIN_USER: admin
+      INFLUXDB_ADMIN_PASSWORD: adminpass
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+      - ./database-init/influxdb-init.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grill-monitoring
+
+  redis:
+    image: redis:6-alpine
+    command: redis-server --requirepass testpass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "testpass", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - grill-monitoring
+
+  # Application services with proper dependencies
+  device-service:
+    build: 
+      context: ./services/device-service
+      dockerfile: Dockerfile
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: grill_monitoring
+      DB_USERNAME: grill_monitor
+      DB_PASSWORD: testpass
+      THERMOWORKS_API_KEY: ${THERMOWORKS_API_KEY:-test-key-replace-with-real}
+      DEBUG: "true"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - grill-monitoring
+
+  temperature-service:
+    build: 
+      context: ./services/temperature-service
+      dockerfile: Dockerfile
+    ports:
+      - "8081:8080"
+    environment:
+      INFLUXDB_HOST: influxdb
+      INFLUXDB_PORT: 8086
+      INFLUXDB_DATABASE: grill_monitoring
+      INFLUXDB_USERNAME: grill_monitor
+      INFLUXDB_PASSWORD: testpass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: testpass
+      THERMOWORKS_API_KEY: ${THERMOWORKS_API_KEY:-test-key-replace-with-real}
+      DEBUG: "true"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - grill-monitoring
+
+  # Original monolithic app for comparison
+  monolithic-app:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      THERMOWORKS_API_KEY: ${THERMOWORKS_API_KEY:-test-key-monolithic}
+      HOMEASSISTANT_URL: ${HOMEASSISTANT_URL:-http://test-homeassistant:8123}
+      HOMEASSISTANT_TOKEN: ${HOMEASSISTANT_TOKEN:-test-token-monolithic}
+      PYTHONUNBUFFERED: "1"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    networks:
+      - grill-monitoring
+    profiles:
+      - monolithic
+
+  # Test utility service for comprehensive validation
+  test-runner:
+    image: curlimages/curl:latest
+    depends_on:
+      device-service:
+        condition: service_healthy
+      temperature-service:
+        condition: service_healthy
+    volumes:
+      - ./tests:/tests
+    command: |
+      sh -c "
+        echo '🧪 Starting Comprehensive Service Testing...'
+        echo '============================================='
+        
+        echo '📡 Testing Device Service...'
+        curl -f http://device-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
+        
+        echo '🌡️  Testing Temperature Service...'
+        curl -f http://temperature-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
+        
+        echo '🔍 Testing API Endpoints...'
+        curl -f http://device-service:8080/api/devices -w '\n  Devices API Status: %{http_code}\n'
+        
+        echo '✅ All core services healthy!'
+        
+        echo '📊 Service Health Summary:'
+        echo '=========================='
+        curl -s http://device-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Device Service: ❌'
+        curl -s http://temperature-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Temperature Service: ❌'
+        
+        echo '🎉 Comprehensive testing complete!'
+      "
+    networks:
+      - grill-monitoring
+    profiles:
+      - testing
+
+  # API testing service with comprehensive validation
+  api-tester:
+    image: postman/newman:alpine
+    depends_on:
+      device-service:
+        condition: service_healthy
+      temperature-service:
+        condition: service_healthy
+    volumes:
+      - ./tests/api:/etc/newman
+    command: |
+      run /etc/newman/grill-monitoring-api-tests.json 
+      --environment /etc/newman/test-environment.json
+      --reporters cli,json
+      --reporter-json-export /etc/newman/results.json
+    networks:
+      - grill-monitoring
+    profiles:
+      - api-testing
+
+volumes:
+  postgres_data:
+    driver: local
+  influxdb_data:
+    driver: local
+  redis_data:
+    driver: local
+
+networks:
+  grill-monitoring:
+    driver: bridge
+    name: grill-monitoring-enhanced

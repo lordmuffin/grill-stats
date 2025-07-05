@@ -7,18 +7,45 @@ import structlog
 logger = structlog.get_logger()
 
 class ThermoWorksClient:
-    def __init__(self, api_key: str, base_url: str = "https://api.thermoworks.com"):
+    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.thermoworks.com"):
         self.api_key = api_key
         self.base_url = base_url
         self.session = requests.Session()
-        self.session.headers.update({
-            'Authorization': f'Bearer {api_key}',
+        
+        headers = {
             'Content-Type': 'application/json',
             'User-Agent': 'grill-monitoring-temperature-service/1.0'
-        })
+        }
+        
+        if api_key:
+            headers['Authorization'] = f'Bearer {api_key}'
+        else:
+            logger.warning("ThermoWorks client initialized without API key, will return mock data")
+            
+        self.session.headers.update(headers)
     
     def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict:
         """Get current temperature data from ThermoWorks API"""
+        if not self.api_key:
+            # Return mock data for testing
+            mock_data = {
+                'device_id': device_id,
+                'probe_id': probe_id,
+                'temperature': 72.0,
+                'unit': 'F',
+                'timestamp': datetime.utcnow().isoformat(),
+                'battery_level': 100,
+                'signal_strength': 100,
+                'metadata': {
+                    'source': 'mock_data',
+                    'api_version': '1.0',
+                    'device_type': 'mock',
+                    'probe_type': 'mock'
+                }
+            }
+            logger.debug("Returning mock temperature data", device_id=device_id)
+            return mock_data
+            
         try:
             endpoint = f"{self.base_url}/devices/{device_id}/temperature"
             if probe_id:

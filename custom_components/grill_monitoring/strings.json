@@ -1,0 +1,36 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Grill Monitoring Setup",
+        "description": "Configure your Grill Monitoring integration.\n\nMake sure both microservices are running:\n- Device Service: {device_service_example}\n- Temperature Service: {temperature_service_example}",
+        "data": {
+          "device_service_url": "Device Service URL",
+          "temperature_service_url": "Temperature Service URL", 
+          "scan_interval": "Scan Interval (seconds)",
+          "timeout": "Request Timeout (seconds)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to services. Please check URLs and ensure services are running.",
+      "invalid_auth": "Invalid authentication credentials.",
+      "unknown": "Unexpected error occurred."
+    },
+    "abort": {
+      "already_configured": "Integration is already configured with these service URLs."
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Grill Monitoring Options",
+        "description": "Update your Grill Monitoring integration settings.",
+        "data": {
+          "scan_interval": "Scan Interval (seconds)",
+          "timeout": "Request Timeout (seconds)"
+        }
+      }
+    }
+  }
+}

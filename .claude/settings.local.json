@@ -1,7 +1,33 @@
 {
   "permissions": {
     "allow": [
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(find:*)",
+      "Bash(rg:*)",
+      "Bash(git add:*)",
+      "Bash(git push:*)",
+      "Bash(ls:*)",
+      "Bash(python3:*)",
+      "Bash(docker:*)",
+      "Bash(podman ps:*)",
+      "Bash(podman logs:*)",
+      "Bash(podman stop:*)",
+      "Bash(podman rm:*)",
+      "Bash(chmod:*)",
+      "Bash(timeout:*)",
+      "Bash(touch:*)",
+      "Bash(curl:*)",
+      "Bash(podman-compose up:*)",
+      "Bash(podman-compose:*)",
+      "Bash(echo)",
+      "Bash(./podman-pod-test.sh:*)",
+      "Bash(podman pod rm:*)",
+      "Bash(podman network rm:*)",
+      "Bash(pip install:*)",
+      "Bash(flake8:*)",
+      "Bash(PYTHONPATH=/mnt/c/Users/lordmuffin/Git/grill-stats/services/temperature-service python3 health_check.py)",
+      "Bash(podman build:*)",
+      "Bash(podman run:*)"
     ],
     "deny": []
   }

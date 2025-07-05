@@ -1,0 +1,53 @@
+2025-07-05 06:27:02,625 - TestOrchestrator - INFO - 🚀 Starting Multi-Agent Parallel Testing
+2025-07-05 06:27:02,625 - Agent-Monolithic - INFO - 🎯 Starting Monolithic Application Test
+2025-07-05 06:27:02,626 - Agent-Monolithic - INFO - 🔨 Building container: grill-stats-test:test
+2025-07-05 06:27:02,628 - Agent-DeviceService - INFO - 🎯 Starting Device Service Test
+2025-07-05 06:27:02,628 - Agent-DeviceService - INFO - 🔨 Building container: device-service-test:test
+2025-07-05 06:27:02,630 - Agent-TemperatureService - INFO - 🎯 Starting Temperature Service Test
+2025-07-05 06:27:02,634 - Agent-TemperatureService - INFO - 🔨 Building container: temperature-service-test:test
+2025-07-05 06:27:26,329 - Agent-Monolithic - INFO - ✅ Build successful: grill-stats-test:test
+2025-07-05 06:27:26,330 - Agent-Monolithic - INFO - 🚀 Starting container: grill-stats-test
+2025-07-05 06:27:31,340 - Agent-Monolithic - INFO - ✅ Container started: grill-stats-test
+2025-07-05 06:27:31,341 - Agent-Monolithic - INFO - 🔍 Testing health endpoint: http://localhost:5000/health
+2025-07-05 06:27:31,534 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 1/10)
+2025-07-05 06:27:33,726 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 2/10)
+2025-07-05 06:27:35,918 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 3/10)
+2025-07-05 06:27:38,109 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 4/10)
+2025-07-05 06:27:38,620 - Agent-DeviceService - INFO - ✅ Build successful: device-service-test:test
+2025-07-05 06:27:38,621 - Agent-DeviceService - INFO - 🚀 Starting container: device-service-test
+2025-07-05 06:27:40,301 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 5/10)
+2025-07-05 06:27:40,650 - Agent-TemperatureService - INFO - ✅ Build successful: temperature-service-test:test
+2025-07-05 06:27:40,651 - Agent-TemperatureService - INFO - 🚀 Starting container: temperature-service-test
+2025-07-05 06:27:42,495 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 6/10)
+2025-07-05 06:27:44,045 - Agent-DeviceService - INFO - ✅ Container started: device-service-test
+2025-07-05 06:27:44,046 - Agent-DeviceService - INFO - 🔍 Testing health endpoint: http://localhost:8080/health
+2025-07-05 06:27:44,241 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 1/10)
+2025-07-05 06:27:44,706 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 7/10)
+2025-07-05 06:27:46,018 - Agent-TemperatureService - INFO - ✅ Container started: temperature-service-test
+2025-07-05 06:27:46,018 - Agent-TemperatureService - INFO - 🔍 Testing health endpoint: http://localhost:8081/health
+2025-07-05 06:27:46,020 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 1/10)
+2025-07-05 06:27:46,443 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 2/10)
+2025-07-05 06:27:46,906 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 8/10)
+2025-07-05 06:27:48,024 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 2/10)
+2025-07-05 06:27:48,650 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 3/10)
+2025-07-05 06:27:49,110 - Agent-Monolithic - INFO - ⏳ Waiting for service to start... (attempt 9/10)
+2025-07-05 06:27:50,030 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 3/10)
+2025-07-05 06:27:50,855 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 4/10)
+2025-07-05 06:27:51,313 - Agent-Monolithic - ERROR - ❌ Health check failed: ('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))
+2025-07-05 06:27:52,040 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 4/10)
+2025-07-05 06:27:53,069 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 5/10)
+2025-07-05 06:27:54,049 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 5/10)
+2025-07-05 06:27:55,276 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 6/10)
+2025-07-05 06:27:56,055 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 6/10)
+2025-07-05 06:27:57,492 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 7/10)
+2025-07-05 06:27:58,059 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 7/10)
+2025-07-05 06:27:59,690 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 8/10)
+2025-07-05 06:28:00,062 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 8/10)
+2025-07-05 06:28:01,697 - Agent-DeviceService - INFO - ⏳ Waiting for service to start... (attempt 9/10)
+2025-07-05 06:28:02,067 - Agent-TemperatureService - INFO - ⏳ Waiting for service to start... (attempt 9/10)
+2025-07-05 06:28:02,321 - Agent-DeviceService - ERROR - ❌ Health check failed: HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7dfba44d2ba0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+2025-07-05 06:28:02,694 - Agent-TemperatureService - ERROR - ❌ Health check failed: HTTPConnectionPool(host='localhost', port=8081): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7dfba44d2bd0>: Failed to establish a new connection: [Errno 111] Connection refused'))
+2025-07-05 06:28:02,701 - TestOrchestrator - INFO - 🧹 Cleaning up all agents
+2025-07-05 06:28:02,708 - Agent-Monolithic - INFO - 🧹 Cleaned up container: grill-stats-test
+2025-07-05 06:28:02,720 - Agent-DeviceService - INFO - 🧹 Cleaned up container: device-service-test
+2025-07-05 06:28:02,721 - Agent-TemperatureService - INFO - 🧹 Cleaned up container: temperature-service-test

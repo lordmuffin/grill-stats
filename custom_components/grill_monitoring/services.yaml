@@ -1,0 +1,31 @@
+# Example services configuration for Grill Monitoring integration
+# This file demonstrates how to use the integration's underlying API services
+
+# Note: These services are handled automatically by the integration
+# This file is for reference only - no manual service configuration needed
+
+# Available API endpoints through the microservices:
+
+# Device Service (Port 8080):
+# GET /health - Service health check
+# GET /api/devices - List all registered devices
+# GET /api/devices/{id} - Get specific device details
+# GET /api/devices/{id}/health - Get device health status
+# POST /api/devices/discover - Discover new devices
+# PUT /api/devices/{id} - Update device configuration
+# DELETE /api/devices/{id} - Remove device
+
+# Temperature Service (Port 8081):
+# GET /health - Service health check
+# GET /api/temperature/current/{device_id} - Get current temperature
+# GET /api/temperature/history/{device_id} - Get historical data
+# GET /api/temperature/stats/{device_id} - Get temperature statistics
+# POST /api/temperature/batch - Store batch temperature data
+# GET /api/temperature/alerts/{device_id} - Get temperature alerts
+# GET /api/temperature/stream/{device_id} - Real-time temperature stream
+
+# Integration automatically polls these endpoints based on your configuration:
+# - Device discovery every startup
+# - Temperature data every scan_interval seconds
+# - Device health monitoring
+# - Automatic sensor creation and updates

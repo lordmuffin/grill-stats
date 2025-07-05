@@ -1,0 +1,109 @@
+version: '3.8'
+
+services:
+  # Database services for microservices testing
+  postgresql:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: grill_monitoring
+      POSTGRES_USER: grill_monitor
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grill_monitor -d grill_monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  influxdb:
+    image: influxdb:1.8
+    environment:
+      INFLUXDB_DB: grill_monitoring
+      INFLUXDB_USER: grill_monitor
+      INFLUXDB_USER_PASSWORD: testpass
+      INFLUXDB_ADMIN_USER: admin
+      INFLUXDB_ADMIN_PASSWORD: adminpass
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:6-alpine
+    command: redis-server --requirepass testpass
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "--raw", "incr", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Microservices
+  device-service:
+    build: ./services/device-service
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: postgresql
+      DB_PORT: 5432
+      DB_NAME: grill_monitoring
+      DB_USERNAME: grill_monitor
+      DB_PASSWORD: testpass
+      THERMOWORKS_API_KEY: test-key-replace-with-real
+      DEBUG: "true"
+    depends_on:
+      postgresql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  temperature-service:
+    build: ./services/temperature-service
+    ports:
+      - "8081:8080"
+    environment:
+      INFLUXDB_HOST: influxdb
+      INFLUXDB_PORT: 8086
+      INFLUXDB_DATABASE: grill_monitoring
+      INFLUXDB_USERNAME: grill_monitor
+      INFLUXDB_PASSWORD: testpass
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      REDIS_PASSWORD: testpass
+      THERMOWORKS_API_KEY: test-key-replace-with-real
+      DEBUG: "true"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+volumes:
+  postgres_data:
+  influxdb_data:
+  redis_data:
+
+networks:
+  default:
+    name: grill-monitoring-dev

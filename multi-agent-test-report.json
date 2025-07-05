@@ -1,0 +1,51 @@
+{
+  "timestamp": "2025-07-05T06:28:02.695941",
+  "total_agents": 3,
+  "summary": {
+    "builds_successful": 3,
+    "containers_started": 3,
+    "health_checks_passed": 0,
+    "avg_response_time_ms": 0.0
+  },
+  "agents": [
+    {
+      "agent_name": "Monolithic",
+      "service_name": "Monolithic Flask App",
+      "container_name": "grill-stats-test",
+      "status": {
+        "build": "\u2705",
+        "start": "\u2705",
+        "health": "\u274c"
+      },
+      "response_time_ms": 0,
+      "response_data": null,
+      "error_message": "('Connection aborted.', ConnectionResetError(104, 'Connection reset by peer'))"
+    },
+    {
+      "agent_name": "DeviceService",
+      "service_name": "Device Management Service",
+      "container_name": "device-service-test",
+      "status": {
+        "build": "\u2705",
+        "start": "\u2705",
+        "health": "\u274c"
+      },
+      "response_time_ms": 0,
+      "response_data": null,
+      "error_message": "HTTPConnectionPool(host='localhost', port=8080): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7dfba44d2ba0>: Failed to establish a new connection: [Errno 111] Connection refused'))"
+    },
+    {
+      "agent_name": "TemperatureService",
+      "service_name": "Temperature Data Service",
+      "container_name": "temperature-service-test",
+      "status": {
+        "build": "\u2705",
+        "start": "\u2705",
+        "health": "\u274c"
+      },
+      "response_time_ms": 0,
+      "response_data": null,
+      "error_message": "HTTPConnectionPool(host='localhost', port=8081): Max retries exceeded with url: /health (Caused by NewConnectionError('<urllib3.connection.HTTPConnection object at 0x7dfba44d2bd0>: Failed to establish a new connection: [Errno 111] Connection refused'))"
+    }
+  ]
+}
