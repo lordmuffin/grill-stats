@@ -18,8 +18,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   ```
 - Install dependencies: `pip install -r requirements.txt`
 
+### Code Quality and Linting
+- **Syntax and error checking**: `flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics`
+- **Code complexity and style**: `flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics`
+- **Install flake8**: `pip install flake8`
+
 ### Testing API Endpoints
 - Health check: `curl http://localhost:5000/health`
+- List devices: `curl http://localhost:5000/devices`
+- Get device temperature: `curl http://localhost:5000/devices/{device_id}/temperature`
+- Get device history: `curl http://localhost:5000/devices/{device_id}/history?start=2024-01-01T00:00:00&end=2024-01-02T00:00:00`
 - Manual sync: `curl -X POST http://localhost:5000/sync`
 - Test Home Assistant connection: `curl http://localhost:5000/homeassistant/test`
 
@@ -43,7 +51,7 @@ This is a Flask-based temperature monitoring service that bridges ThermoWorks wi
 - **ThermoWorks Client**: Uses Bearer token authentication with session management
 - **Home Assistant Client**: Uses Long-Lived Access Token with REST API
 - **Error Handling**: Comprehensive logging with graceful failure recovery
-- **Sensor Naming**: Converts device names to Home Assistant entity IDs (`thermoworks_device_name`)
+- **Sensor Naming**: Converts device names to Home Assistant entity IDs (`thermoworks_{device_name}`)
 
 ### Key Configuration
 - **Sync Interval**: 5-minute background job (configurable in app.py:109)
@@ -51,25 +59,54 @@ This is a Flask-based temperature monitoring service that bridges ThermoWorks wi
 - **Docker Deployment**: Uses volume mapping for config directory
 - **Port Mapping**: Flask runs on port 5000 (exposed in Docker)
 
+### REST API Endpoints
+- `GET /health` - Health check with timestamp
+- `GET /devices` - List all ThermoWorks devices
+- `GET /devices/{id}/temperature` - Get current temperature for specific device
+- `GET /devices/{id}/history` - Get historical data with optional start/end parameters
+- `POST /sync` - Trigger manual temperature sync
+- `GET /homeassistant/test` - Test Home Assistant connection
+
 ## CI/CD Pipeline
 
 The project uses Gitea Actions for continuous integration:
 
 ### Workflow Configuration
-- **Trigger**: Runs on every push to any branch
-- **Runner**: Ubuntu-latest
-- **Workflow File**: `.gitea/workflows/demo.yaml`
+- **Trigger**: Runs on push to main/develop branches and PRs to main
+- **Runner**: Ubuntu-latest with Docker-in-Docker support
+- **Workflow File**: `.gitea/workflows/build.yaml`
 
 ### Pipeline Steps
+**Test Job:**
 1. **Repository Checkout**: Uses `actions/checkout@v4`
-2. **Environment Info**: Displays runner OS, branch, and repository details
-3. **File Listing**: Lists all files in the workspace
-4. **Status Reporting**: Shows job completion status
+2. **Python Setup**: Installs Python 3.11 and dependencies
+3. **Code Linting**: Runs flake8 for syntax errors and code quality
+4. **Application Testing**: Import tests (currently commented out)
 
-### Current Limitations
-- No automated testing or linting steps
-- No Docker image building or deployment
-- Basic demo workflow without production features
+**Build Job:**
+1. **Docker Image Building**: Creates tagged images (SHA and latest)
+2. **Container Testing**: Verifies Docker image starts successfully
+3. **Artifact Upload**: Saves Docker image for main branch builds
+
+### Available Quality Checks
+- **Syntax Validation**: Flake8 checks for Python syntax errors
+- **Code Complexity**: Max complexity 10, line length 127
+- **Docker Build Testing**: Ensures container builds and starts
+
+## Technology Stack
+
+### Core Dependencies
+- **Flask 2.3.3**: Web framework for REST API
+- **APScheduler 3.10.4**: Background job scheduling for temperature sync
+- **Requests 2.31.0**: HTTP client for API communication
+- **python-dotenv 1.0.0**: Environment variable management
+- **Pydantic 2.4.2**: Data validation and serialization
+- **homeassistant-api 5.0.0**: Home Assistant REST API integration
+
+### Development Tools
+- **flake8**: Code linting and style checking
+- **Docker**: Containerization for deployment
+- **Gitea Actions**: CI/CD pipeline automation
 
 ## Environment Variables
 - `THERMOWORKS_API_KEY`: Required for ThermoWorks API access
