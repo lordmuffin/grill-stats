@@ -23,6 +23,27 @@ services:
     networks:
       - grill-monitoring
 
+  timescaledb:
+    image: timescale/timescaledb:latest-pg14
+    environment:
+      POSTGRES_DB: grill_monitoring
+      POSTGRES_USER: grill_monitor
+      POSTGRES_PASSWORD: testpass
+    ports:
+      - "5433:5432"
+    volumes:
+      - timescaledb_data:/var/lib/postgresql/data
+      - ./database-init/timescale-init.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U grill_monitor -d grill_monitoring"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grill-monitoring
+
   influxdb:
     image: influxdb:1.8
     environment:
@@ -125,6 +146,33 @@ services:
     networks:
       - grill-monitoring
 
+  historical-data-service:
+    build: 
+      context: ./services/historical-data-service
+      dockerfile: Dockerfile
+    ports:
+      - "8082:8080"
+    environment:
+      TIMESCALEDB_HOST: timescaledb
+      TIMESCALEDB_PORT: 5432
+      TIMESCALEDB_DATABASE: grill_monitoring
+      TIMESCALEDB_USERNAME: grill_monitor
+      TIMESCALEDB_PASSWORD: testpass
+      DEBUG: "true"
+      PYTHONUNBUFFERED: "1"
+    depends_on:
+      timescaledb:
+        condition: service_healthy
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+    networks:
+      - grill-monitoring
+
   # Original monolithic app for comparison
   monolithic-app:
     build: .
@@ -155,6 +203,8 @@ services:
         condition: service_healthy
       temperature-service:
         condition: service_healthy
+      historical-data-service:
+        condition: service_healthy
     volumes:
       - ./tests:/tests
     command: |
@@ -168,6 +218,9 @@ services:
         echo '🌡️  Testing Temperature Service...'
         curl -f http://temperature-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
         
+        echo '📊 Testing Historical Data Service...'
+        curl -f http://historical-data-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
+        
         echo '🔍 Testing API Endpoints...'
         curl -f http://device-service:8080/api/devices -w '\n  Devices API Status: %{http_code}\n'
         
@@ -177,6 +230,7 @@ services:
         echo '=========================='
         curl -s http://device-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Device Service: ❌'
         curl -s http://temperature-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Temperature Service: ❌'
+        curl -s http://historical-data-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Historical Data Service: ❌'
         
         echo '🎉 Comprehensive testing complete!'
       "
@@ -193,6 +247,8 @@ services:
         condition: service_healthy
       temperature-service:
         condition: service_healthy
+      historical-data-service:
+        condition: service_healthy
     volumes:
       - ./tests/api:/etc/newman
     command: |
@@ -207,6 +263,8 @@ services:
 
 volumes:
   postgres_data:
+    driver: local
+  timescaledb_data:
     driver: local
   influxdb_data:
     driver: local
