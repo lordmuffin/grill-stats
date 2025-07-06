@@ -59,9 +59,11 @@ jobs:
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
           echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
           
-          # Build the container image
+          # Build the container image in rootless mode
           echo "Building container image..."
           buildah build-using-dockerfile \
+            --isolation=chroot \
+            --layers=false \
             --tag ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
             --file Dockerfile \
             .
