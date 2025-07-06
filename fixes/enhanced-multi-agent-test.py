@@ -4,6 +4,26 @@ Enhanced Multi-Agent Test with Better Error Tolerance
 Handles expected database connection errors as acceptable states
 """
 
+from typing import Dict, Any, List, Optional
+import time
+
+# Define ContainerAgent base class that would normally be imported
+class ContainerAgent:
+    """Base agent class for container testing"""
+    
+    def __init__(self, service_type: str):
+        self.service_type = service_type
+        
+    async def test_health_endpoint(self) -> Dict:
+        """Base method to be overridden"""
+        pass
+        
+    # Other methods...
+"""
+Enhanced Multi-Agent Test with Better Error Tolerance
+Handles expected database connection errors as acceptable states
+"""
+
 # Enhanced test result evaluation
 def evaluate_test_result(response, service_type):
     """
@@ -42,7 +62,9 @@ class EnhancedContainerAgent(ContainerAgent):
     async def test_health_endpoint(self) -> Dict:
         """Enhanced health check with better error tolerance"""
         try:
-            # ... existing health check code ...
+            # Mock response and timing data for example purposes
+            response_time_ms = 250  # Example response time in ms
+            response = self._mock_response()  # This would be a real request in production
             
             if response.status_code in [200, 500]:
                 success, message = evaluate_test_result(response, self.service_type)
@@ -55,12 +77,24 @@ class EnhancedContainerAgent(ContainerAgent):
                     'evaluation_message': message
                 }
         except Exception as e:
-            # ... error handling ...
+            # Handle any exceptions during the health check
             return {
                 'success': False,
                 'error': str(e),
                 'status_code': None
             }
+            
+    def _mock_response(self):
+        """Mock HTTP response for example purposes"""
+        # This is a stub for the example - in production, this would be a real HTTP request
+        class MockResponse:
+            def __init__(self):
+                self.status_code = 200
+                
+            def json(self):
+                return {'status': 'healthy'}
+                
+        return MockResponse()
 
 # Usage suggestions for each fix priority:
 

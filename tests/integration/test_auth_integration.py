@@ -2,7 +2,7 @@ import unittest
 from flask import Flask, url_for, session
 from flask_testing import TestCase
 from flask_sqlalchemy import SQLAlchemy
-from flask_login import LoginManager, current_user
+from flask_login import LoginManager, current_user, login_required
 from flask_bcrypt import Bcrypt
 
 from models.user import User
