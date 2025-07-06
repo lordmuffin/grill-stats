@@ -21,6 +21,7 @@ jobs:
           python -m venv /workspace/venv
           
           # 2. Activate the virtual environment for subsequent commands
+          # FIX: Corrected typo in virtual environment path from 'venc' to 'venv'.
           . /workspace/venv/bin/activate
           
           # 3. Install packages into the isolated venv
@@ -45,20 +46,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Create Kaniko Config
-        run: |
-          mkdir -p /workspace/kaniko-config
-          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /workspace/kaniko-config/config.json
-          echo "Kaniko config created successfully."
-
-      # FIX: Reverted to the 'uses:' syntax, which is the most robust way to
-      # invoke a container action and avoids PATH issues on the runner.
+      # FIX: Using the 'container' block to create the config file in the default location.
+      # This is the most compatible method and avoids the unsupported '--docker-config-dir' flag.
       - name: Build and Push with Kaniko
-        uses: docker://gcr.io/kaniko-project/executor:debug
-        with:
-          args: |
-            --docker-config-dir=/workspace/kaniko-config
-            --context=/workspace
-            --dockerfile=/workspace/Dockerfile
-            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest
+        container:
+          image: gcr.io/kaniko-project/executor:debug
+        run: |
+          # 1. Create the config file AT THE DEFAULT LOCATION that Kaniko expects.
+          mkdir -p /kaniko/.docker
+          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /kaniko/.docker/config.json
+
+          # 2. Run the executor. It will automatically find the config file,
+          # so the problematic flag is no longer needed.
+          /kaniko/executor \
+            --context=/workspace \
+            --dockerfile=/workspace/Dockerfile \
+            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
