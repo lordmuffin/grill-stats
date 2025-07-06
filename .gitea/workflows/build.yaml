@@ -8,18 +8,13 @@ on:
 
 jobs:
   test:
-    # The job runs on the base runner environment
     runs-on: ubuntu-latest
-    # FIX: Removed the job-level container to allow the checkout action to use Node.js from the host runner.
     steps:
-      # This step now runs in the default runner environment, which has Node.js.
+      # FIX: Removed explicit 'repository' and 'ref' to let the action
+      # automatically check out the commit that triggered the workflow.
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          repository: lordmuffin/grill-stats
-          ref: main
 
-      # FIX: This step now specifies its own container, only for this task.
       - name: Install dependencies
         container:
           image: python:3.11-slim
@@ -31,37 +26,28 @@ jobs:
             echo "No requirements.txt found"
           fi
 
-      # FIX: This step also gets its own container.
       - name: Lint with flake8
         container:
           image: python:3.11-slim
         run: |
           pip install flake8
-          # Stop the build if there are Python syntax errors or undefined names
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
-          # Exit-zero treats all errors as warnings
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   build:
     needs: test
     runs-on: ubuntu-latest
     steps:
-      # The checkout action runs first on the host runner
+      # FIX: Also removed explicit 'repository' and 'ref' here for consistency.
       - name: Checkout Code
         uses: actions/checkout@v4
-        with:
-          repository: lordmuffin/grill-stats
-          ref: main
 
-      # The Kaniko step uses its specific container to build the image
       - name: Build and Push with Kaniko
         uses: docker://gcr.io/kaniko-project/executor:v1.9.0
         env:
-          # Secrets are passed as environment variables
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
-          # 'args' passes commands directly to the Kaniko container's entrypoint.
           args: |
             --context=dir:///workspace/
             --dockerfile=./Dockerfile
