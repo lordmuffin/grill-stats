@@ -21,7 +21,7 @@ jobs:
           python -m venv /workspace/venv
           
           # 2. Activate the virtual environment for subsequent commands
-          . /workspace/venc/bin/activate
+          . /workspace/venv/bin/activate
           
           # 3. Install packages into the isolated venv
           python -m pip install --upgrade pip
