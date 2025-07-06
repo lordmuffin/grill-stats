@@ -38,15 +38,17 @@ jobs:
 
       - name: Setup Kaniko
         run: |
-          # Download Kaniko executor tarball and extract
-          KANIKO_VERSION="v1.23.2"
-          curl -L https://github.com/GoogleContainerTools/kaniko/releases/download/${KANIKO_VERSION}/kaniko-linux-amd64.tar.gz -o /tmp/kaniko.tar.gz
-          tar -xzf /tmp/kaniko.tar.gz -C /tmp/
+          # Use a simpler approach - extract from the debug image
+          # Create a temporary directory
+          mkdir -p /tmp/kaniko-extract
+          
+          # Pull the Kaniko executor from the image using a different method
+          # Download the static binary from a reliable source
+          curl -L "https://storage.googleapis.com/kaniko-project/releases/v1.23.2/executor-linux-amd64" -o /tmp/executor
           chmod +x /tmp/executor
           
           # Verify the download
           file /tmp/executor
-          ls -la /tmp/executor
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
