@@ -51,8 +51,6 @@ jobs:
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
           args: |
-            # FIX: Corrected the context to use the 'dir://' prefix and made the
-            # dockerfile path relative to the context to solve the pathing error.
             --context=dir:///workspace
             --dockerfile=Dockerfile
             --destination=${GITEA_REGISTRY}/lordmuffin/grill-stats:latest
