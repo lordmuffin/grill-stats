@@ -94,7 +94,7 @@ jobs:
           
           # Try pushing with crane first
           echo "Attempting push with crane..."
-          if ! /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
+          if ! /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
             --insecure \
             --platform=linux/amd64; then
             echo "Crane push failed, trying alternative method..."
