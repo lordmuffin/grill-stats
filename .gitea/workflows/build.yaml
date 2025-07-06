@@ -38,13 +38,15 @@ jobs:
 
       - name: Setup Kaniko
         run: |
-          # Download Kaniko executor from specific version
+          # Download Kaniko executor tarball and extract
           KANIKO_VERSION="v1.23.2"
-          curl -L https://github.com/GoogleContainerTools/kaniko/releases/download/${KANIKO_VERSION}/executor-linux-amd64 -o /tmp/kaniko-executor
-          chmod +x /tmp/kaniko-executor
+          curl -L https://github.com/GoogleContainerTools/kaniko/releases/download/${KANIKO_VERSION}/kaniko-linux-amd64.tar.gz -o /tmp/kaniko.tar.gz
+          tar -xzf /tmp/kaniko.tar.gz -C /tmp/
+          chmod +x /tmp/executor
           
           # Verify the download
-          file /tmp/kaniko-executor
+          file /tmp/executor
+          ls -la /tmp/executor
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
@@ -52,7 +54,7 @@ jobs:
 
       - name: Build and Push with Kaniko
         run: |
-          DOCKER_CONFIG=/tmp/docker-config /tmp/kaniko-executor \
+          DOCKER_CONFIG=/tmp/docker-config /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
