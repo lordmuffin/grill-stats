@@ -36,40 +36,53 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Setup img
+      - name: Setup Kaniko
         run: |
-          # Install img - truly rootless container builder
-          echo "Installing img..."
+          # Return to Kaniko but with different approach
+          echo "Setting up Kaniko executor..."
           
-          # Download img binary
-          curl -L https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64 -o /tmp/img
-          chmod +x /tmp/img
-          
-          # Verify installation
-          /tmp/img version
+          # Download Kaniko executor
+          curl -L https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - -C /tmp/ crane
+          /tmp/crane export gcr.io/kaniko-project/executor:v1.23.2 - | tar -xf - -C /tmp/ kaniko/executor
+          cp /tmp/kaniko/executor /tmp/executor
+          chmod +x /tmp/executor
           
           # Test registry connectivity
           echo "Testing registry connectivity..."
           curl -v -u "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" \
                http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth test completed"
 
-      - name: Build and Push with img
+      - name: Build and Push with Kaniko
         run: |
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
           echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
           
-          # Build the container image with img (rootless)
+          # Create minimal auth config
+          mkdir -p /tmp/docker-config
+          AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
+          cat > /tmp/docker-config/config.json << EOF
+          {
+            "auths": {
+              "${{ env.GITEA_REGISTRY }}": {
+                "auth": "${AUTH_STRING}"
+              }
+            }
+          }
+          EOF
+          
+          # Build with Kaniko using tar context to avoid git issues
           echo "Building container image..."
-          /tmp/img build -t ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest .
+          export DOCKER_CONFIG=/tmp/docker-config
           
-          # Login to registry with basic auth
-          echo "Logging into registry..."
-          echo "${{ secrets.REGISTRY_PASSWORD }}" | /tmp/img login \
-            --username "${{ secrets.REGISTRY_USERNAME }}" \
-            --password-stdin \
-            ${{ env.GITEA_REGISTRY }}
+          # Create tar context
+          tar -czf /tmp/context.tar.gz --exclude='.git' --exclude='.gitea' .
           
-          # Push the image
-          echo "Pushing image..."
-          /tmp/img push ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest
+          # Run Kaniko with tar context
+          /tmp/executor \
+            --context=tar:///tmp/context.tar.gz \
+            --destination=${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
+            --custom-platform=linux/amd64 \
+            --insecure \
+            --skip-tls-verify \
+            --single-snapshot
