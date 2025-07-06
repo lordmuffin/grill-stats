@@ -38,33 +38,22 @@ jobs:
 
       - name: Setup Kaniko
         run: |
-          # Try multiple download methods
-          echo "Attempting to download Kaniko executor..."
+          # Download a working version from a reliable source
+          echo "Downloading Kaniko executor from container registry..."
           
-          # Method 1: Try direct download from GitHub with proper headers
-          if ! wget --header="Accept: application/octet-stream" \
-                   https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/executor-linux-amd64 \
-                   -O /tmp/executor; then
-            echo "Method 1 failed, trying method 2..."
-            
-            # Method 2: Use a known working URL
-            if ! curl -L -H "Accept: application/octet-stream" \
-                     "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/executor-linux-amd64" \
-                     -o /tmp/executor; then
-              echo "Method 2 failed, trying method 3..."
-              
-              # Method 3: Use an alternative approach - build from source or use pre-built
-              echo "Using fallback method - installing from container registry"
-              # This is a fallback - we'll handle this if needed
-              exit 1
-            fi
-          fi
+          # Use crane or direct extraction from container
+          # First try to install crane
+          curl -L https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - -C /tmp/ crane
           
+          # Extract executor from the official Kaniko image
+          /tmp/crane export gcr.io/kaniko-project/executor:v1.23.2 - | tar -xf - -C /tmp/ kaniko/executor
+          
+          # Move to expected location
+          cp /tmp/kaniko/executor /tmp/executor
           chmod +x /tmp/executor
           
           # Verify the download
           file /tmp/executor
-          head -1 /tmp/executor | hexdump -C
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
