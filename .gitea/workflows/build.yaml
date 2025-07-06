@@ -115,16 +115,14 @@ jobs:
           # Try crane with different approaches
           echo "Attempt 1: Push to hostname-based registry"
           if /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
-            --platform=linux/amd64 \
-            --debug; then
+            --platform=linux/amd64; then
             echo "✅ Crane push succeeded!"
             exit 0
           fi
           
           echo "Attempt 2: Push to IP-based registry"
           if /tmp/crane push /tmp/image.tar ${GITEA_IP}:3000/gitea-admin/grill-stats:test \
-            --platform=linux/amd64 \
-            --debug; then
+            --platform=linux/amd64; then
             echo "✅ Crane push to IP succeeded!"
             exit 0
           fi
