@@ -43,15 +43,23 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # FIX: This step is restructured to explicitly create the credential file
+      # and use the full registry hostname to solve the authentication error.
       - name: Build and Push with Kaniko
-        uses: docker://gcr.io/kaniko-project/executor:v1.9.0
+        container:
+          image: gcr.io/kaniko-project/executor:v1.9.0
         env:
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-        with:
-          # FIX: Removed the comment from this block, as it was being passed as a command.
-          args: |
-            --context=dir:///workspace/
-            --dockerfile=./Dockerfile
-            --destination=gitea-internal/your-image-name:latest
+          # NOTE: You may need to change this value to your Gitea registry's actual internal hostname.
+          # This value is based on your earlier error logs.
+          GITEA_REGISTRY: gitea-http.gitea.svc.cluster.local:3000
+        run: |
+          # 1. Create Kaniko's credential file. The key MUST be the registry hostname.
+          mkdir -p /kaniko/.docker
+          echo '{"auths":{"'${GITEA_REGISTRY}'":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
+
+          # 2. Run the Kaniko executor. The destination MUST start with the registry hostname.
+          /kaniko/executor \
+            --context=/workspace \
+            --dockerfile=/workspace/Dockerfile \
+            --destination=${GITEA_REGISTRY}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
