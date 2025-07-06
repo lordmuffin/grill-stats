@@ -1,0 +1,47 @@
+name: Temperature Service Build
+
+on:
+  push:
+    branches: [ main ]
+    tags: [ 'v*' ]
+    paths:
+      - 'services/temperature-service/**'
+      - '.gitea/workflows/temperature-service-build.yml'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Log in to Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: gitea.lab.apj.dev
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v4
+        with:
+          images: gitea.lab.apj.dev/lordmuffin/grill-stats-temperature-service
+          tags: |
+            type=semver,pattern={{version}}
+            type=ref,event=branch
+            type=sha,format=short
+
+      - name: Build and push
+        uses: docker/build-push-action@v4
+        with:
+          context: ./services/temperature-service
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=registry,ref=gitea.lab.apj.dev/lordmuffin/grill-stats-temperature-service:cache
+          cache-to: type=registry,ref=gitea.lab.apj.dev/lordmuffin/grill-stats-temperature-service:cache,mode=max
