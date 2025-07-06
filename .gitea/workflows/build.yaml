@@ -43,7 +43,33 @@ jobs:
           
           # Update package manager and install buildah
           sudo apt-get update
-          sudo apt-get install -y buildah
+          sudo apt-get install -y buildah fuse-overlayfs
+          
+          # Configure buildah for rootless operation
+          mkdir -p ~/.config/containers
+          cat > ~/.config/containers/storage.conf << EOF
+          [storage]
+          driver = "vfs"
+          runroot = "/tmp/containers/storage"
+          graphroot = "/tmp/containers/storage"
+          
+          [storage.options]
+          mount_program = "/usr/bin/fuse-overlayfs"
+          EOF
+          
+          # Configure registries
+          cat > ~/.config/containers/registries.conf << EOF
+          [registries.search]
+          registries = ['docker.io']
+          
+          [[registry]]
+          location = "${{ env.GITEA_REGISTRY }}"
+          insecure = true
+          EOF
+          
+          # Set environment variables for buildah
+          export BUILDAH_ISOLATION=chroot
+          export TMPDIR=/tmp
           
           # Verify installation
           buildah version
@@ -55,15 +81,25 @@ jobs:
 
       - name: Build and Push with Buildah
         run: |
+          # Set environment variables for fully rootless operation
+          export BUILDAH_ISOLATION=chroot
+          export STORAGE_DRIVER=vfs
+          export TMPDIR=/tmp
+          export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u)
+          mkdir -p $XDG_RUNTIME_DIR
+          
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
           echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
+          echo "Storage driver: $(buildah info --format '{{.store.GraphDriverName}}')"
           
-          # Build the container image in rootless mode
+          # Build the container image with maximum compatibility
           echo "Building container image..."
-          buildah build-using-dockerfile \
+          buildah bud \
             --isolation=chroot \
+            --storage-driver=vfs \
             --layers=false \
+            --pull=false \
             --tag ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
             --file Dockerfile \
             .
