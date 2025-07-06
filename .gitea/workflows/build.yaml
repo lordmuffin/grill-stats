@@ -11,7 +11,7 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     env:
-      GITEA_REGISTRY: git.lab.apj.dev
+      GITEA_REGISTRY: gitea-internal.gitea.svc.cluster.local
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
