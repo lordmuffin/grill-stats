@@ -49,9 +49,9 @@ jobs:
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
+          # FIX: Removed the comment from this block, as it was being passed as a command.
           args: |
             --context=dir:///workspace/
             --dockerfile=./Dockerfile
             --destination=gitea-internal/your-image-name:latest
-            # FIX: Corrected the flag to use camelCase as required by Kaniko.
             --customPlatform=linux/amd64
