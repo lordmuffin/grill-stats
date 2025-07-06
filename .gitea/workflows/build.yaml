@@ -112,41 +112,51 @@ jobs:
           echo "Docker config contents:"
           cat ~/.docker/config.json
           
-          # Try crane with different approaches
-          echo "Attempt 1: Push to hostname-based registry"
+          # Try crane with different approaches and force HTTP
+          echo "Attempt 1: Push to hostname-based registry (HTTP)"
           if /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
-            --platform=linux/amd64; then
+            --platform=linux/amd64 \
+            --insecure; then
             echo "✅ Crane push succeeded!"
             exit 0
           fi
           
-          echo "Attempt 2: Push to IP-based registry"
+          echo "Attempt 2: Push to IP-based registry (HTTP)"
           if /tmp/crane push /tmp/image.tar ${GITEA_IP}:3000/gitea-admin/grill-stats:test \
-            --platform=linux/amd64; then
+            --platform=linux/amd64 \
+            --insecure; then
             echo "✅ Crane push to IP succeeded!"
             exit 0
           fi
           
-          echo "Both crane attempts failed, trying Docker..."
-          if false; then
-            echo "Crane push failed, trying Docker load and push..."
-            
-            # Alternative: Use Docker to load and push the image
-            echo "Loading image with Docker..."
-            docker load -i /tmp/image.tar
-            
-            echo "Tagging image..."
-            docker tag $(docker images --format "{{.Repository}}:{{.Tag}}" | head -1) ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test
-            
-            echo "Logging into registry with Docker..."
-            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.GITEA_REGISTRY }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
-            
-            echo "Pushing with Docker..."
-            if docker push ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test; then
-              echo "✅ Docker push succeeded!"
-              exit 0
-            else
-              echo "❌ Docker push also failed"
-              exit 1
-            fi
+          echo "Attempt 3: Push with explicit HTTP scheme"
+          if /tmp/crane push /tmp/image.tar http://${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
+            --platform=linux/amd64 \
+            --insecure; then
+            echo "✅ Crane push with HTTP scheme succeeded!"
+            exit 0
+          fi
+          
+          echo "All crane attempts failed, trying Docker..."
+          
+          # Alternative: Use Docker to load and push the image
+          echo "Loading image with Docker..."
+          docker load -i /tmp/image.tar
+          
+          echo "Tagging image..."
+          IMAGE_ID=$(docker images --format "{{.Repository}}:{{.Tag}}" | head -1)
+          echo "Source image: $IMAGE_ID"
+          docker tag "$IMAGE_ID" ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test
+          
+          echo "Logging into registry with Docker..."
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.GITEA_REGISTRY }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+          
+          echo "Pushing with Docker..."
+          if docker push ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test; then
+            echo "✅ Docker push succeeded!"
+            exit 0
+          else
+            echo "❌ Docker push also failed"
+            docker images
+            exit 1
           fi
