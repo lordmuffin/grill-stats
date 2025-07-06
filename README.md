@@ -74,6 +74,8 @@ See the detailed [FEATURES.md](FEATURES.md) for comprehensive documentation of i
 
 ### 🛡️ Security & Observability
 
+- **User Authentication** with email/password login
+- **Account security** with lockout protection
 - **Zero-trust network policies** with Kubernetes NetworkPolicy
 - **OpenTelemetry instrumentation** for distributed tracing
 - **Structured logging** with JSON formatting
@@ -214,6 +216,7 @@ HOMEASSISTANT_TOKEN: "your-long-lived-access-token"
 DB_USERNAME: "grill_monitor"
 DB_PASSWORD: "secure-database-password"
 REDIS_PASSWORD: "redis-authentication-password"
+SECRET_KEY: "secure-random-secret-key-for-flask-sessions"
 ```
 
 #### Service Configuration
@@ -513,7 +516,13 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🏷️ Version History
 
-### v1.1.0 (Current)
+### v1.2.0 (Current)
+- ✅ User Authentication with login/logout functionality
+- ✅ Account security with failed login tracking and lockout protection
+- ✅ Route protection with login requirements
+- ✅ User-friendly dashboard interface
+
+### v1.1.0
 - ✅ Device Management Service with OAuth2 ThermoWorks integration
 - ✅ Real-time temperature monitoring with Chart.js visualization
 - ✅ Kubernetes Kustomize configurations for multi-environment deployment

@@ -29,7 +29,8 @@
       "Bash(podman build:*)",
       "Bash(podman run:*)",
       "Bash(git commit:*)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "WebFetch(domain:github.com)"
     ],
     "deny": []
   }

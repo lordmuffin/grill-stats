@@ -1,0 +1,55 @@
+{% extends "layout.html" %}
+
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="jumbotron">
+            <h1 class="display-4">Welcome to Grill Stats</h1>
+            <p class="lead">Monitor your ThermoWorks devices and integrate with Home Assistant.</p>
+            
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('dashboard') }}" class="btn btn-primary btn-lg">Go to Dashboard</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn btn-primary btn-lg">Login</a>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Monitor Devices</h5>
+            </div>
+            <div class="card-body">
+                <p>View all your connected ThermoWorks devices and their current temperatures.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Track History</h5>
+            </div>
+            <div class="card-body">
+                <p>Access historical temperature data for your cooking sessions.</p>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <h5>Home Assistant Integration</h5>
+            </div>
+            <div class="card-body">
+                <p>Connect your devices to Home Assistant for automation and monitoring.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

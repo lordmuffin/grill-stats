@@ -109,7 +109,8 @@ class ThermoworksClient:
     ThermoWorks Cloud API Client
 
     This class provides methods to interact with the ThermoWorks Cloud API,
-    including authentication, device discovery, and temperature data retrieval.
+    including authentication, device discovery, temperature data retrieval,
+    and gateway management.
     """
 
     def __init__(
@@ -1024,6 +1025,68 @@ class ThermoworksClient:
         status["polling_active"] = bool(self._polling_thread and self._polling_thread.is_alive())
         
         return status
+        
+    def get_gateway_status(self, gateway_id: str) -> Dict[str, Any]:
+        """
+        Get the status of an RFX Gateway
+        
+        Args:
+            gateway_id: Gateway ID
+            
+        Returns:
+            Gateway status information
+            
+        Raises:
+            ThermoworksAPIError: If the API request fails
+            ValueError: If the gateway is not found
+        """
+        response = self._make_api_request("GET", f"/gateways/{gateway_id}")
+        
+        if not response:
+            raise ValueError(f"Gateway {gateway_id} not found")
+            
+        return response.get("gateway", response)
+        
+    def get_gateways(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
+        """
+        Get a list of all registered RFX Gateways
+        
+        Args:
+            force_refresh: Whether to force a refresh from the API
+            
+        Returns:
+            List of gateway information dictionaries
+            
+        Raises:
+            ThermoworksAPIError: If the API request fails
+        """
+        response = self._make_api_request("GET", "/gateways")
+        
+        return response.get("gateways", [])
+        
+    def register_gateway(self, gateway_id: str, name: str) -> Dict[str, Any]:
+        """
+        Register an RFX Gateway with the ThermoWorks Cloud account
+        
+        Args:
+            gateway_id: Gateway ID
+            name: User-friendly name for the gateway
+            
+        Returns:
+            Gateway registration response
+            
+        Raises:
+            ThermoworksAPIError: If the API request fails
+        """
+        data = {
+            "gateway_id": gateway_id,
+            "name": name,
+            "type": "rfx_gateway"
+        }
+        
+        response = self._make_api_request("POST", "/gateways/register", json_data=data)
+        
+        return response
 
     def __del__(self) -> None:
         """Cleanup when the client is deleted"""

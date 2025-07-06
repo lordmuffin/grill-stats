@@ -9,6 +9,10 @@ services:
       - THERMOWORKS_API_KEY=${THERMOWORKS_API_KEY}
       - HOMEASSISTANT_URL=${HOMEASSISTANT_URL}
       - HOMEASSISTANT_TOKEN=${HOMEASSISTANT_TOKEN}
+      - SECRET_KEY=${SECRET_KEY:-default-dev-secret-key}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///grill_stats.db}
+      - FLASK_ENV=${FLASK_ENV:-development}
     volumes:
       - ./config:/app/config
+      - ./instance:/app/instance
     restart: unless-stopped

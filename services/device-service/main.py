@@ -29,6 +29,14 @@ from thermoworks_client import (
     DeviceInfo,
     TemperatureReading,
 )
+from rfx_gateway_client import (
+    RFXGatewayClient,
+    RFXGatewayError,
+    GatewaySetupStep,
+    WiFiNetwork,
+    GatewaySetupStatus,
+)
+from rfx_gateway_routes import register_gateway_routes
 
 # Load environment variables
 load_dotenv()
@@ -42,7 +50,7 @@ logger = logging.getLogger("device_service")
 
 # Initialize Flask app
 app = Flask(__name__)
-CORS(app)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # Redis connection for sharing device data with other services
 try:
@@ -69,6 +77,14 @@ thermoworks_client = ThermoworksClient(
     token_storage_path=os.environ.get("TOKEN_STORAGE_PATH"),
     polling_interval=int(os.environ.get("THERMOWORKS_POLLING_INTERVAL", 60)),
     auto_start_polling=False,  # We'll start it after app initialization
+)
+
+# Initialize RFX Gateway client
+rfx_gateway_client = RFXGatewayClient(
+    thermoworks_client=thermoworks_client,
+    max_scan_duration=int(os.environ.get("RFX_SCAN_DURATION", 30)),
+    connection_timeout=int(os.environ.get("RFX_CONNECTION_TIMEOUT", 15)),
+    setup_timeout=int(os.environ.get("RFX_SETUP_TIMEOUT", 300)),
 )
 
 
@@ -140,6 +156,16 @@ def shutdown_handler(signum, frame):
 # Register the shutdown handler for common signals
 signal.signal(signal.SIGINT, shutdown_handler)
 signal.signal(signal.SIGTERM, shutdown_handler)
+
+# Make sure to clean up RFX Gateway client resources on shutdown
+def exit_handler():
+    try:
+        rfx_gateway_client.cleanup()
+    except Exception as e:
+        logger.error(f"Error cleaning up RFX Gateway client: {e}")
+
+import atexit
+atexit.register(exit_handler)
 
 
 # Try to authenticate with client credentials if available
@@ -1448,6 +1474,9 @@ def swagger_json():
     return jsonify(swagger)
 
 
+# Register the RFX Gateway routes
+register_gateway_routes(app, rfx_gateway_client, thermoworks_client)
+
 if __name__ == "__main__":
     # Get host and port from environment variables
     host = os.environ.get("HOST", "0.0.0.0")
@@ -1459,3 +1488,4 @@ if __name__ == "__main__":
     finally:
         # Ensure we clean up resources when the app exits
         thermoworks_client.stop_polling()
+        rfx_gateway_client.cleanup()
