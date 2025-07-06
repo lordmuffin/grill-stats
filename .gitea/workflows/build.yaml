@@ -1,5 +1,4 @@
 name: Build and Test Grill Stats
-run-name: ${{ gitea.actor }} triggered build for ${{ gitea.ref_name }}
 
 on:
   push:
@@ -16,10 +15,8 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
+      # Python setup is not needed since we're using a Python container
+      # This step is removed to avoid potential conflicts
 
       - name: Install dependencies
         run: |
@@ -63,27 +60,37 @@ jobs:
         id: tags
         run: |
           TAG=""
-          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
-            TAG=${GITHUB_REF#refs/tags/}
-            echo "TAG=${TAG}" >> $GITHUB_ENV
-            echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
-          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+          if [[ "$GITEA_REF" == refs/tags/* ]]; then
+            TAG=${GITEA_REF#refs/tags/}
+            echo "TAG=${TAG}" >> $GITEA_ENV
+            echo "ADDITIONAL_TAG=latest" >> $GITEA_ENV
+          elif [[ "$GITEA_REF" == refs/heads/main ]]; then
             TAG=main
-            COMMIT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
-            echo "TAG=${TAG}" >> $GITHUB_ENV
-            echo "ADDITIONAL_TAG=sha-${COMMIT_SHA}" >> $GITHUB_ENV
+            COMMIT_SHA=$(echo ${GITEA_SHA} | cut -c1-7)
+            echo "TAG=${TAG}" >> $GITEA_ENV
+            echo "ADDITIONAL_TAG=sha-${COMMIT_SHA}" >> $GITEA_ENV
           else
-            TAG=${GITHUB_REF#refs/heads/}
-            COMMIT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
-            echo "TAG=${TAG}" >> $GITHUB_ENV
-            echo "ADDITIONAL_TAG=sha-${COMMIT_SHA}" >> $GITHUB_ENV
+            TAG=${GITEA_REF#refs/heads/}
+            COMMIT_SHA=$(echo ${GITEA_SHA} | cut -c1-7)
+            echo "TAG=${TAG}" >> $GITEA_ENV
+            echo "ADDITIONAL_TAG=sha-${COMMIT_SHA}" >> $GITEA_ENV
           fi
 
-      - name: Build and push with Kaniko
+      - name: Build with Kaniko (without pushing)
         run: |
+          # First try without pushing to ensure build works
           /kaniko/executor \
             --context="${PWD}" \
-            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats:${TAG}" \
-            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats:${ADDITIONAL_TAG}" \
+            --no-push \
+            --cache=true \
+            --cache-ttl=168h \
+            --cleanup
+          
+      - name: Build and push with Kaniko (if build succeeds)
+        run: |
+          echo "Building and pushing image..."
+          /kaniko/executor \
+            --context="${PWD}" \
+            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats:latest" \
             --cache=true \
             --cache-ttl=168h
