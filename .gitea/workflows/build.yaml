@@ -41,25 +41,26 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
-    container:
-      image: gcr.io/kaniko-project/executor:debug
-      env:
-        DOCKER_CONFIG: /kaniko/.docker
     env:
       GITEA_REGISTRY: gitea-http.gitea.svc.cluster.local:3000
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Setup Kaniko Config
+      - name: Setup Kaniko
         run: |
-          mkdir -p /kaniko/.docker
-          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /kaniko/.docker/config.json
+          # Download Kaniko executor
+          curl -L https://github.com/GoogleContainerTools/kaniko/releases/latest/download/executor-linux-amd64 -o /tmp/kaniko-executor
+          chmod +x /tmp/kaniko-executor
           
+          # Create Docker config directory
+          mkdir -p /tmp/docker-config
+          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /tmp/docker-config/config.json
+
       - name: Build and Push with Kaniko
         run: |
-          /kaniko/executor \
-            --context=${GITHUB_WORKSPACE} \
-            --dockerfile=${GITHUB_WORKSPACE}/Dockerfile \
+          DOCKER_CONFIG=/tmp/docker-config /tmp/kaniko-executor \
+            --context=${{ github.workspace }} \
+            --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
