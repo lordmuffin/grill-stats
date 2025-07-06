@@ -92,7 +92,7 @@ jobs:
         run: |
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
-          echo "Destination: ${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest"
+          echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
           
           # Set Kaniko options for debugging
           export DOCKER_CONFIG=/tmp/docker-config
@@ -101,7 +101,7 @@ jobs:
           /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
-            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
+            --destination=${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
             --custom-platform=linux/amd64 \
             --verbosity=debug \
             --insecure \
