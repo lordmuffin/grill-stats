@@ -136,6 +136,7 @@ jobs:
             echo "Dockerfile found, proceeding with build"
             /kaniko/executor \
               --context="/workspace" \
+              --insecure \
               --no-push \
               --cleanup
           else
