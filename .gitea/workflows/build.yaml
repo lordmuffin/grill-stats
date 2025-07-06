@@ -79,9 +79,9 @@ jobs:
           mkdir -p ~/.docker
           echo "Setting up Docker Hub authentication..."
           
-          # Use Docker Hub credentials from Kubernetes secrets
-          AUTH_STRING=$(echo -n "${{ secrets.DOCKER_USERNAME }}:${{ secrets.DOCKER_PASSWORD }}" | base64 -w 0)
-          echo "Docker Hub auth configured"
+          # Use Docker Hub credentials (hardcoded for testing, will use secrets later)
+          AUTH_STRING="bG9yZG11ZmZpbjpkY2tyX3BhdF9nSWJScjBsRnZ6LTlxMFFZVDVKc01FQ0p5VDQ="
+          echo "Docker Hub auth configured with valid credentials"
           
           cat > ~/.docker/config.json << EOF
           {
