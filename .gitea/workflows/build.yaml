@@ -45,16 +45,15 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # FIX: Changed this step to a simple 'run' command. This avoids using
-      # the 'docker://' syntax and relies only on the runner's basic shell.
       - name: Create Kaniko Config
         run: |
           mkdir -p /workspace/kaniko-config
           echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /workspace/kaniko-config/config.json
           echo "Kaniko config created successfully."
 
+      # FIX: Updated the Kaniko image to a more recent version that supports the --docker-config-dir flag.
       - name: Build and Push with Kaniko
-        uses: docker://gcr.io/kaniko-project/executor:v1.9.0
+        uses: docker://gcr.io/kaniko-project/executor:v1.22.0
         with:
           args: |
             --docker-config-dir=/workspace/kaniko-config
