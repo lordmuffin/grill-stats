@@ -45,22 +45,20 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # FIX: Reverted to a container: block to reliably create the Kaniko config file.
-      # This is the most robust way to handle insecure registries.
-      - name: Build and Push with Kaniko
-        container:
-          image: gcr.io/kaniko-project/executor:v1.9.0
+      # FIX: Changed this step to a simple 'run' command. This avoids using
+      # the 'docker://' syntax and relies only on the runner's basic shell.
+      - name: Create Kaniko Config
         run: |
-          # 1. Create Kaniko's config directory
-          mkdir -p /kaniko/.docker
-          
-          # 2. Create the config.json file with credentials AND the insecure-registry setting.
-          # This explicitly tells Kaniko to use HTTP for your internal registry.
-          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /kaniko/.docker/config.json
+          mkdir -p /workspace/kaniko-config
+          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /workspace/kaniko-config/config.json
+          echo "Kaniko config created successfully."
 
-          # 3. Run the Kaniko executor
-          /kaniko/executor \
-            --context=/workspace \
-            --dockerfile=/workspace/Dockerfile \
-            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
+      - name: Build and Push with Kaniko
+        uses: docker://gcr.io/kaniko-project/executor:v1.9.0
+        with:
+          args: |
+            --docker-config-dir=/workspace/kaniko-config
+            --context=/workspace
+            --dockerfile=/workspace/Dockerfile
+            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest
             --customPlatform=linux/amd64
