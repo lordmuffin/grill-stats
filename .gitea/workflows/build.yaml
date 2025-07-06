@@ -11,7 +11,7 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     env:
-      GITEA_REGISTRY: gitea-internal.gitea.svc.cluster.local
+      GITEA_REGISTRY: gitea-internal.gitea.svc.cluster.local:80
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -60,7 +60,12 @@ jobs:
           
           # Debug: Check if registry is accessible
           echo "Testing registry connectivity..."
-          curl -v https://${{ env.GITEA_REGISTRY }}/v2/ || echo "Registry API not accessible at /v2/"
+          echo "Testing HTTP endpoint:"
+          curl -v http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Registry API not accessible at HTTP /v2/"
+          echo "Testing HTTPS endpoint:"
+          curl -v https://${{ env.GITEA_REGISTRY }}/v2/ || echo "Registry API not accessible at HTTPS /v2/"
+          echo "Testing base path:"
+          curl -v http://${{ env.GITEA_REGISTRY }}/ || echo "Base path not accessible"
           
           # Create auth config with proper format for Gitea
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
@@ -100,10 +105,12 @@ jobs:
           # Set Kaniko options for debugging
           export DOCKER_CONFIG=/tmp/docker-config
           
-          # Run Kaniko with verbose output
+          # Run Kaniko with verbose output and insecure flag for internal registry
           /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --custom-platform=linux/amd64 \
-            --verbosity=debug
+            --verbosity=debug \
+            --insecure \
+            --skip-tls-verify
