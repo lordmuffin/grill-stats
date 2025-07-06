@@ -75,23 +75,24 @@ jobs:
           curl -v -u "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" \
                http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth failed"
           
-          # Create comprehensive auth config
+          # Create auth config that forces basic auth
           cat > /tmp/docker-config/config.json << EOF
           {
             "auths": {
               "${{ env.GITEA_REGISTRY }}": {
-                "username": "${{ secrets.REGISTRY_USERNAME }}",
-                "password": "${{ secrets.REGISTRY_PASSWORD }}",
                 "auth": "${AUTH_STRING}"
               }
             },
             "HttpHeaders": {
-              "User-Agent": "kaniko/executor",
-              "Authorization": "Basic ${AUTH_STRING}"
+              "User-Agent": "kaniko/executor"
             },
-            "credHelpers": {}
+            "experimental": "enabled"
           }
           EOF
+          
+          # Also create legacy Docker auth format
+          mkdir -p /tmp/docker-config/auths/${{ env.GITEA_REGISTRY }}
+          echo '{"auth":"'${AUTH_STRING}'"}' > /tmp/docker-config/auths/${{ env.GITEA_REGISTRY }}/config.json
           
           # Debug: Show config (redacted)
           echo "Docker config created:"
@@ -113,7 +114,11 @@ jobs:
                -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
                "http://${{ env.GITEA_REGISTRY }}/v2/gitea-admin/grill-stats/manifests/latest" || echo "Manual auth test completed"
           
-          # Run Kaniko with multiple auth strategies
+          # Set environment variables to force basic auth
+          export DOCKER_CONFIG=/tmp/docker-config
+          export KANIKO_REGISTRY_MIRROR=false
+          
+          # Run Kaniko with simpler configuration
           /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
@@ -122,5 +127,4 @@ jobs:
             --verbosity=debug \
             --insecure \
             --skip-tls-verify \
-            --registry-map=git.lab.apj.dev=${{ env.GITEA_REGISTRY }} \
-            --push-retry=3
+            --registry-map=git.lab.apj.dev=${{ env.GITEA_REGISTRY }}
