@@ -36,84 +36,40 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Setup Buildah
+      - name: Setup img
         run: |
-          # Install buildah as alternative to Kaniko
-          echo "Installing Buildah..."
+          # Install img - truly rootless container builder
+          echo "Installing img..."
           
-          # Update package manager and install buildah
-          sudo apt-get update
-          sudo apt-get install -y buildah fuse-overlayfs
-          
-          # Configure buildah for rootless operation
-          mkdir -p ~/.config/containers
-          cat > ~/.config/containers/storage.conf << EOF
-          [storage]
-          driver = "vfs"
-          runroot = "/tmp/containers/storage"
-          graphroot = "/tmp/containers/storage"
-          
-          [storage.options]
-          mount_program = "/usr/bin/fuse-overlayfs"
-          EOF
-          
-          # Configure registries
-          cat > ~/.config/containers/registries.conf << EOF
-          [registries.search]
-          registries = ['docker.io']
-          
-          [[registry]]
-          location = "${{ env.GITEA_REGISTRY }}"
-          insecure = true
-          EOF
-          
-          # Set environment variables for buildah
-          export BUILDAH_ISOLATION=chroot
-          export TMPDIR=/tmp
+          # Download img binary
+          curl -L https://github.com/genuinetools/img/releases/download/v0.5.11/img-linux-amd64 -o /tmp/img
+          chmod +x /tmp/img
           
           # Verify installation
-          buildah version
+          /tmp/img version
           
           # Test registry connectivity
           echo "Testing registry connectivity..."
           curl -v -u "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" \
                http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth test completed"
 
-      - name: Build and Push with Buildah
+      - name: Build and Push with img
         run: |
-          # Set environment variables for fully rootless operation
-          export BUILDAH_ISOLATION=chroot
-          export STORAGE_DRIVER=vfs
-          export TMPDIR=/tmp
-          export XDG_RUNTIME_DIR=/tmp/runtime-$(id -u)
-          mkdir -p $XDG_RUNTIME_DIR
-          
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
           echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
-          echo "Storage driver: $(buildah info --format '{{.store.GraphDriverName}}')"
           
-          # Build the container image with maximum compatibility
+          # Build the container image with img (rootless)
           echo "Building container image..."
-          buildah bud \
-            --isolation=chroot \
-            --storage-driver=vfs \
-            --layers=false \
-            --pull=false \
-            --tag ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
-            --file Dockerfile \
-            .
+          /tmp/img build -t ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest .
           
           # Login to registry with basic auth
           echo "Logging into registry..."
-          echo "${{ secrets.REGISTRY_PASSWORD }}" | buildah login \
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | /tmp/img login \
             --username "${{ secrets.REGISTRY_USERNAME }}" \
             --password-stdin \
-            --tls-verify=false \
             ${{ env.GITEA_REGISTRY }}
           
           # Push the image
           echo "Pushing image..."
-          buildah push \
-            --tls-verify=false \
-            ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest
+          /tmp/img push ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest
