@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: services
+
+resources:
+- deployment.yaml
+- svc.yaml
+- db.yaml
+- pvc.yaml
+- cm.yaml
+- ingress.yaml
+
+images:
+- name: gitea.lab.apj.dev/lordmuffin/grill-stats
+  newTag: latest
+
+# Add commonLabels if desired
+commonLabels:
+  app.kubernetes.io/part-of: grill-stats
+  app.kubernetes.io/managed-by: kustomize
+
+# Add annotations for automatic reloading
+commonAnnotations:
+  reloader.stakater.com/auto: "true"
