@@ -43,8 +43,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # FIX: Reverted to the 'uses' syntax which is the correct way to run a
-      # container with arguments and solves the "No such file or directory" error.
       - name: Build and Push with Kaniko
         uses: docker://gcr.io/kaniko-project/executor:v1.9.0
         env:
@@ -52,11 +50,11 @@ jobs:
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
-          # 'args' passes commands directly to the container's entrypoint.
-          # We combine the setup and execution into one block.
           args: |
-            --context=/workspace
-            --dockerfile=/workspace/Dockerfile
+            # FIX: Corrected the context to use the 'dir://' prefix and made the
+            # dockerfile path relative to the context to solve the pathing error.
+            --context=dir:///workspace
+            --dockerfile=Dockerfile
             --destination=${GITEA_REGISTRY}/lordmuffin/grill-stats:latest
             --customPlatform=linux/amd64
             --registry-mirror=${GITEA_REGISTRY}
