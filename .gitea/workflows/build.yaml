@@ -106,5 +106,4 @@ jobs:
             --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --custom-platform=linux/amd64 \
-            --verbosity=debug \
-            --registry-certificate=/etc/ssl/certs/ca-certificates.crt
+            --verbosity=debug
