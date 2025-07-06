@@ -9,7 +9,9 @@ on:
 
 jobs:
   test:
-    runs-on: ubuntu-latest
+    runs-on: kubernetes
+    container:
+      image: python:3.11-slim
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -40,36 +42,48 @@ jobs:
           # python -c "import homeassistant_client; print('✅ Home Assistant client imports successfully')"
 
   build:
-    runs-on: ubuntu-latest
+    runs-on: kubernetes
     needs: test
-    services:
-      docker:
-        image: docker:24-dind
-        options: --privileged
+    container:
+      image: gcr.io/kaniko-project/executor:v1.9.0-debug
+      entrypoint: [""]
+      args: [""]
+      env:
+        HOME: /kaniko
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Build Docker image
+      - name: Create Kaniko configuration
         run: |
-          docker build -t grill-stats:${{ gitea.sha }} .
-          docker build -t grill-stats:latest .
+          mkdir -p /kaniko/.docker
+          echo '{"auths":{"gitea.lab.apj.dev":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
 
-      - name: Test Docker image
+      - name: Get image tags
+        id: tags
         run: |
-          # Test that the Docker image runs without immediate crash
-          timeout 10s docker run --rm grill-stats:latest || [ $? -eq 124 ]
-          echo "✅ Docker image builds and starts successfully"
+          TAG=""
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            TAG=${GITHUB_REF#refs/tags/}
+            echo "TAG=${TAG}" >> $GITHUB_ENV
+            echo "ADDITIONAL_TAG=latest" >> $GITHUB_ENV
+          elif [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            TAG=main
+            COMMIT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
+            echo "TAG=${TAG}" >> $GITHUB_ENV
+            echo "ADDITIONAL_TAG=sha-${COMMIT_SHA}" >> $GITHUB_ENV
+          else
+            TAG=${GITHUB_REF#refs/heads/}
+            COMMIT_SHA=$(echo ${GITHUB_SHA} | cut -c1-7)
+            echo "TAG=${TAG}" >> $GITHUB_ENV
+            echo "ADDITIONAL_TAG=sha-${COMMIT_SHA}" >> $GITHUB_ENV
+          fi
 
-      - name: Save Docker image
-        if: github.ref == 'refs/heads/main'
+      - name: Build and push with Kaniko
         run: |
-          docker save grill-stats:latest | gzip > grill-stats-latest.tar.gz
-
-      - name: Upload Docker image artifact
-        if: github.ref == 'refs/heads/main'
-        uses: actions/upload-artifact@v3
-        with:
-          name: docker-image
-          path: grill-stats-latest.tar.gz
-          retention-days: 7
+          /kaniko/executor \
+            --context="${PWD}" \
+            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats:${TAG}" \
+            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats:${ADDITIONAL_TAG}" \
+            --cache=true \
+            --cache-ttl=168h
