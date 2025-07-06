@@ -26,6 +26,7 @@ Or with options:
 5. Analyzes the diff to determine if multiple distinct logical changes are present
 6. If multiple distinct changes are detected, suggests breaking the commit into multiple smaller commits
 7. For each commit (or the single commit if not split), creates a commit message using emoji conventional commit format
+8. Summarizes for the user the final commit and asks for confirmation to push to all remotes
 
 ## Best Practices for Commits
 
