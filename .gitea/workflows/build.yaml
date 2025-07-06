@@ -45,15 +45,22 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # FIX: Reverted to a container: block to reliably create the Kaniko config file.
+      # This is the most robust way to handle insecure registries.
       - name: Build and Push with Kaniko
-        uses: docker://gcr.io/kaniko-project/executor:v1.9.0
-        env:
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-        with:
-          args: |
-            --context=dir:///workspace
-            --dockerfile=Dockerfile
-            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest
+        container:
+          image: gcr.io/kaniko-project/executor:v1.9.0
+        run: |
+          # 1. Create Kaniko's config directory
+          mkdir -p /kaniko/.docker
+          
+          # 2. Create the config.json file with credentials AND the insecure-registry setting.
+          # This explicitly tells Kaniko to use HTTP for your internal registry.
+          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /kaniko/.docker/config.json
+
+          # 3. Run the Kaniko executor
+          /kaniko/executor \
+            --context=/workspace \
+            --dockerfile=/workspace/Dockerfile \
+            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
-            --insecure-registry=${{ env.GITEA_REGISTRY }}
