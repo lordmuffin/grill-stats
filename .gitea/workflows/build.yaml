@@ -8,24 +8,21 @@ on:
 
 jobs:
   test:
-    # FIX 1: Added the mandatory 'runs-on' key.
-    # You may need to change 'ubuntu-latest' to match the label of your runners.
+    # The job runs on the base runner environment
     runs-on: ubuntu-latest
-    container:
-      image: python:3.11-slim
+    # FIX: Removed the job-level container to allow the checkout action to use Node.js from the host runner.
     steps:
-      - name: Install Git
-        run: |
-          apt-get update -qq && apt-get install -y -qq git
-
-      # FIX 2: Use the standard 'actions/checkout' action. It's simpler and more reliable.
+      # This step now runs in the default runner environment, which has Node.js.
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           repository: lordmuffin/grill-stats
           ref: main
 
+      # FIX: This step now specifies its own container, only for this task.
       - name: Install dependencies
+        container:
+          image: python:3.11-slim
         run: |
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then
@@ -34,7 +31,10 @@ jobs:
             echo "No requirements.txt found"
           fi
 
+      # FIX: This step also gets its own container.
       - name: Lint with flake8
+        container:
+          image: python:3.11-slim
         run: |
           pip install flake8
           # Stop the build if there are Python syntax errors or undefined names
@@ -44,19 +44,16 @@ jobs:
 
   build:
     needs: test
-    # FIX 1: Added the mandatory 'runs-on' key.
     runs-on: ubuntu-latest
     steps:
-      # FIX 2: Use the standard checkout action first.
-      # This step runs in the default runner environment and places code in the shared workspace.
+      # The checkout action runs first on the host runner
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
           repository: lordmuffin/grill-stats
           ref: main
 
-      # FIX 3: This step now correctly uses the Kaniko container.
-      # The 'run' command is replaced with 'with' and 'args' to pass commands to the container.
+      # The Kaniko step uses its specific container to build the image
       - name: Build and Push with Kaniko
         uses: docker://gcr.io/kaniko-project/executor:v1.9.0
         env:
@@ -65,10 +62,8 @@ jobs:
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
           # 'args' passes commands directly to the Kaniko container's entrypoint.
-          # This is the correct way to run commands in a container specified with 'uses'.
           args: |
             --context=dir:///workspace/
             --dockerfile=./Dockerfile
             --destination=gitea-internal/your-image-name:latest
             --custom-platform=linux/amd64
-
