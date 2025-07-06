@@ -11,6 +11,7 @@ resources:
 
 patches:
 - path: patches/ingress-patch.yaml
+- path: patches/grill-stats-ingress-patch.yaml
 
 configMapGenerator:
 - name: grill-monitoring-config

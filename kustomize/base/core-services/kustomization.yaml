@@ -4,3 +4,4 @@ kind: Kustomization
 resources:
 - device-service.yaml
 - temperature-service.yaml
+- grill-stats.yaml
