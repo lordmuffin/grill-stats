@@ -14,18 +14,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
       - name: Install Dependencies and Lint
-        container:
-          image: python:3.11-slim
         run: |
-          # 1. Create a virtual environment in the shared workspace
-          python -m venv /workspace/venv
-          
-          # 2. Activate the virtual environment for subsequent commands
-          # FIX: Corrected typo in virtual environment path from 'venc' to 'venv'.
-          . /workspace/venv/bin/activate
-          
-          # 3. Install packages into the isolated venv
+          # Install packages
           python -m pip install --upgrade pip
           if [ -f requirements.txt ]; then
             pip install -r requirements.txt
@@ -33,7 +29,7 @@ jobs:
             echo "No requirements.txt found"
           fi
           
-          # 4. Install and run flake8 from within the venv
+          # Install and run flake8
           pip install flake8
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
