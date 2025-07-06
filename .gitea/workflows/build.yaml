@@ -80,7 +80,7 @@ jobs:
       image: gcr.io/kaniko-project/executor:v1.9.0-debug
       env:
         HOME: /kaniko
-      entrypoint: ["/bin/sh", "-c"] 
+      entrypoint: ["/bin/sh", "-c", "tail -f /dev/null"]
     steps:
       - name: Checkout code in Kaniko container
         run: |
