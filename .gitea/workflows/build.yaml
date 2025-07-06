@@ -15,23 +15,32 @@ jobs:
     steps:
       - name: Checkout code manually
         run: |
-          apt-get update
-          apt-get install -y git
-          # Print debug info
-          echo "Environment variables:"
-          env | grep -i gitea || true
-          # Fallback to generic checkout
+          # Prepare system
           mkdir -p /workspace
           cd /workspace
-          if [ -n "${GITEA_REPO_CLONE_URL}" ]; then
-            git clone ${GITEA_REPO_CLONE_URL} .
-            git checkout ${GITEA_SHA:-HEAD}
+          
+          # Debug information
+          echo "Current directory: $(pwd)"
+          ls -la
+          
+          # Install git quietly to avoid stderr noise
+          apt-get update -qq > /dev/null 2>&1
+          apt-get install -y -qq git > /dev/null 2>&1
+          
+          # If directory is not empty, use existing files
+          if [ "$(ls -A)" ]; then
+            echo "Using existing files in workspace"
           else
-            # Manual fallback if variables aren't available
+            # Only clone if directory is empty
+            echo "Cloning repository..."
             git clone https://github.com/lordmuffin/grill-stats.git .
             git checkout main
           fi
+          
+          # Verify checkout
+          echo "Repository contents:"
           ls -la
+          echo "Checkout complete"
 
       # Python setup is not needed since we're using a Python container
       # This step is removed to avoid potential conflicts
@@ -39,12 +48,16 @@ jobs:
       - name: Install dependencies
         run: |
           cd /workspace
+          echo "Current directory: $(pwd)"
+          ls -la
           python -m pip install --upgrade pip
+          echo "Checking for requirements.txt"
           if [ -f requirements.txt ]; then
+            echo "Installing from requirements.txt"
             pip install -r requirements.txt
           else
             echo "No requirements.txt found"
-            ls -la
+            find . -name "requirements.txt"
           fi
 
       - name: Lint with flake8
@@ -72,31 +85,40 @@ jobs:
       env:
         HOME: /kaniko
     steps:
-      - name: Debug environment
-        run: |
-          echo "Current directory: $(pwd)"
-          ls -la
-          echo "Environment variables:"
-          env | sort
-
-      - name: Checkout code manually
+      - name: Checkout code in Kaniko container
         run: |
           # Debug info
-          echo "Fetching repository code..."
-          # Kaniko debug image has busybox - use its tools
+          echo "Current directory: $(pwd)"
           mkdir -p /workspace
           cd /workspace
-          # Fallback to direct GitHub URL if Gitea variables aren't available
-          /kaniko/executor version || true
-          # Try to use git from debug image
-          git version || apk add --no-cache git
-          git clone https://github.com/lordmuffin/grill-stats.git .
+          echo "Workspace contents:"
           ls -la
+          
+          # Install git using apk (Alpine package manager)
+          echo "Installing git..."
+          apk add --no-cache --quiet git
+          
+          # If directory is not empty, use existing files
+          if [ "$(ls -A)" ]; then
+            echo "Using existing files in workspace"
+          else
+            # Only clone if directory is empty
+            echo "Cloning repository..."
+            git clone https://github.com/lordmuffin/grill-stats.git .
+            git checkout main
+          fi
+          
+          # Verify checkout
+          echo "Repository contents:"
+          ls -la
+          echo "Checkout complete"
 
       - name: Create Kaniko configuration
         run: |
+          cd /workspace
           mkdir -p /kaniko/.docker
           echo '{"auths":{"gitea.lab.apj.dev":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
+          echo "Kaniko configuration created"
 
       # Simplified tagging for testing
       - name: Set simple image tag
