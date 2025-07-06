@@ -277,8 +277,23 @@ def get_monitoring_data():
         except Exception as e:
             logger.error(f"Error accessing RFX Gateway service: {e}")
         
+        # Initialize Redis client if not already defined
+        try:
+            import redis
+            redis_client = redis.Redis(
+                host=os.environ.get("REDIS_HOST", "localhost"),
+                port=int(os.environ.get("REDIS_PORT", 6379)),
+                password=os.environ.get("REDIS_PASSWORD", None),
+                decode_responses=True
+            )
+            # Test connection
+            redis_client.ping()
+        except (ImportError, redis.RedisError) as e:
+            logger.warning(f"Redis not available for temperature cache: {e}")
+            redis_client = None
+        
         # If no probes were found but Redis is available, check for cached readings
-        if not all_probes and 'redis_client' in globals() and redis_client:
+        if not all_probes and redis_client:
             try:
                 # Get all temperature keys
                 temp_keys = redis_client.keys("temperature:latest:*")
