@@ -52,37 +52,32 @@ jobs:
           curl -v -u "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" \
                http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth test completed"
 
-      - name: Build and Push with Kaniko
+      - name: Build and Push with Kaniko to Local, then Crane
         run: |
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
           echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
           
-          # Create minimal auth config
-          mkdir -p /tmp/docker-config
-          AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
-          cat > /tmp/docker-config/config.json << EOF
-          {
-            "auths": {
-              "${{ env.GITEA_REGISTRY }}": {
-                "auth": "${AUTH_STRING}"
-              }
-            }
-          }
-          EOF
-          
-          # Build with Kaniko using tar context to avoid git issues
-          echo "Building container image..."
-          export DOCKER_CONFIG=/tmp/docker-config
+          # Build with Kaniko to local tar file (no registry push)
+          echo "Building container image to local tar..."
           
           # Create tar context
           tar -czf /tmp/context.tar.gz --exclude='.git' --exclude='.gitea' .
           
-          # Run Kaniko with tar context
+          # Run Kaniko to build and export to tar (no push)
           /tmp/executor \
             --context=tar:///tmp/context.tar.gz \
-            --destination=${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
+            --tarPath=/tmp/image.tar \
+            --no-push \
             --custom-platform=linux/amd64 \
-            --insecure \
-            --skip-tls-verify \
             --single-snapshot
+          
+          # Use crane to push the tar to registry with better auth handling
+          echo "Pushing with crane..."
+          /tmp/crane auth login ${{ env.GITEA_REGISTRY }} \
+            --username "${{ secrets.REGISTRY_USERNAME }}" \
+            --password "${{ secrets.REGISTRY_PASSWORD }}" \
+            --insecure
+          
+          /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
+            --insecure
