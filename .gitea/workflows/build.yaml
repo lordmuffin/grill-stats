@@ -38,9 +38,13 @@ jobs:
 
       - name: Setup Kaniko
         run: |
-          # Download Kaniko executor
-          curl -L https://github.com/GoogleContainerTools/kaniko/releases/latest/download/executor-linux-amd64 -o /tmp/kaniko-executor
+          # Download Kaniko executor from specific version
+          KANIKO_VERSION="v1.23.2"
+          curl -L https://github.com/GoogleContainerTools/kaniko/releases/download/${KANIKO_VERSION}/executor-linux-amd64 -o /tmp/kaniko-executor
           chmod +x /tmp/kaniko-executor
+          
+          # Verify the download
+          file /tmp/kaniko-executor
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
