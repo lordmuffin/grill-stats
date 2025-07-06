@@ -11,7 +11,7 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     env:
-      GITEA_REGISTRY: gitea-internal.gitea.svc.cluster.local
+      GITEA_REGISTRY: git.lab.apj.dev
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -57,7 +57,7 @@ jobs:
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
-          # Create auth config with base64 encoded credentials
+          # Create auth config with base64 encoded credentials for external domain
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
           cat > /tmp/docker-config/config.json << EOF
           {
@@ -67,10 +67,8 @@ jobs:
               }
             },
             "HttpHeaders": {
-              "User-Agent": "kaniko/executor"
-            },
-            "credHelpers": {},
-            "experimental": "enabled"
+              "User-Agent": "Docker/20.10.0"
+            }
           }
           EOF
 
@@ -80,6 +78,4 @@ jobs:
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
-            --custom-platform=linux/amd64 \
-            --insecure \
-            --skip-tls-verify
+            --custom-platform=linux/amd64
