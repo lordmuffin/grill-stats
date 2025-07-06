@@ -55,27 +55,56 @@ jobs:
           # Verify the download
           file /tmp/executor
           
-          # Create Docker config directory
+          # Create Docker config directory and test auth
           mkdir -p /tmp/docker-config
-          # Create auth config with base64 encoded credentials for external domain
+          
+          # Debug: Check if registry is accessible
+          echo "Testing registry connectivity..."
+          curl -v https://${{ env.GITEA_REGISTRY }}/v2/ || echo "Registry API not accessible at /v2/"
+          
+          # Create auth config with proper format for Gitea
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
           cat > /tmp/docker-config/config.json << EOF
           {
             "auths": {
               "${{ env.GITEA_REGISTRY }}": {
+                "username": "${{ secrets.REGISTRY_USERNAME }}",
+                "password": "${{ secrets.REGISTRY_PASSWORD }}",
                 "auth": "${AUTH_STRING}"
               }
             },
             "HttpHeaders": {
-              "User-Agent": "Docker/20.10.0"
+              "User-Agent": "kaniko/executor"
+            },
+            "credHelpers": {},
+            "proxies": {
+              "default": {
+                "httpProxy": "",
+                "httpsProxy": "",
+                "noProxy": ""
+              }
             }
           }
           EOF
+          
+          # Debug: Show config (redacted)
+          echo "Docker config created:"
+          cat /tmp/docker-config/config.json | jq 'del(.auths[].password, .auths[].auth)'
 
       - name: Build and Push with Kaniko
         run: |
-          DOCKER_CONFIG=/tmp/docker-config /tmp/executor \
+          # Debug: Check environment
+          echo "Registry: ${{ env.GITEA_REGISTRY }}"
+          echo "Destination: ${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest"
+          
+          # Set Kaniko options for debugging
+          export DOCKER_CONFIG=/tmp/docker-config
+          
+          # Run Kaniko with verbose output
+          /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
-            --custom-platform=linux/amd64
+            --custom-platform=linux/amd64 \
+            --verbosity=debug \
+            --registry-certificate=/etc/ssl/certs/ca-certificates.crt
