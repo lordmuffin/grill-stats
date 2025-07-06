@@ -78,10 +78,22 @@ jobs:
           # Create Docker config for crane
           mkdir -p ~/.docker
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
+          
+          # Test internal DNS resolution
+          echo "Testing DNS resolution..."
+          nslookup gitea-http.gitea.svc.cluster.local || echo "DNS lookup failed"
+          
+          # Create Docker config for both hostname and IP
+          GITEA_IP=$(nslookup gitea-http.gitea.svc.cluster.local | grep -A1 "Name:" | tail -1 | awk '{print $2}' || echo "10.0.3.163")
+          echo "Gitea IP: $GITEA_IP"
+          
           cat > ~/.docker/config.json << EOF
           {
             "auths": {
               "${{ env.GITEA_REGISTRY }}": {
+                "auth": "${AUTH_STRING}"
+              },
+              "${GITEA_IP}:3000": {
                 "auth": "${AUTH_STRING}"
               }
             }
@@ -100,9 +112,25 @@ jobs:
           echo "Docker config contents:"
           cat ~/.docker/config.json
           
-          if ! /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
+          # Try crane with different approaches
+          echo "Attempt 1: Push to hostname-based registry"
+          if /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
             --platform=linux/amd64 \
             --debug; then
+            echo "✅ Crane push succeeded!"
+            exit 0
+          fi
+          
+          echo "Attempt 2: Push to IP-based registry"
+          if /tmp/crane push /tmp/image.tar ${GITEA_IP}:3000/gitea-admin/grill-stats:test \
+            --platform=linux/amd64 \
+            --debug; then
+            echo "✅ Crane push to IP succeeded!"
+            exit 0
+          fi
+          
+          echo "Both crane attempts failed, trying Docker..."
+          if false; then
             echo "Crane push failed, trying Docker load and push..."
             
             # Alternative: Use Docker to load and push the image
