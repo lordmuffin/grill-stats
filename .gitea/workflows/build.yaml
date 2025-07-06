@@ -74,37 +74,37 @@ jobs:
           # python -c "import thermoworks_client; print('✅ ThermoWorks client imports successfully')"
           # python -c "import homeassistant_client; print('✅ Home Assistant client imports successfully')"
 
-build:
-    needs: test
-    # REMOVE the job-level 'container:' block entirely.
-    # The runner will use a default pod environment.
-    steps:
-      - name: Checkout Code
-        # Use a standard image that includes git for this step
-        uses: docker://alpine/git:latest
-        run: |
-          # The runner provides a shared /workspace for all steps
-          git clone https://github.com/lordmuffin/grill-stats.git .
-          git checkout main
-          echo "--- Workspace Contents After Checkout ---"
-          ls -la
+  build:
+      needs: test
+      # REMOVE the job-level 'container:' block entirely.
+      # The runner will use a default pod environment.
+      steps:
+        - name: Checkout Code
+          # Use a standard image that includes git for this step
+          uses: docker://alpine/git:latest
+          run: |
+            # The runner provides a shared /workspace for all steps
+            git clone https://github.com/lordmuffin/grill-stats.git .
+            git checkout main
+            echo "--- Workspace Contents After Checkout ---"
+            ls -la
 
-      - name: Build and Push with Kaniko
-        # NOW use the Kaniko image, only for this step
-        uses: docker://gcr.io/kaniko-project/executor:v1.9.0
-        env:
-          # Pass secrets to the step as environment variables
-          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
-          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
-        run: |
-          # 1. Create Kaniko's credential file from the secrets
-          mkdir -p /kaniko/.docker
-          echo '{"auths":{"gitea-internal":{"username":"'${REGISTRY_USERNAME}'","password":"'${REGISTRY_PASSWORD}'"}}}' > /kaniko/.docker/config.json
+        - name: Build and Push with Kaniko
+          # NOW use the Kaniko image, only for this step
+          uses: docker://gcr.io/kaniko-project/executor:v1.9.0
+          env:
+            # Pass secrets to the step as environment variables
+            REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+            REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
+          run: |
+            # 1. Create Kaniko's credential file from the secrets
+            mkdir -p /kaniko/.docker
+            echo '{"auths":{"gitea-internal":{"username":"'${REGISTRY_USERNAME}'","password":"'${REGISTRY_PASSWORD}'"}}}' > /kaniko/.docker/config.json
 
-          # 2. Run the Kaniko executor
-          # It builds from the /workspace populated by the checkout step
-          # and pushes to the destination.
-          /kaniko/executor \
-            --context=/workspace \
-            --dockerfile=/workspace/Dockerfile \
-            --destination=gitea-internal/your-image-name:latest
+            # 2. Run the Kaniko executor
+            # It builds from the /workspace populated by the checkout step
+            # and pushes to the destination.
+            /kaniko/executor \
+              --context=/workspace \
+              --dockerfile=/workspace/Dockerfile \
+              --destination=gitea-internal/your-image-name:latest
