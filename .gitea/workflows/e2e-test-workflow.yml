@@ -13,8 +13,6 @@ jobs:
     container:
       image: python:3.11-slim
       entrypoint: /bin/bash
-      args: -c "sleep 3 && exec ""$@"""
-
     services:
       postgres:
         image: postgres:14-alpine
