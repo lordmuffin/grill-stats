@@ -8,17 +8,13 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu-latest
+    runs-on: kubernetes
+    container:
+      image: python:3.11-slim
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -35,18 +31,14 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   test:
-    runs-on: ubuntu-latest
+    runs-on: kubernetes
     needs: lint
+    container:
+      image: python:3.11-slim
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
@@ -61,21 +53,17 @@ jobs:
           # python -m pytest tests/integration/ -v
 
   microservice-tests:
-    runs-on: ubuntu-latest
+    runs-on: kubernetes
     needs: lint
     strategy:
       matrix:
         service: [device-service, temperature-service, historical-data-service, data-pipeline]
+    container:
+      image: python:3.11-slim
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Set up Python
-        uses: actions/setup-python@v4
-        with:
-          python-version: '3.11'
-          cache: 'pip'
 
       - name: Install dependencies
         run: |
