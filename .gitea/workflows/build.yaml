@@ -67,18 +67,12 @@ jobs:
           echo "Testing base path:"
           curl -v http://${{ env.GITEA_REGISTRY }}/ || echo "Base path not accessible"
           
-          # Create auth config with proper format for Gitea registry
-          # The registry uses Bearer token auth with external realm
+          # Create auth config - use only internal registry to bypass Traefik auth
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
           cat > /tmp/docker-config/config.json << EOF
           {
             "auths": {
               "${{ env.GITEA_REGISTRY }}": {
-                "username": "${{ secrets.REGISTRY_USERNAME }}",
-                "password": "${{ secrets.REGISTRY_PASSWORD }}",
-                "auth": "${AUTH_STRING}"
-              },
-              "git.lab.apj.dev": {
                 "username": "${{ secrets.REGISTRY_USERNAME }}",
                 "password": "${{ secrets.REGISTRY_PASSWORD }}",
                 "auth": "${AUTH_STRING}"
@@ -103,7 +97,7 @@ jobs:
           # Set Kaniko options for debugging
           export DOCKER_CONFIG=/tmp/docker-config
           
-          # Run Kaniko with verbose output and insecure flag for internal registry
+          # Run Kaniko with registry map to override token realm
           /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
@@ -111,4 +105,5 @@ jobs:
             --custom-platform=linux/amd64 \
             --verbosity=debug \
             --insecure \
-            --skip-tls-verify
+            --skip-tls-verify \
+            --registry-map=git.lab.apj.dev=${{ env.GITEA_REGISTRY }}
