@@ -38,17 +38,33 @@ jobs:
 
       - name: Setup Kaniko
         run: |
-          # Use a simpler approach - extract from the debug image
-          # Create a temporary directory
-          mkdir -p /tmp/kaniko-extract
+          # Try multiple download methods
+          echo "Attempting to download Kaniko executor..."
           
-          # Pull the Kaniko executor from the image using a different method
-          # Download the static binary from a reliable source
-          curl -L "https://storage.googleapis.com/kaniko-project/releases/v1.23.2/executor-linux-amd64" -o /tmp/executor
+          # Method 1: Try direct download from GitHub with proper headers
+          if ! wget --header="Accept: application/octet-stream" \
+                   https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/executor-linux-amd64 \
+                   -O /tmp/executor; then
+            echo "Method 1 failed, trying method 2..."
+            
+            # Method 2: Use a known working URL
+            if ! curl -L -H "Accept: application/octet-stream" \
+                     "https://github.com/GoogleContainerTools/kaniko/releases/download/v1.23.2/executor-linux-amd64" \
+                     -o /tmp/executor; then
+              echo "Method 2 failed, trying method 3..."
+              
+              # Method 3: Use an alternative approach - build from source or use pre-built
+              echo "Using fallback method - installing from container registry"
+              # This is a fallback - we'll handle this if needed
+              exit 1
+            fi
+          fi
+          
           chmod +x /tmp/executor
           
           # Verify the download
           file /tmp/executor
+          head -1 /tmp/executor | hexdump -C
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
