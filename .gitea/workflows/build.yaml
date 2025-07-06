@@ -65,8 +65,8 @@ jobs:
     needs: test
     container:
       image: gcr.io/kaniko-project/executor:v1.9.0-debug
-      entrypoint: [""]
-      args: [""]
+      entrypoint: ""
+      args: ""
       env:
         HOME: /kaniko
     steps:
