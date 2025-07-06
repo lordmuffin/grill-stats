@@ -56,6 +56,11 @@ class EnhancedContainerAgent(ContainerAgent):
                 }
         except Exception as e:
             # ... error handling ...
+            return {
+                'success': False,
+                'error': str(e),
+                'status_code': None
+            }
 
 # Usage suggestions for each fix priority:
 

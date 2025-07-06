@@ -31,6 +31,9 @@ class GrillMonitorDataCoordinator(DataUpdateCoordinator):
 
     def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
         """Initialize global Grill Monitor data updater."""
+        import logging
+        _LOGGER = logging.getLogger(__name__)
+        
         super().__init__(
             hass,
             _LOGGER,

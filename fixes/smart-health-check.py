@@ -1,6 +1,39 @@
 # Enhanced Health Check Logic for Microservices
 # This handles expected database connection errors gracefully
 
+import datetime
+from flask import jsonify
+
+# Example managers and clients that would be properly imported in production
+class DeviceManager:
+    def health_check(self):
+        # Mock implementation
+        return True
+
+class TemperatureManager:
+    def health_check(self):
+        # Mock implementation
+        return True
+
+class RedisClient:
+    def ping(self):
+        # Mock implementation
+        return True
+
+# Initialize mock objects for testing
+device_manager = DeviceManager()
+temperature_manager = TemperatureManager()
+redis_client = RedisClient()
+
+# Flask app stub
+class App:
+    def route(self, rule):
+        def decorator(f):
+            return f
+        return decorator
+
+app = App()
+
 def enhanced_health_check(service_type="device"):
     """
     Enhanced health check that distinguishes between:
