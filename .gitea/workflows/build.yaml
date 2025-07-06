@@ -74,72 +74,37 @@ jobs:
           # python -c "import thermoworks_client; print('✅ ThermoWorks client imports successfully')"
           # python -c "import homeassistant_client; print('✅ Home Assistant client imports successfully')"
 
-  build:
+build:
     needs: test
-    container:
-      image: gcr.io/kaniko-project/executor:v1.9.0-debug
-      env:
-        HOME: /kaniko
-      entrypoint: ["/bin/sh", "-c", "tail -f /dev/null"]
+    # REMOVE the job-level 'container:' block entirely.
+    # The runner will use a default pod environment.
     steps:
-      - name: Checkout code in Kaniko container
+      - name: Checkout Code
+        # Use a standard image that includes git for this step
+        uses: docker://alpine/git:latest
         run: |
-          # Debug info
-          echo "Current directory: $(pwd)"
-          mkdir -p /workspace
-          cd /workspace
-          echo "Workspace contents:"
+          # The runner provides a shared /workspace for all steps
+          git clone https://github.com/lordmuffin/grill-stats.git .
+          git checkout main
+          echo "--- Workspace Contents After Checkout ---"
           ls -la
-          
-          # Install git using apk (Alpine package manager)
-          echo "Installing git..."
-          apk add --no-cache --quiet git
-          
-          # If directory is not empty, use existing files
-          if [ "$(ls -A)" ]; then
-            echo "Using existing files in workspace"
-          else
-            # Only clone if directory is empty
-            echo "Cloning repository..."
-            git clone https://github.com/lordmuffin/grill-stats.git .
-            git checkout main
-          fi
-          
-          # Verify checkout
-          echo "Repository contents:"
-          ls -la
-          echo "Checkout complete"
 
-      - name: Create Kaniko configuration
+      - name: Build and Push with Kaniko
+        # NOW use the Kaniko image, only for this step
+        uses: docker://gcr.io/kaniko-project/executor:v1.9.0
+        env:
+          # Pass secrets to the step as environment variables
+          REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
+          REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         run: |
-          cd /workspace
+          # 1. Create Kaniko's credential file from the secrets
           mkdir -p /kaniko/.docker
-          echo '{"auths":{"gitea-internal":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
-          echo "Kaniko configuration created"
+          echo '{"auths":{"gitea-internal":{"username":"'${REGISTRY_USERNAME}'","password":"'${REGISTRY_PASSWORD}'"}}}' > /kaniko/.docker/config.json
 
-      # Simplified tagging for testing
-      - name: Set simple image tag
-        run: |
-          # Just use 'latest' tag for now to simplify debugging
-          export TAG="latest"
-          echo "Using tag: ${TAG}"
-
-      # Single build step to minimize complexity during debugging
-      - name: Build with Kaniko
-        run: |
-          cd /workspace
-          # Build without pushing first to debug any issues
-          echo "Building image without pushing..."
-          echo "Contents of current directory:"
-          ls -la
-          if [ -f Dockerfile ]; then
-            echo "Dockerfile found, proceeding with build"
-            /kaniko/executor \
-              --context="/workspace" \
-              --insecure \
-              --no-push \
-              --cleanup
-          else
-            echo "No Dockerfile found, cannot build image"
-            exit 1
-          fi
+          # 2. Run the Kaniko executor
+          # It builds from the /workspace populated by the checkout step
+          # and pushes to the destination.
+          /kaniko/executor \
+            --context=/workspace \
+            --dockerfile=/workspace/Dockerfile \
+            --destination=gitea-internal/your-image-name:latest
