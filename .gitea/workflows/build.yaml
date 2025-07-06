@@ -21,7 +21,7 @@ jobs:
           python -m venv /workspace/venv
           
           # 2. Activate the virtual environment for subsequent commands
-          . /workspace/venv/bin/activate
+          . /workspace/venc/bin/activate
           
           # 3. Install packages into the isolated venv
           python -m pip install --upgrade pip
@@ -51,17 +51,14 @@ jobs:
           echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /workspace/kaniko-config/config.json
           echo "Kaniko config created successfully."
 
-      # FIX: Reverted to a container: block and using the ':debug' tag, which is more stable for CI.
-      # This avoids issues with bad SHA digests and runner caching.
+      # FIX: Reverted to the 'uses:' syntax, which is the most robust way to
+      # invoke a container action and avoids PATH issues on the runner.
       - name: Build and Push with Kaniko
-        container:
-          # Using the debug image is more robust in CI environments
-          image: gcr.io/kaniko-project/executor:debug
-        run: |
-          # Calling the executor by its full path avoids PATH issues.
-          /kaniko/executor \
-            --docker-config-dir=/workspace/kaniko-config \
-            --context=/workspace \
-            --dockerfile=/workspace/Dockerfile \
-            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
+        uses: docker://gcr.io/kaniko-project/executor:debug
+        with:
+          args: |
+            --docker-config-dir=/workspace/kaniko-config
+            --context=/workspace
+            --dockerfile=/workspace/Dockerfile
+            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest
             --customPlatform=linux/amd64
