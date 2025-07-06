@@ -10,6 +10,8 @@ jobs:
   lint:
     container:
       image: python:3.11-slim
+      entrypoint: /bin/bash
+      args: -c "sleep 3 && exec ""$@"""
 
     steps:
       - name: Checkout repository
@@ -33,6 +35,8 @@ jobs:
     needs: lint
     container:
       image: python:3.11-slim
+      entrypoint: /bin/bash
+      args: -c "sleep 3 && exec ""$@"""
 
     steps:
       - name: Checkout repository
@@ -57,6 +61,8 @@ jobs:
         service: [device-service, temperature-service, historical-data-service, data-pipeline]
     container:
       image: python:3.11-slim
+      entrypoint: /bin/bash
+      args: -c "sleep 3 && exec ""$@"""
 
     steps:
       - name: Checkout repository

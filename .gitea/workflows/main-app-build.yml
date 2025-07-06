@@ -23,8 +23,8 @@ jobs:
     
     container:
       image: gcr.io/kaniko-project/executor:v1.9.0-debug
-      entrypoint: ""
-      args: ""
+      entrypoint: /busybox/sh
+      args: -c "sleep 3 && exec ""\$@"""
       env:
         HOME: /kaniko
 
