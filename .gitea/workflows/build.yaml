@@ -57,7 +57,22 @@ jobs:
           
           # Create Docker config directory
           mkdir -p /tmp/docker-config
-          echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /tmp/docker-config/config.json
+          # Create auth config with base64 encoded credentials
+          AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
+          cat > /tmp/docker-config/config.json << EOF
+{
+  "auths": {
+    "${{ env.GITEA_REGISTRY }}": {
+      "auth": "${AUTH_STRING}"
+    }
+  },
+  "HttpHeaders": {
+    "User-Agent": "kaniko/executor"
+  },
+  "credHelpers": {},
+  "experimental": "enabled"
+}
+EOF
 
       - name: Build and Push with Kaniko
         run: |
@@ -65,4 +80,6 @@ jobs:
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
-            --customPlatform=linux/amd64
+            --custom-platform=linux/amd64 \
+            --insecure \
+            --skip-tls-verify
