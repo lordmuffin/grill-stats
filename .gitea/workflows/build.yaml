@@ -10,8 +10,6 @@ jobs:
   test:
     container:
       image: python:3.11-slim
-      entrypoint: /bin/bash
-      args: -c "sleep 3 && exec ""$@"""
     steps:
       - name: Checkout code manually
         run: |
@@ -80,8 +78,6 @@ jobs:
     needs: test
     container:
       image: gcr.io/kaniko-project/executor:v1.9.0-debug
-      entrypoint: /busybox/sh
-      args: -c "sleep 3 && exec ""$@"""
       env:
         HOME: /kaniko
     steps:
