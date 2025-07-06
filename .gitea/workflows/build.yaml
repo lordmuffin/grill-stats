@@ -39,20 +39,23 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    # FIX: Define the registry URL at the job level to make it available in expressions.
+    env:
+      GITEA_REGISTRY: gitea-http.gitea.svc.cluster.local:3000
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
       - name: Build and Push with Kaniko
         uses: docker://gcr.io/kaniko-project/executor:v1.9.0
+        # The step-level env is now only for secrets passed to Kaniko.
         env:
-          GITEA_REGISTRY: gitea-http.gitea.svc.cluster.local:3000
           REGISTRY_USERNAME: ${{ secrets.REGISTRY_USERNAME }}
           REGISTRY_PASSWORD: ${{ secrets.REGISTRY_PASSWORD }}
         with:
           args: |
             --context=dir:///workspace
             --dockerfile=Dockerfile
-            --destination=${GITEA_REGISTRY}/lordmuffin/grill-stats:latest
+            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest
             --customPlatform=linux/amd64
-            --registry-mirror=${GITEA_REGISTRY}
+            --registry-mirror=${{ env.GITEA_REGISTRY }}
