@@ -94,19 +94,33 @@ jobs:
           
           # Try pushing with crane first
           echo "Attempting push with crane..."
+          echo "Target registry: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test"
+          echo "Testing crane auth..."
+          /tmp/crane auth list || echo "No existing crane auth"
+          echo "Docker config contents:"
+          cat ~/.docker/config.json
+          
           if ! /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
-            --platform=linux/amd64; then
-            echo "Crane push failed, trying alternative method..."
+            --platform=linux/amd64 \
+            --debug; then
+            echo "Crane push failed, trying Docker load and push..."
             
-            # Alternative: Load the tar and try uploading manually using curl
-            echo "Extracting image info from tar..."
-            tar -tf /tmp/image.tar | head -10
+            # Alternative: Use Docker to load and push the image
+            echo "Loading image with Docker..."
+            docker load -i /tmp/image.tar
             
-            # For now, let's at least verify the build worked
-            echo "✅ Container build completed successfully!"
-            echo "❌ Registry push failed due to authentication/API compatibility issues"
-            echo "The built image tar is available at: /tmp/image.tar"
+            echo "Tagging image..."
+            docker tag $(docker images --format "{{.Repository}}:{{.Tag}}" | head -1) ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test
             
-            # Fail the step but show it was a push issue, not a build issue
-            exit 1
+            echo "Logging into registry with Docker..."
+            echo "${{ secrets.REGISTRY_PASSWORD }}" | docker login ${{ env.GITEA_REGISTRY }} -u "${{ secrets.REGISTRY_USERNAME }}" --password-stdin
+            
+            echo "Pushing with Docker..."
+            if docker push ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test; then
+              echo "✅ Docker push succeeded!"
+              exit 0
+            else
+              echo "❌ Docker push also failed"
+              exit 1
+            fi
           fi
