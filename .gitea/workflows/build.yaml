@@ -77,14 +77,18 @@ jobs:
           
           # Create Docker config for crane
           mkdir -p ~/.docker
+          echo "Registry credentials check:"
+          echo "Username: '${{ secrets.REGISTRY_USERNAME }}'"
+          echo "Password length: $(echo -n '${{ secrets.REGISTRY_PASSWORD }}' | wc -c)"
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
+          echo "Auth string: $AUTH_STRING"
           
           # Test internal DNS resolution
           echo "Testing DNS resolution..."
-          nslookup gitea-http.gitea.svc.cluster.local || echo "DNS lookup failed"
+          getent hosts gitea-http.gitea.svc.cluster.local || echo "DNS lookup failed"
           
           # Create Docker config for both hostname and IP
-          GITEA_IP=$(nslookup gitea-http.gitea.svc.cluster.local | grep -A1 "Name:" | tail -1 | awk '{print $2}' || echo "10.0.3.163")
+          GITEA_IP=$(getent hosts gitea-http.gitea.svc.cluster.local | awk '{print $1}' || echo "10.0.3.163")
           echo "Gitea IP: $GITEA_IP"
           
           cat > ~/.docker/config.json << EOF
@@ -107,8 +111,8 @@ jobs:
           # Try pushing with crane first
           echo "Attempting push with crane..."
           echo "Target registry: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test"
-          echo "Testing crane auth..."
-          /tmp/crane auth list || echo "No existing crane auth"
+          echo "Testing crane version..."
+          /tmp/crane version || echo "Crane version check failed"
           echo "Docker config contents:"
           cat ~/.docker/config.json
           
@@ -139,7 +143,17 @@ jobs:
           
           echo "All crane attempts failed, trying Docker..."
           
+          # Set Docker environment for Docker-in-Docker
+          export DOCKER_HOST=tcp://localhost:2376
+          export DOCKER_TLS_VERIFY=1
+          export DOCKER_CERT_PATH=/certs/client
+          
           # Alternative: Use Docker to load and push the image
+          echo "Docker environment:"
+          echo "DOCKER_HOST: $DOCKER_HOST"
+          echo "DOCKER_TLS_VERIFY: $DOCKER_TLS_VERIFY"
+          echo "DOCKER_CERT_PATH: $DOCKER_CERT_PATH"
+          
           echo "Loading image with Docker..."
           docker load -i /tmp/image.tar
           
