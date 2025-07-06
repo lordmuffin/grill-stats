@@ -57,10 +57,9 @@ jobs:
           mkdir -p /kaniko/.docker
           echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /kaniko/.docker/config.json
 
-          # 2. Run the executor. It will automatically find the config file,
-          # so the problematic flag is no longer needed.
+          # 2. Run the executor using the full path within the container
           /kaniko/executor \
-            --context=/workspace \
-            --dockerfile=/workspace/Dockerfile \
+            --context=. \
+            --dockerfile=Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
