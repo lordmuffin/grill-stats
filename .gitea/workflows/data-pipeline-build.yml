@@ -24,7 +24,7 @@ jobs:
       - name: Create Kaniko configuration
         run: |
           mkdir -p /kaniko/.docker
-          echo '{"auths":{"gitea.lab.apj.dev":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
+          echo '{"auths":{"gitea-internal":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
 
       - name: Get image tags
         id: tags
@@ -50,7 +50,7 @@ jobs:
         run: |
           /kaniko/executor \
             --context="${PWD}/services/data-pipeline" \
-            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats-data-pipeline:${TAG}" \
-            --destination="gitea.lab.apj.dev/lordmuffin/grill-stats-data-pipeline:${ADDITIONAL_TAG}" \
+            --destination="gitea-internal/lordmuffin/grill-stats-data-pipeline:${TAG}" \
+            --destination="gitea-internal/lordmuffin/grill-stats-data-pipeline:${ADDITIONAL_TAG}" \
             --cache=true \
             --cache-ttl=168h

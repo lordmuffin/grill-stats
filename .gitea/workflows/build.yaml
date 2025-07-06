@@ -114,7 +114,7 @@ jobs:
         run: |
           cd /workspace
           mkdir -p /kaniko/.docker
-          echo '{"auths":{"gitea.lab.apj.dev":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
+          echo '{"auths":{"gitea-internal":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}}}' > /kaniko/.docker/config.json
           echo "Kaniko configuration created"
 
       # Simplified tagging for testing

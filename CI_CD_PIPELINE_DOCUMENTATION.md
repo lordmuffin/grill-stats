@@ -73,10 +73,10 @@ To speed up builds, we implement a caching strategy using Kaniko's caching featu
 
 ### Registry Configuration
 
-The pipelines are configured to use the Gitea registry at `gitea.lab.apj.dev`. Images are pushed to repositories named:
+The pipelines are configured to use the Gitea registry at `gitea-internal`. Images are pushed to repositories named:
 
-- `gitea.lab.apj.dev/lordmuffin/grill-stats` (main app)
-- `gitea.lab.apj.dev/lordmuffin/grill-stats-{service-name}` (microservices)
+- `gitea-internal/lordmuffin/grill-stats` (main app)
+- `gitea-internal/lordmuffin/grill-stats-{service-name}` (microservices)
 
 ### Required Secrets
 

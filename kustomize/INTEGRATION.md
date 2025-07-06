@@ -30,7 +30,7 @@ Create a Kubernetes secret for pulling from your Gitea registry:
 ```bash
 kubectl create secret docker-registry gitea-registry \
   --namespace grill-monitoring \
-  --docker-server=gitea.lab.apj.dev \
+  --docker-server=gitea-internal \
   --docker-username=your-gitea-username \
   --docker-password=your-gitea-password
 ```
@@ -74,7 +74,7 @@ Repeat this process for each environment as needed.
    spec:
      project: default  # Use your ArgoCD project name
      source:
-       repoURL: https://gitea.lab.apj.dev/lordmuffin/homelab.git
+       repoURL: https://gitea-internal/lordmuffin/homelab.git
        targetRevision: HEAD
        path: apps/services/grill-stats
      destination:
