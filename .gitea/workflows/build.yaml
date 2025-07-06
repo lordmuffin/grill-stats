@@ -36,95 +36,46 @@ jobs:
           flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics || true
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
-      - name: Setup Kaniko
+      - name: Setup Buildah
         run: |
-          # Download a working version from a reliable source
-          echo "Downloading Kaniko executor from container registry..."
+          # Install buildah as alternative to Kaniko
+          echo "Installing Buildah..."
           
-          # Use crane or direct extraction from container
-          # First try to install crane
-          curl -L https://github.com/google/go-containerregistry/releases/latest/download/go-containerregistry_Linux_x86_64.tar.gz | tar -xzf - -C /tmp/ crane
+          # Update package manager and install buildah
+          sudo apt-get update
+          sudo apt-get install -y buildah
           
-          # Extract executor from the official Kaniko image
-          /tmp/crane export gcr.io/kaniko-project/executor:v1.23.2 - | tar -xf - -C /tmp/ kaniko/executor
+          # Verify installation
+          buildah version
           
-          # Move to expected location
-          cp /tmp/kaniko/executor /tmp/executor
-          chmod +x /tmp/executor
-          
-          # Verify the download
-          file /tmp/executor
-          
-          # Create Docker config directory and test auth
-          mkdir -p /tmp/docker-config
-          
-          # Debug: Check if registry is accessible
+          # Test registry connectivity
           echo "Testing registry connectivity..."
-          echo "Testing HTTP endpoint:"
-          curl -v http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Registry API not accessible at HTTP /v2/"
-          echo "Testing HTTPS endpoint:"
-          curl -v https://${{ env.GITEA_REGISTRY }}/v2/ || echo "Registry API not accessible at HTTPS /v2/"
-          echo "Testing base path:"
-          curl -v http://${{ env.GITEA_REGISTRY }}/ || echo "Base path not accessible"
-          
-          # Create auth config with alternative authentication methods
-          AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
-          
-          # Try authenticating with curl first to debug
-          echo "Testing authentication:"
           curl -v -u "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" \
-               http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth failed"
-          
-          # Create auth config that forces basic auth
-          cat > /tmp/docker-config/config.json << EOF
-          {
-            "auths": {
-              "${{ env.GITEA_REGISTRY }}": {
-                "auth": "${AUTH_STRING}"
-              }
-            },
-            "HttpHeaders": {
-              "User-Agent": "kaniko/executor"
-            },
-            "experimental": "enabled"
-          }
-          EOF
-          
-          # Also create legacy Docker auth format
-          mkdir -p /tmp/docker-config/auths/${{ env.GITEA_REGISTRY }}
-          echo '{"auth":"'${AUTH_STRING}'"}' > /tmp/docker-config/auths/${{ env.GITEA_REGISTRY }}/config.json
-          
-          # Debug: Show config (redacted)
-          echo "Docker config created:"
-          cat /tmp/docker-config/config.json | jq 'del(.auths[].password, .auths[].auth)'
+               http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth test completed"
 
-      - name: Build and Push with Kaniko
+      - name: Build and Push with Buildah
         run: |
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
           echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
           
-          # Set Kaniko options for debugging
-          export DOCKER_CONFIG=/tmp/docker-config
+          # Build the container image
+          echo "Building container image..."
+          buildah build-using-dockerfile \
+            --tag ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
+            --file Dockerfile \
+            .
           
-          # Try manual authentication first
-          echo "Testing manual push check:"
-          curl -X GET \
-               -H "Authorization: Basic ${AUTH_STRING}" \
-               -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
-               "http://${{ env.GITEA_REGISTRY }}/v2/gitea-admin/grill-stats/manifests/latest" || echo "Manual auth test completed"
+          # Login to registry with basic auth
+          echo "Logging into registry..."
+          echo "${{ secrets.REGISTRY_PASSWORD }}" | buildah login \
+            --username "${{ secrets.REGISTRY_USERNAME }}" \
+            --password-stdin \
+            --tls-verify=false \
+            ${{ env.GITEA_REGISTRY }}
           
-          # Set environment variables to force basic auth
-          export DOCKER_CONFIG=/tmp/docker-config
-          export KANIKO_REGISTRY_MIRROR=false
-          
-          # Run Kaniko with simpler configuration
-          /tmp/executor \
-            --context=${{ github.workspace }} \
-            --dockerfile=${{ github.workspace }}/Dockerfile \
-            --destination=${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest \
-            --custom-platform=linux/amd64 \
-            --verbosity=debug \
-            --insecure \
-            --skip-tls-verify \
-            --registry-map=git.lab.apj.dev=${{ env.GITEA_REGISTRY }}
+          # Push the image
+          echo "Pushing image..."
+          buildah push \
+            --tls-verify=false \
+            ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest
