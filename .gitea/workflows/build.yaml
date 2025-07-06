@@ -13,8 +13,6 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # FIX: Combined dependency installation and linting into a single step
-      # that uses a Python virtual environment to avoid system conflicts.
       - name: Install Dependencies and Lint
         container:
           image: python:3.11-slim
@@ -55,4 +53,5 @@ jobs:
             --context=dir:///workspace/
             --dockerfile=./Dockerfile
             --destination=gitea-internal/your-image-name:latest
-            --custom-platform=linux/amd64
+            # FIX: Corrected the flag to use camelCase as required by Kaniko.
+            --customPlatform=linux/amd64
