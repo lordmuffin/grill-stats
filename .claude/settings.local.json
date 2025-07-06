@@ -31,7 +31,8 @@
       "Bash(git commit:*)",
       "Bash(grep:*)",
       "WebFetch(domain:github.com)",
-      "Bash(sed:*)"
+      "Bash(sed:*)",
+      "WebFetch(domain:raw.githubusercontent.com)"
     ],
     "deny": []
   }
