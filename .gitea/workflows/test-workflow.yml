@@ -8,7 +8,6 @@ on:
 
 jobs:
   lint:
-    runs-on: kubernetes
     container:
       image: python:3.11-slim
 
@@ -31,7 +30,6 @@ jobs:
           flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
   test:
-    runs-on: kubernetes
     needs: lint
     container:
       image: python:3.11-slim
@@ -53,7 +51,6 @@ jobs:
           # python -m pytest tests/integration/ -v
 
   microservice-tests:
-    runs-on: kubernetes
     needs: lint
     strategy:
       matrix:

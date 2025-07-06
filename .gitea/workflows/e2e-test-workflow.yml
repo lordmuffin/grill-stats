@@ -10,7 +10,6 @@ on:
 
 jobs:
   e2e-tests:
-    runs-on: kubernetes
     container:
       image: python:3.11-slim
 
