@@ -11,7 +11,7 @@ jobs:
   test-and-build:
     runs-on: ubuntu-latest
     env:
-      GITEA_REGISTRY: gitea-internal.gitea.svc.cluster.local:80
+      GITEA_REGISTRY: gitea-http.gitea.svc.cluster.local:3000
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -56,7 +56,7 @@ jobs:
         run: |
           # Debug: Check environment
           echo "Registry: ${{ env.GITEA_REGISTRY }}"
-          echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:latest"
+          echo "Destination: ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test"
           
           # Build with Kaniko to local tar file (no registry push)
           echo "Building container image to local tar..."
@@ -95,7 +95,6 @@ jobs:
           # Try pushing with crane first
           echo "Attempting push with crane..."
           if ! /tmp/crane push /tmp/image.tar ${{ env.GITEA_REGISTRY }}/gitea-admin/grill-stats:test \
-            --insecure \
             --platform=linux/amd64; then
             echo "Crane push failed, trying alternative method..."
             
