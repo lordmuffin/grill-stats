@@ -67,8 +67,15 @@ jobs:
           echo "Testing base path:"
           curl -v http://${{ env.GITEA_REGISTRY }}/ || echo "Base path not accessible"
           
-          # Create auth config - use only internal registry to bypass Traefik auth
+          # Create auth config with alternative authentication methods
           AUTH_STRING=$(echo -n "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" | base64 -w 0)
+          
+          # Try authenticating with curl first to debug
+          echo "Testing authentication:"
+          curl -v -u "${{ secrets.REGISTRY_USERNAME }}:${{ secrets.REGISTRY_PASSWORD }}" \
+               http://${{ env.GITEA_REGISTRY }}/v2/ || echo "Basic auth failed"
+          
+          # Create comprehensive auth config
           cat > /tmp/docker-config/config.json << EOF
           {
             "auths": {
@@ -79,8 +86,10 @@ jobs:
               }
             },
             "HttpHeaders": {
-              "User-Agent": "kaniko/executor"
-            }
+              "User-Agent": "kaniko/executor",
+              "Authorization": "Basic ${AUTH_STRING}"
+            },
+            "credHelpers": {}
           }
           EOF
           
@@ -97,7 +106,14 @@ jobs:
           # Set Kaniko options for debugging
           export DOCKER_CONFIG=/tmp/docker-config
           
-          # Run Kaniko with registry map to override token realm
+          # Try manual authentication first
+          echo "Testing manual push check:"
+          curl -X GET \
+               -H "Authorization: Basic ${AUTH_STRING}" \
+               -H "Accept: application/vnd.docker.distribution.manifest.v2+json" \
+               "http://${{ env.GITEA_REGISTRY }}/v2/gitea-admin/grill-stats/manifests/latest" || echo "Manual auth test completed"
+          
+          # Run Kaniko with multiple auth strategies
           /tmp/executor \
             --context=${{ github.workspace }} \
             --dockerfile=${{ github.workspace }}/Dockerfile \
@@ -106,4 +122,5 @@ jobs:
             --verbosity=debug \
             --insecure \
             --skip-tls-verify \
-            --registry-map=git.lab.apj.dev=${{ env.GITEA_REGISTRY }}
+            --registry-map=git.lab.apj.dev=${{ env.GITEA_REGISTRY }} \
+            --push-retry=3
