@@ -51,14 +51,17 @@ jobs:
           echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /workspace/kaniko-config/config.json
           echo "Kaniko config created successfully."
 
-      # FIX: Using the immutable image digest (sha256) to bypass runner caching issues
-      # and guarantee the correct, newer version of Kaniko is used.
+      # FIX: Reverted to a container: block and using the ':debug' tag, which is more stable for CI.
+      # This avoids issues with bad SHA digests and runner caching.
       - name: Build and Push with Kaniko
-        uses: docker://gcr.io/kaniko-project/executor@sha256:d9fe1f1377319998a48f791694f448e89895627e24765954f056f72c676281b3
-        with:
-          args: |
-            --docker-config-dir=/workspace/kaniko-config
-            --context=/workspace
-            --dockerfile=/workspace/Dockerfile
-            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest
+        container:
+          # Using the debug image is more robust in CI environments
+          image: gcr.io/kaniko-project/executor:debug
+        run: |
+          # Calling the executor by its full path avoids PATH issues.
+          /kaniko/executor \
+            --docker-config-dir=/workspace/kaniko-config \
+            --context=/workspace \
+            --dockerfile=/workspace/Dockerfile \
+            --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
