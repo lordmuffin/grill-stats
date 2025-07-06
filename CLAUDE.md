@@ -112,3 +112,6 @@ The project uses Gitea Actions for continuous integration:
 - `THERMOWORKS_API_KEY`: Required for ThermoWorks API access
 - `HOMEASSISTANT_URL`: Full URL to Home Assistant instance
 - `HOMEASSISTANT_TOKEN`: Long-lived access token for Home Assistant API
+
+## Deployment Notes
+- Remember we are using gitea runners on kubernetes, we can't use Docker

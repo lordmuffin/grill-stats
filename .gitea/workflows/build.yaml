@@ -41,25 +41,25 @@ jobs:
   build:
     needs: test
     runs-on: ubuntu-latest
+    container:
+      image: gcr.io/kaniko-project/executor:debug
+      env:
+        DOCKER_CONFIG: /kaniko/.docker
     env:
       GITEA_REGISTRY: gitea-http.gitea.svc.cluster.local:3000
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # FIX: Using the 'container' block to create the config file in the default location.
-      # This is the most compatible method and avoids the unsupported '--docker-config-dir' flag.
-      - name: Build and Push with Kaniko
-        container:
-          image: gcr.io/kaniko-project/executor:debug
+      - name: Setup Kaniko Config
         run: |
-          # 1. Create the config file AT THE DEFAULT LOCATION that Kaniko expects.
           mkdir -p /kaniko/.docker
           echo '{"auths":{"${{ env.GITEA_REGISTRY }}":{"username":"${{ secrets.REGISTRY_USERNAME }}","password":"${{ secrets.REGISTRY_PASSWORD }}"}},"http-insecure-registries":["${{ env.GITEA_REGISTRY }}"]}' > /kaniko/.docker/config.json
-
-          # 2. Run the executor using the full path within the container
+          
+      - name: Build and Push with Kaniko
+        run: |
           /kaniko/executor \
-            --context=. \
-            --dockerfile=Dockerfile \
+            --context=${GITHUB_WORKSPACE} \
+            --dockerfile=${GITHUB_WORKSPACE}/Dockerfile \
             --destination=${{ env.GITEA_REGISTRY }}/lordmuffin/grill-stats:latest \
             --customPlatform=linux/amd64
