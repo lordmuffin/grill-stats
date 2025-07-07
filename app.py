@@ -24,6 +24,10 @@ load_dotenv()
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# Log Flask version for debugging
+import flask
+logger.info(f"Starting application with Flask version: {flask.__version__}")
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -346,7 +350,6 @@ def get_monitoring_data():
             'message': f"Error fetching monitoring data: {str(e)}"
         }), 500
 
-@app.before_first_request
 def create_tables():
     """Create database tables and add test user in development"""
     db.create_all()
@@ -356,6 +359,31 @@ def create_tables():
         from auth.utils import create_test_user
         create_test_user(user_manager, bcrypt, 'test@example.com', 'password')
         logger.info("Created test user: test@example.com / password")
+
+# Initialize database - Flask 3.0+ compatible
+def initialize_app():
+    """Initialize application with database setup"""
+    with app.app_context():
+        create_tables()
+        logger.info("Database initialization completed")
+
+# Call initialization immediately when module is loaded (works in all deployment scenarios)
+try:
+    initialize_app()
+except Exception as e:
+    logger.error(f"Failed to initialize app during startup: {e}")
+    # We'll retry on first request if this fails
+    @app.before_request
+    def retry_initialization():
+        """Retry initialization on first request if startup failed"""
+        if not hasattr(app, '_database_initialized'):
+            try:
+                with app.app_context():
+                    create_tables()
+                app._database_initialized = True
+                logger.info("Database initialization completed on first request")
+            except Exception as retry_e:
+                logger.error(f"Failed to initialize database on first request: {retry_e}")
 
 if __name__ == '__main__':
     if not homeassistant_client.test_connection():
