@@ -53,12 +53,12 @@ jobs:
 
       - name: Run E2E tests
         env:
-          DATABASE_URL: postgresql://test:test@localhost:5432/grillstats_test
-          SQLALCHEMY_DATABASE_URI: postgresql://test:test@localhost:5432/grillstats_test
-          REDIS_HOST: localhost
+          DATABASE_URL: postgresql://test:test@postgres:5432/grillstats_test
+          SQLALCHEMY_DATABASE_URI: postgresql://test:test@postgres:5432/grillstats_test
+          REDIS_HOST: redis
           REDIS_PORT: 6379
           TESTING: "true"
         run: |
           # Wait for postgres
-          timeout 20s bash -c 'until pg_isready -h localhost -p 5432; do sleep 1; done'
+          timeout 20s bash -c 'until pg_isready -h postgres -p 5432; do sleep 1; done'
           python -m pytest tests/e2e/ -v
