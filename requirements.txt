@@ -5,8 +5,9 @@ python-dotenv==1.0.0
 apscheduler==3.10.4
 pydantic==2.4.2
 Flask-SQLAlchemy==3.1.1
-Flask-Login==0.6.2
+Flask-Login==0.6.3
 Flask-WTF==1.2.1
 email-validator==2.0.0
 Flask-Bcrypt==1.0.1
 Flask-Migrate==4.0.5
+werkzeug==2.3.7
