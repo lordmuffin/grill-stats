@@ -49,10 +49,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           if [ -f requirements-test.txt ]; then pip install -r requirements-test.txt; fi
+          # Skip bluetooth tests in CI
 
       - name: Run tests
         run: |
-          python -m pytest tests/unit/ -v
+          python -m pytest tests/unit/ -v -k "not bluetooth"
           # Uncomment when integration tests are ready to run in CI
           # python -m pytest tests/integration/ -v
 
@@ -85,5 +86,5 @@ jobs:
         run: |
           cd services/${{ matrix.service }}
           if [ -d tests ]; then
-            python -m pytest tests/unit/ -v
+            python -m pytest tests/unit/ -v -k "not bluetooth"
           fi

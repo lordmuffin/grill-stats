@@ -11,5 +11,4 @@ email-validator==2.0.0
 Flask-Bcrypt==1.0.1
 Flask-Migrate==4.0.5
 werkzeug==2.3.7
-pybluez==0.23
 flask-testing==0.8.1
