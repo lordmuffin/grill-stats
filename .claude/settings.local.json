@@ -32,7 +32,9 @@
       "Bash(grep:*)",
       "WebFetch(domain:github.com)",
       "Bash(sed:*)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "Bash(pip show:*)",
+      "Bash(python:*)"
     ],
     "deny": []
   }
