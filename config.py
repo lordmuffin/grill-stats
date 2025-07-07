@@ -18,3 +18,10 @@ class Config:
     
     # Authentication settings
     MAX_LOGIN_ATTEMPTS = 5
+
+
+class TestConfig(Config):
+    """Test configuration"""
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'postgresql://test:test@localhost:5432/grillstats_test'
+    WTF_CSRF_ENABLED = False

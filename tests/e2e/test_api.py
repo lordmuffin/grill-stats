@@ -1,9 +1,17 @@
 import pytest
-from app import create_app
+from flask import Flask
+from flask_sqlalchemy import SQLAlchemy
+
+db = SQLAlchemy()
 
 @pytest.fixture
 def app():
-    app = create_app(testing=True)
+    from config import TestConfig
+    app = Flask(__name__)
+    app.config.from_object(TestConfig)
+    db.init_app(app)
+    with app.app_context():
+        db.create_all()
     return app
 
 @pytest.fixture
