@@ -6,8 +6,8 @@ from datetime import datetime
 import sys
 import os
 
-# Add the services directory to the path so we can import modules
-sys.path.append(os.path.join(os.path.dirname(__file__), '../../services/device-service'))
+# Mock bluetooth module
+sys.modules['bluetooth'] = __import__('mock_bluetooth')
 
 from rfx_gateway_client import (
     RFXGatewayClient, 
