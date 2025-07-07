@@ -10,7 +10,7 @@ on:
 
 jobs:
   e2e-tests:
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:14-alpine

@@ -8,7 +8,7 @@ on:
 
 jobs:
   lint:
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: https://github.com/actions/checkout@v4
@@ -34,7 +34,7 @@ jobs:
 
   test:
     needs: lint
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: https://github.com/actions/checkout@v4
@@ -62,7 +62,7 @@ jobs:
     strategy:
       matrix:
         service: [device-service, temperature-service, historical-data-service, data-pipeline]
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
         uses: https://github.com/actions/checkout@v4
