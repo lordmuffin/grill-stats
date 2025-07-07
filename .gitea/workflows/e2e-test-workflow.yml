@@ -10,9 +10,7 @@ on:
 
 jobs:
   e2e-tests:
-    container:
-      image: python:3.11-slim
-      entrypoint: /bin/bash
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:14-alpine
@@ -40,12 +38,17 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
       
       - name: Install system dependencies
         run: |
-          apt-get update
-          apt-get install -y --no-install-recommends libpq-dev build-essential
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends libpq-dev build-essential
 
       - name: Install Python dependencies
         run: |

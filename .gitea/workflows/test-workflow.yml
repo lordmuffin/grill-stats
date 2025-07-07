@@ -8,12 +8,15 @@ on:
 
 jobs:
   lint:
-    container:
-      image: python:3.11-slim
-      entrypoint: /bin/bash
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -31,12 +34,15 @@ jobs:
 
   test:
     needs: lint
-    container:
-      image: python:3.11-slim
-      entrypoint: /bin/bash
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
@@ -55,12 +61,15 @@ jobs:
     strategy:
       matrix:
         service: [device-service, temperature-service, historical-data-service, data-pipeline]
-    container:
-      image: python:3.11-slim
-      entrypoint: /bin/bash
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
 
       - name: Install dependencies
         run: |
