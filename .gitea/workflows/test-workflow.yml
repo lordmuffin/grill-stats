@@ -52,6 +52,8 @@ jobs:
           # Skip bluetooth tests in CI
 
       - name: Run tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}:${{ github.workspace }}/services/device-service
         run: |
           python -m pytest tests/unit/ -v -k "not bluetooth"
           # Uncomment when integration tests are ready to run in CI
@@ -83,6 +85,8 @@ jobs:
           fi
 
       - name: Run microservice tests
+        env:
+          PYTHONPATH: ${{ github.workspace }}/services/${{ matrix.service }}
         run: |
           cd services/${{ matrix.service }}
           if [ -d tests ]; then
