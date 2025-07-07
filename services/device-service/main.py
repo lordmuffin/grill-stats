@@ -82,6 +82,8 @@ thermoworks_client = ThermoworksClient(
 # Initialize RFX Gateway client
 rfx_gateway_client = RFXGatewayClient(
     thermoworks_client=thermoworks_client,
+    ha_url=os.environ.get("HOMEASSISTANT_URL", "http://localhost:8123"),
+    ha_token=os.environ.get("HOMEASSISTANT_TOKEN"),
     max_scan_duration=int(os.environ.get("RFX_SCAN_DURATION", 30)),
     connection_timeout=int(os.environ.get("RFX_CONNECTION_TIMEOUT", 15)),
     setup_timeout=int(os.environ.get("RFX_SETUP_TIMEOUT", 300)),
