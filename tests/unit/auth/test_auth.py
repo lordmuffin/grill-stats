@@ -5,13 +5,6 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_bcrypt import Bcrypt
 
-import sys
-import os
-
-# Add project root to Python path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../..'))
-sys.path.insert(0, project_root)
-
 from models.user import User
 from auth.utils import generate_password_hash, check_password, create_test_user
 from auth.routes import init_auth_routes
