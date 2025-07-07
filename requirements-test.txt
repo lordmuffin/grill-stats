@@ -3,5 +3,6 @@ pact-python==1.7.0
 pytest-asyncio==0.21.1
 pytest-cov==4.1.0
 pytest-mock==3.11.1
+pytest-env==1.0.1
 Flask-Login==0.6.3
 werkzeug==2.3.7
