@@ -38,10 +38,6 @@ class AuthTestCase(TestCase):
         # Initialize auth routes
         init_auth_routes(app, self.login_manager, self.user_manager, self.bcrypt)
         
-        @app.route('/dashboard')
-        def dashboard():
-            return 'Dashboard Page'
-        
         return app
     
     def setUp(self):

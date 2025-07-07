@@ -3,6 +3,9 @@
 class BluetoothError(Exception):
     pass
 
+# Constants
+RFCOMM = 1
+
 class BluetoothSocket:
     def __init__(self):
         self.connected = False
