@@ -9,16 +9,16 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu
     env:
       DOCKER_REGISTRY: docker.io
       IMAGE_NAME: lordmuffin/grill-stats
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: https://github.com/actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v4
+        uses: https://github.com/actions/setup-python@v4
         with:
           python-version: '3.11'
 
