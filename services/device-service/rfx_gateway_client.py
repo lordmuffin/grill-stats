@@ -21,7 +21,12 @@ import hashlib
 from dataclasses import dataclass, asdict, field
 from typing import Dict, List, Optional, Union, Any, Tuple, Set
 from enum import Enum
-import bluetooth
+try:
+    import bluetooth
+    BLUETOOTH_AVAILABLE = True
+except ImportError:
+    BLUETOOTH_AVAILABLE = False
+    bluetooth = None
 
 # Configure logging
 logging.basicConfig(
@@ -138,6 +143,10 @@ class RFXGatewayClient:
         Returns:
             List of discovered gateway devices
         """
+        if not BLUETOOTH_AVAILABLE:
+            logger.warning("Bluetooth not available - skipping gateway discovery")
+            return []
+            
         timeout = timeout or self.max_scan_duration
         logger.info(f"Starting Bluetooth scan for RFX Gateways (timeout: {timeout}s)")
         
@@ -191,6 +200,10 @@ class RFXGatewayClient:
         Returns:
             True if connection successful, False otherwise
         """
+        if not BLUETOOTH_AVAILABLE:
+            logger.warning("Bluetooth not available - cannot connect to gateway")
+            return False
+            
         logger.info(f"Connecting to RFX Gateway {gateway_id}")
         
         # Get Bluetooth address from gateway ID
