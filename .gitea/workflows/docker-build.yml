@@ -9,7 +9,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu
+    runs-on: ubuntu-latest
     env:
       DOCKER_REGISTRY: docker.io
       IMAGE_NAME: lordmuffin/grill-stats
