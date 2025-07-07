@@ -25,8 +25,9 @@ spec:
     spec:
       containers:
       - name: device-service
-        image: grill-stats/device-service:latest
+        image: lordmuffin/grill-stats-device-service:latest
         imagePullPolicy: Always
+        command: ["python", "main.py"]
         ports:
         - containerPort: 8080
           name: http
