@@ -79,11 +79,22 @@ thermoworks_client = ThermoworksClient(
     auto_start_polling=False,  # We'll start it after app initialization
 )
 
+# Validate required Home Assistant configuration
+ha_url = os.environ.get("HOMEASSISTANT_URL", "http://localhost:8123")
+ha_token = os.environ.get("HOMEASSISTANT_TOKEN")
+
+if not ha_token:
+    logger.error("HOMEASSISTANT_TOKEN environment variable is required but not set")
+    logger.error("Please ensure the Home Assistant long-lived access token is configured in secrets")
+    raise ValueError("Missing required Home Assistant token configuration")
+
+logger.info(f"Initializing RFX Gateway client with Home Assistant URL: {ha_url}")
+
 # Initialize RFX Gateway client
 rfx_gateway_client = RFXGatewayClient(
     thermoworks_client=thermoworks_client,
-    ha_url=os.environ.get("HOMEASSISTANT_URL", "http://localhost:8123"),
-    ha_token=os.environ.get("HOMEASSISTANT_TOKEN"),
+    ha_url=ha_url,
+    ha_token=ha_token,
     max_scan_duration=int(os.environ.get("RFX_SCAN_DURATION", 30)),
     connection_timeout=int(os.environ.get("RFX_CONNECTION_TIMEOUT", 15)),
     setup_timeout=int(os.environ.get("RFX_SETUP_TIMEOUT", 300)),
