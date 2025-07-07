@@ -6,8 +6,9 @@ from datetime import datetime
 import sys
 import os
 
-# Mock bluetooth module
-sys.modules['bluetooth'] = __import__('mock_bluetooth')
+# Import and set up mock bluetooth module
+from . import mock_bluetooth
+sys.modules['bluetooth'] = mock_bluetooth
 
 from rfx_gateway_client import (
     RFXGatewayClient, 
