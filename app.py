@@ -434,7 +434,10 @@ except Exception as e:
 application = app
 
 logger.info(f"Module __name__ is: {__name__}")
+logger.info("About to check if __name__ == '__main__'")
+
 if __name__ == '__main__':
+    logger.info("*** FLASK SERVER STARTING ***")
     logger.info("Starting Grill Stats application")
     
     # Run Flask development server
@@ -443,9 +446,14 @@ if __name__ == '__main__':
         is_production = os.environ.get('FLASK_ENV') == 'production'
         debug_mode = not is_production
         logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}")
+        logger.info("About to call app.run...")
         app.run(host='0.0.0.0', port=5000, debug=debug_mode)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         scheduler.shutdown()
+    except Exception as run_e:
+        logger.error(f"Error starting Flask server: {run_e}")
+        import traceback
+        logger.error(f"Flask server traceback: {traceback.format_exc()}")
 else:
     logger.info("Module imported but not executed directly - Flask server not started")
