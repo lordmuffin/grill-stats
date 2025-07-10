@@ -408,12 +408,19 @@ def initialize_app():
     logger.info("Temperature sync scheduler started")
 
 # Call initialization immediately when module is loaded (works in all deployment scenarios)
+logger.info("Attempting to initialize application...")
 try:
     initialize_app()
-    if not homeassistant_client.test_connection():
-        logger.warning("Could not connect to Home Assistant - check your configuration")
+    logger.info("Application initialization successful")
+    try:
+        if not homeassistant_client.test_connection():
+            logger.warning("Could not connect to Home Assistant - check your configuration")
+    except Exception as ha_e:
+        logger.warning(f"Home Assistant connection test failed: {ha_e}")
 except Exception as e:
     logger.error(f"Failed to initialize app during startup: {e}")
+    import traceback
+    logger.error(f"Initialization traceback: {traceback.format_exc()}")
     # We'll retry on first request if this fails
     @app.before_request
     def retry_initialization():
@@ -429,6 +436,7 @@ except Exception as e:
 # This makes the app work with gunicorn in production
 application = app
 
+logger.info(f"Module __name__ is: {__name__}")
 if __name__ == '__main__':
     logger.info("Starting Grill Stats application")
     
@@ -442,3 +450,5 @@ if __name__ == '__main__':
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         scheduler.shutdown()
+else:
+    logger.info("Module imported but not executed directly - Flask server not started")
