@@ -362,14 +362,26 @@ def create_tables():
 
 # Initialize database - Flask 3.0+ compatible
 def initialize_app():
-    """Initialize application with database setup"""
+    """Initialize application with database setup and scheduler"""
     with app.app_context():
         create_tables()
         logger.info("Database initialization completed")
+    
+    # Set up the scheduler for temperature sync
+    scheduler.add_job(
+        func=sync_temperature_data,
+        trigger="interval",
+        minutes=5,
+        id='temperature_sync'
+    )
+    scheduler.start()
+    logger.info("Temperature sync scheduler started")
 
 # Call initialization immediately when module is loaded (works in all deployment scenarios)
 try:
     initialize_app()
+    if not homeassistant_client.test_connection():
+        logger.warning("Could not connect to Home Assistant - check your configuration")
 except Exception as e:
     logger.error(f"Failed to initialize app during startup: {e}")
     # We'll retry on first request if this fails
@@ -378,37 +390,23 @@ except Exception as e:
         """Retry initialization on first request if startup failed"""
         if not hasattr(app, '_database_initialized'):
             try:
-                with app.app_context():
-                    create_tables()
+                initialize_app()
                 app._database_initialized = True
-                logger.info("Database initialization completed on first request")
+                logger.info("Application initialization completed on first request")
             except Exception as retry_e:
-                logger.error(f"Failed to initialize database on first request: {retry_e}")
+                logger.error(f"Failed to initialize application on first request: {retry_e}")
+
+# This makes the app work with gunicorn in production
+application = app
 
 if __name__ == '__main__':
-    if not homeassistant_client.test_connection():
-        logger.warning("Could not connect to Home Assistant - check your configuration")
+    logger.info("Starting Grill Stats application in development mode")
     
-    # Create database tables on startup
-    with app.app_context():
-        db.create_all()
-        # Create a test user in development mode
-        from auth.utils import create_test_user
-        create_test_user(user_manager, bcrypt, 'test@example.com', 'password')
-        logger.info("Created test user: test@example.com / password")
-    
-    scheduler.add_job(
-        func=sync_temperature_data,
-        trigger="interval",
-        minutes=5,
-        id='temperature_sync'
-    )
-    scheduler.start()
-    
-    logger.info("Starting Grill Stats application")
-    
+    # Run Flask development server (only in development)
     try:
-        app.run(host='0.0.0.0', port=5000, debug=True)
+        # Use debug=False in production deployment
+        is_production = os.environ.get('FLASK_ENV') == 'production'
+        app.run(host='0.0.0.0', port=5000, debug=not is_production)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         scheduler.shutdown()
