@@ -389,6 +389,29 @@ def create_tables():
         from auth.utils import create_test_user
         create_test_user(user_manager, bcrypt, 'test@example.com', 'password')
         logger.info("Created test user: test@example.com / password")
+    
+    # Create admin user in production if specified via environment variables
+    admin_email = os.getenv('ADMIN_EMAIL')
+    admin_password = os.getenv('ADMIN_PASSWORD')
+    admin_name = os.getenv('ADMIN_NAME', 'Administrator')
+    
+    logger.info(f"Admin credentials check - Email: {admin_email}, Password: {'***' if admin_password else 'None'}")
+    
+    if admin_email and admin_password:
+        try:
+            from auth.utils import create_test_user
+            existing_admin = user_manager.get_user_by_email(admin_email)
+            if not existing_admin:
+                create_test_user(user_manager, bcrypt, admin_email, admin_password)
+                logger.info(f"Successfully created admin user: {admin_email}")
+            else:
+                logger.info(f"Admin user already exists: {admin_email}")
+        except Exception as e:
+            logger.error(f"Failed to create admin user: {e}")
+            import traceback
+            logger.error(traceback.format_exc())
+    else:
+        logger.warning("Admin credentials not provided - no admin user created")
 
 # Initialize database - Flask 3.0+ compatible
 def initialize_app():
