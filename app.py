@@ -430,13 +430,15 @@ except Exception as e:
 application = app
 
 if __name__ == '__main__':
-    logger.info("Starting Grill Stats application in development mode")
+    logger.info("Starting Grill Stats application")
     
-    # Run Flask development server (only in development)
+    # Run Flask development server
     try:
         # Use debug=False in production deployment
         is_production = os.environ.get('FLASK_ENV') == 'production'
-        app.run(host='0.0.0.0', port=5000, debug=not is_production)
+        debug_mode = not is_production
+        logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}")
+        app.run(host='0.0.0.0', port=5000, debug=debug_mode)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         scheduler.shutdown()
