@@ -9,6 +9,19 @@ class Config:
     SQLALCHEMY_DATABASE_URI = os.getenv('DATABASE_URL', 'sqlite:///grill_stats.db')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     
+    # Database connection pooling and timeout settings
+    SQLALCHEMY_ENGINE_OPTIONS = {
+        'pool_size': 10,
+        'pool_recycle': 3600,  # Recycle connections after 1 hour
+        'pool_pre_ping': True,  # Verify connections before use
+        'pool_timeout': 30,     # Wait up to 30 seconds for connection
+        'max_overflow': 20,     # Allow up to 20 overflow connections
+        'connect_args': {
+            'connect_timeout': 10,      # Connection timeout in seconds
+            'application_name': 'grill-stats'
+        }
+    }
+    
     # ThermoWorks API settings
     THERMOWORKS_API_KEY = os.getenv('THERMOWORKS_API_KEY')
     

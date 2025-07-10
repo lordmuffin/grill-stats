@@ -59,39 +59,69 @@ homeassistant_client = HomeAssistantClient(
 
 scheduler = BackgroundScheduler()
 
+@app.teardown_appcontext
+def close_db(error):
+    """Close database connections at the end of each request"""
+    try:
+        db.session.close()
+    except Exception as e:
+        logger.warning(f"Error closing database session: {e}")
+
+@app.teardown_request
+def teardown_request(exception):
+    """Cleanup after each request"""
+    try:
+        if exception:
+            db.session.rollback()
+        db.session.close()
+    except Exception as e:
+        logger.warning(f"Error in teardown_request: {e}")
+
 def sync_temperature_data():
     logger.info("Starting temperature data sync")
     
     try:
-        devices = thermoworks_client.get_devices()
-        
-        for device in devices:
-            device_id = device.get('id')
-            device_name = device.get('name', f'thermoworks_{device_id}')
-            
-            temperature_data = thermoworks_client.get_temperature_data(device_id)
-            
-            if temperature_data and temperature_data.get('temperature'):
-                sensor_name = f"thermoworks_{device_name.lower().replace(' ', '_')}"
+        # Use application context to ensure database connections are properly handled
+        with app.app_context():
+            try:
+                devices = thermoworks_client.get_devices()
                 
-                attributes = {
-                    'device_id': device_id,
-                    'last_updated': temperature_data.get('timestamp'),
-                    'battery_level': temperature_data.get('battery_level'),
-                    'signal_strength': temperature_data.get('signal_strength')
-                }
-                
-                success = homeassistant_client.create_sensor(
-                    sensor_name=sensor_name,
-                    state=temperature_data['temperature'],
-                    attributes=attributes,
-                    unit=temperature_data.get('unit', 'F')
-                )
-                
-                if success:
-                    logger.info(f"Updated sensor {sensor_name} with temperature {temperature_data['temperature']}°{temperature_data.get('unit', 'F')}")
-                else:
-                    logger.error(f"Failed to update sensor {sensor_name}")
+                for device in devices:
+                    device_id = device.get('id')
+                    device_name = device.get('name', f'thermoworks_{device_id}')
+                    
+                    temperature_data = thermoworks_client.get_temperature_data(device_id)
+                    
+                    if temperature_data and temperature_data.get('temperature'):
+                        sensor_name = f"thermoworks_{device_name.lower().replace(' ', '_')}"
+                        
+                        attributes = {
+                            'device_id': device_id,
+                            'last_updated': temperature_data.get('timestamp'),
+                            'battery_level': temperature_data.get('battery_level'),
+                            'signal_strength': temperature_data.get('signal_strength')
+                        }
+                        
+                        success = homeassistant_client.create_sensor(
+                            sensor_name=sensor_name,
+                            state=temperature_data['temperature'],
+                            attributes=attributes,
+                            unit=temperature_data.get('unit', 'F')
+                        )
+                        
+                        if success:
+                            logger.info(f"Updated sensor {sensor_name} with temperature {temperature_data['temperature']}°{temperature_data.get('unit', 'F')}")
+                        else:
+                            logger.error(f"Failed to update sensor {sensor_name}")
+                            
+            except Exception as e:
+                logger.error(f"Error during temperature sync: {e}")
+            finally:
+                # Ensure database connections are properly closed
+                try:
+                    db.session.close()
+                except Exception as close_e:
+                    logger.warning(f"Error closing database session: {close_e}")
                     
     except Exception as e:
         logger.error(f"Error during temperature sync: {e}")
