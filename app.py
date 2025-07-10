@@ -412,11 +412,8 @@ logger.info("Attempting to initialize application...")
 try:
     initialize_app()
     logger.info("Application initialization successful")
-    try:
-        if not homeassistant_client.test_connection():
-            logger.warning("Could not connect to Home Assistant - check your configuration")
-    except Exception as ha_e:
-        logger.warning(f"Home Assistant connection test failed: {ha_e}")
+    # Don't test Home Assistant connection during startup as it can hang/crash the app
+    # This will be tested on first request or via health check endpoint
 except Exception as e:
     logger.error(f"Failed to initialize app during startup: {e}")
     import traceback
