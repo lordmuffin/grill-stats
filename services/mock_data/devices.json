@@ -1,0 +1,157 @@
+{
+  "devices": [
+    {
+      "device_id": "mock-signals-001",
+      "name": "Test Signals",
+      "model": "SIGNALS",
+      "firmware_version": "1.2.3",
+      "last_seen": "2025-01-11T10:30:00Z",
+      "battery_level": 85,
+      "signal_strength": -45,
+      "is_online": true,
+      "probes": [
+        {
+          "probe_id": "probe_1",
+          "name": "Air Temp",
+          "type": "ambient",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 225.5,
+          "unit": "F",
+          "alarm_low": 200,
+          "alarm_high": 250
+        }
+      ]
+    },
+    {
+      "device_id": "mock-bluedot-002", 
+      "name": "Mock BlueDOT",
+      "model": "BLUEDOT",
+      "firmware_version": "2.1.0",
+      "last_seen": "2025-01-11T10:28:00Z",
+      "battery_level": 92,
+      "signal_strength": -38,
+      "is_online": true,
+      "probes": [
+        {
+          "probe_id": "probe_1",
+          "name": "Brisket Internal",
+          "type": "food",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 195.2,
+          "unit": "F",
+          "alarm_low": 190,
+          "alarm_high": 205
+        },
+        {
+          "probe_id": "probe_2", 
+          "name": "Pit Temperature",
+          "type": "ambient",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 235.8,
+          "unit": "F",
+          "alarm_low": 225,
+          "alarm_high": 250
+        }
+      ]
+    },
+    {
+      "device_id": "mock-node-003",
+      "name": "Fake NODE",
+      "model": "NODE",
+      "firmware_version": "3.0.1",
+      "last_seen": "2025-01-11T10:25:00Z",
+      "battery_level": 78,
+      "signal_strength": -52,
+      "is_online": true,
+      "probes": [
+        {
+          "probe_id": "probe_1",
+          "name": "Ribs Internal",
+          "type": "food",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 185.3,
+          "unit": "F",
+          "alarm_low": 180,
+          "alarm_high": 195
+        },
+        {
+          "probe_id": "probe_2",
+          "name": "Chicken Breast",
+          "type": "food", 
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 155.7,
+          "unit": "F",
+          "alarm_low": 160,
+          "alarm_high": 170
+        },
+        {
+          "probe_id": "probe_3",
+          "name": "Smoker Air",
+          "type": "ambient",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 275.1,
+          "unit": "F",
+          "alarm_low": 250,
+          "alarm_high": 300
+        },
+        {
+          "probe_id": "probe_4",
+          "name": "Water Pan",
+          "type": "ambient",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 212.0,
+          "unit": "F",
+          "alarm_low": 200,
+          "alarm_high": 220
+        }
+      ]
+    },
+    {
+      "device_id": "mock-dot-004",
+      "name": "Test DOT",
+      "model": "DOT",
+      "firmware_version": "1.8.2",
+      "last_seen": "2025-01-11T10:32:00Z",
+      "battery_level": 65,
+      "signal_strength": -61,
+      "is_online": false,
+      "probes": [
+        {
+          "probe_id": "probe_1",
+          "name": "Steak Internal",
+          "type": "food",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 125.4,
+          "unit": "F",
+          "alarm_low": 130,
+          "alarm_high": 140
+        },
+        {
+          "probe_id": "probe_2",
+          "name": "Grill Grate",
+          "type": "surface",
+          "min_temp": -40,
+          "max_temp": 572,
+          "current_temp": 425.6,
+          "unit": "F",
+          "alarm_low": 400,
+          "alarm_high": 450
+        }
+      ]
+    }
+  ],
+  "metadata": {
+    "total_devices": 4,
+    "online_devices": 3,
+    "last_updated": "2025-01-11T10:35:00Z",
+    "api_version": "mock-v1.0.0"
+  }
+}
