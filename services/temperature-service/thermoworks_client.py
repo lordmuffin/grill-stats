@@ -1,5 +1,6 @@
 import requests
 import json
+import os
 from typing import Dict, List, Optional
 from datetime import datetime
 import structlog
@@ -7,25 +8,52 @@ import structlog
 logger = structlog.get_logger()
 
 class ThermoWorksClient:
-    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.thermoworks.com"):
+    def __init__(self, api_key: Optional[str] = None, base_url: str = "https://api.thermoworks.com", mock_mode: Optional[bool] = None):
         self.api_key = api_key
         self.base_url = base_url
-        self.session = requests.Session()
         
-        headers = {
-            'Content-Type': 'application/json',
-            'User-Agent': 'grill-stats-temperature-service/1.0'
-        }
+        # Determine if mock mode should be used
+        if mock_mode is None:
+            mock_mode = os.getenv('MOCK_MODE', 'false').lower() in ('true', '1', 'yes', 'on')
         
-        if api_key:
-            headers['Authorization'] = f'Bearer {api_key}'
+        self.mock_mode = mock_mode and not os.getenv('FLASK_ENV', '').lower() == 'production'
+        
+        if self.mock_mode:
+            logger.info("ThermoWorks temperature service client initialized in MOCK MODE")
+            # Import and initialize mock service
+            try:
+                import sys
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+                from mock_data import MockDataService
+                self.mock_service = MockDataService()
+            except ImportError as e:
+                logger.error("Failed to import MockDataService", error=str(e))
+                self.mock_mode = False
+                self.mock_service = None
         else:
-            logger.warning("ThermoWorks client initialized without API key, will return mock data")
+            logger.info("ThermoWorks temperature service client initialized in LIVE MODE")
+            self.mock_service = None
+        
+        # Initialize real session for non-mock mode
+        if not self.mock_mode:
+            self.session = requests.Session()
+            headers = {
+                'Content-Type': 'application/json',
+                'User-Agent': 'grill-stats-temperature-service/1.0'
+            }
             
-        self.session.headers.update(headers)
+            if api_key:
+                headers['Authorization'] = f'Bearer {api_key}'
+            else:
+                logger.warning("ThermoWorks client initialized without API key, will return mock data")
+                
+            self.session.headers.update(headers)
     
     def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict:
         """Get current temperature data from ThermoWorks API"""
+        if self.mock_mode and self.mock_service:
+            return self.mock_service.get_temperature_data(device_id, probe_id)
+            
         if not self.api_key:
             # Return mock data for testing
             mock_data = {

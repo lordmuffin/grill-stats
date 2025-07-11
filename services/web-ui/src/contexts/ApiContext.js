@@ -106,6 +106,24 @@ export const ApiProvider = ({ children }) => {
     
     discoverDevices: async () => {
       return apiCall('/api/devices/discover', { method: 'POST' });
+    },
+    
+    registerDevice: async (deviceId, nickname) => {
+      return apiCall('/api/devices/register', {
+        method: 'POST',
+        body: JSON.stringify({ 
+          device_id: deviceId, 
+          nickname: nickname 
+        }),
+      });
+    },
+    
+    removeDevice: async (deviceId) => {
+      return apiCall(`/api/devices/${deviceId}`, { method: 'DELETE' });
+    },
+    
+    getConfig: async () => {
+      return apiCall('/api/config');
     }
   };
 

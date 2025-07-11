@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useApi } from '../contexts/ApiContext';
 import DeviceCard from './DeviceCard';
 
@@ -8,6 +9,7 @@ const DeviceList = () => {
   const [error, setError] = useState(null);
   const [syncing, setSyncing] = useState(false);
   const { deviceApi } = useApi();
+  const navigate = useNavigate();
 
   const fetchDevices = async (forceRefresh = false) => {
     try {
@@ -107,6 +109,12 @@ const DeviceList = () => {
           <h2>Your Devices</h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button 
+              onClick={() => navigate('/devices/manage')}
+              className="btn btn-primary"
+            >
+              Manage Devices
+            </button>
+            <button 
               onClick={handleRefresh} 
               className="btn btn-secondary"
               disabled={loading}
@@ -115,7 +123,7 @@ const DeviceList = () => {
             </button>
             <button 
               onClick={handleSync} 
-              className="btn btn-primary"
+              className="btn btn-secondary"
               disabled={syncing}
             >
               {syncing ? 'Syncing...' : 'Sync with ThermoWorks'}
@@ -135,16 +143,23 @@ const DeviceList = () => {
             <p>
               You don't have any ThermoWorks devices connected yet. 
               <br />
-              Make sure your devices are registered with your ThermoWorks account, 
-              then click "Sync with ThermoWorks" to discover them.
+              Use Device Management to add devices manually or sync with your ThermoWorks account.
             </p>
-            <button 
-              onClick={handleSync} 
-              className="btn btn-primary"
-              disabled={syncing}
-            >
-              {syncing ? 'Syncing...' : 'Sync with ThermoWorks'}
-            </button>
+            <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button 
+                onClick={() => navigate('/devices/manage')}
+                className="btn btn-primary"
+              >
+                Manage Devices
+              </button>
+              <button 
+                onClick={handleSync} 
+                className="btn btn-secondary"
+                disabled={syncing}
+              >
+                {syncing ? 'Syncing...' : 'Sync with ThermoWorks'}
+              </button>
+            </div>
           </div>
         ) : (
           <div className="device-grid">

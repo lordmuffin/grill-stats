@@ -123,6 +123,7 @@ class ThermoworksClient:
         token_storage_path: Optional[str] = None,
         polling_interval: int = 60,
         auto_start_polling: bool = True,
+        mock_mode: Optional[bool] = None,
     ):
         """
         Initialize the ThermoWorks client
@@ -136,6 +137,7 @@ class ThermoworksClient:
             token_storage_path: Path to store token (falls back to ~/.thermoworks_token.json)
             polling_interval: Interval in seconds for polling device data (falls back to env var)
             auto_start_polling: Whether to start polling automatically on initialization
+            mock_mode: Whether to use mock data (falls back to MOCK_MODE env var)
         """
         # OAuth2 configuration
         self.client_id = client_id or os.environ.get("THERMOWORKS_CLIENT_ID")
@@ -145,6 +147,27 @@ class ThermoworksClient:
         # API endpoints
         self.base_url = base_url or os.environ.get("THERMOWORKS_BASE_URL", "https://api.thermoworks.com/v1")
         self.auth_url = auth_url or os.environ.get("THERMOWORKS_AUTH_URL", "https://auth.thermoworks.com")
+        
+        # Mock mode configuration
+        if mock_mode is None:
+            mock_mode = os.environ.get('MOCK_MODE', 'false').lower() in ('true', '1', 'yes', 'on')
+        self.mock_mode = mock_mode and not os.environ.get('FLASK_ENV', '').lower() == 'production'
+        
+        if self.mock_mode:
+            logger.info("ThermoWorks device service client initialized in MOCK MODE")
+            # Import and initialize mock service
+            try:
+                import sys
+                sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
+                from mock_data import MockDataService
+                self.mock_service = MockDataService()
+            except ImportError as e:
+                logger.error("Failed to import MockDataService: %s", e)
+                self.mock_mode = False
+                self.mock_service = None
+        else:
+            logger.info("ThermoWorks device service client initialized in LIVE MODE")
+            self.mock_service = None
         
         # Token storage
         self.token_storage_path = token_storage_path or os.path.expanduser("~/.thermoworks_token.json")
@@ -692,6 +715,29 @@ class ThermoworksClient:
         Raises:
             ThermoworksAPIError: If the API request fails
         """
+        # Use mock data if mock mode is enabled
+        if self.mock_mode and self.mock_service:
+            try:
+                mock_devices = self.mock_service.get_devices()
+                devices = []
+                for device_data in mock_devices:
+                    device = DeviceInfo(
+                        device_id=device_data.get("device_id"),
+                        name=device_data.get("name", f"Device {device_data.get('device_id')}"),
+                        model=device_data.get("model", "Unknown"),
+                        firmware_version=device_data.get("firmware_version"),
+                        last_seen=device_data.get("last_seen"),
+                        battery_level=device_data.get("battery_level"),
+                        signal_strength=device_data.get("signal_strength"),
+                        is_online=device_data.get("is_online", True),
+                        probes=device_data.get("probes", []),
+                    )
+                    devices.append(device)
+                return devices
+            except Exception as e:
+                logger.error(f"Failed to get mock devices: {e}")
+                return []
+        
         # Check if we can use cached data
         with self._device_cache_lock:
             cache_age = time.time() - self._device_cache_timestamp

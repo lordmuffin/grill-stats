@@ -7,6 +7,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager, current_user, login_required
 from flask_bcrypt import Bcrypt
 from flask_migrate import Migrate
+from flask_socketio import SocketIO, emit, join_room, leave_room
 from apscheduler.schedulers.background import BackgroundScheduler
 from dotenv import load_dotenv
 from thermoworks_client import ThermoWorksClient
@@ -38,10 +39,34 @@ bcrypt = Bcrypt(app)
 login_manager = LoginManager(app)
 login_manager.login_view = 'login'
 migrate = Migrate(app, db)
+socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize User model
 from models.user import User
 user_manager = User(db)
+
+# Initialize TemperatureAlert model
+from models.temperature_alert import TemperatureAlert, AlertType
+alert_manager = TemperatureAlert(db)
+
+# Initialize Alert Monitor (will be started after app initialization)
+from services.alert_monitor import AlertMonitor
+alert_monitor = None
+
+# Initialize Device model (will use existing device service for now)
+try:
+    from models.device import Device
+    device_manager = Device(db)
+except ImportError:
+    logger.warning("Device model not found, will use device service instead")
+    device_manager = None
+
+# Initialize GrillingSession model and SessionTracker
+from models.grilling_session import GrillingSession
+session_manager = GrillingSession(db)
+
+from services.session_tracker import SessionTracker
+session_tracker = SessionTracker(session_manager, mock_mode=app.config.get('MOCK_MODE', False))
 
 # Initialize auth routes
 from auth.routes import init_auth_routes
@@ -49,7 +74,8 @@ init_auth_routes(app, login_manager, user_manager, bcrypt)
 
 # Initialize API clients
 thermoworks_client = ThermoWorksClient(
-    api_key=app.config['THERMOWORKS_API_KEY']
+    api_key=app.config['THERMOWORKS_API_KEY'],
+    mock_mode=app.config.get('MOCK_MODE', False)
 )
 
 homeassistant_client = HomeAssistantClient(
@@ -102,6 +128,7 @@ def sync_temperature_data():
                             'signal_strength': temperature_data.get('signal_strength')
                         }
                         
+                        # Update Home Assistant sensor
                         success = homeassistant_client.create_sensor(
                             sensor_name=sensor_name,
                             state=temperature_data['temperature'],
@@ -113,6 +140,26 @@ def sync_temperature_data():
                             logger.info(f"Updated sensor {sensor_name} with temperature {temperature_data['temperature']}°{temperature_data.get('unit', 'F')}")
                         else:
                             logger.error(f"Failed to update sensor {sensor_name}")
+                        
+                        # Process temperature data through session tracker
+                        try:
+                            # Parse timestamp or use current time
+                            timestamp = None
+                            if temperature_data.get('timestamp'):
+                                timestamp = datetime.fromisoformat(temperature_data['timestamp'].replace('Z', '+00:00'))
+                            
+                            # For now, we'll use a default user_id of 1 for auto-detected sessions
+                            # In a real implementation, this would be determined by device ownership
+                            default_user_id = 1
+                            
+                            session_tracker.process_temperature_reading(
+                                device_id=device_id,
+                                temperature=float(temperature_data['temperature']),
+                                timestamp=timestamp,
+                                user_id=default_user_id
+                            )
+                        except Exception as session_error:
+                            logger.warning(f"Session tracking error for device {device_id}: {session_error}")
                             
             except Exception as e:
                 logger.error(f"Error during temperature sync: {e}")
@@ -125,6 +172,721 @@ def sync_temperature_data():
                     
     except Exception as e:
         logger.error(f"Error during temperature sync: {e}")
+
+# ============ TEMPERATURE ALERT CRUD APIs ============
+
+@app.route('/api/alerts', methods=['POST'])
+@login_required
+def create_alert():
+    """Create a new temperature alert"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided'
+            }), 400
+        
+        # Validate required fields
+        required_fields = ['device_id', 'probe_id', 'alert_type']
+        missing_fields = [field for field in required_fields if field not in data]
+        if missing_fields:
+            return jsonify({
+                'success': False,
+                'message': f'Missing required fields: {", ".join(missing_fields)}'
+            }), 400
+        
+        # Validate alert type
+        try:
+            alert_type = AlertType(data['alert_type'])
+        except ValueError:
+            return jsonify({
+                'success': False,
+                'message': f'Invalid alert type. Must be one of: {[t.value for t in AlertType]}'
+            }), 400
+        
+        # Validate alert-specific data
+        errors = alert_manager.validate_alert_data(alert_type, **data)
+        if errors:
+            return jsonify({
+                'success': False,
+                'message': 'Validation errors',
+                'errors': errors
+            }), 400
+        
+        # Create the alert
+        alert_data = {
+            'name': data.get('name', f'{data["device_id"]} {data["probe_id"]} Alert'),
+            'description': data.get('description'),
+            'target_temperature': data.get('target_temperature'),
+            'min_temperature': data.get('min_temperature'),
+            'max_temperature': data.get('max_temperature'),
+            'threshold_value': data.get('threshold_value'),
+            'temperature_unit': data.get('temperature_unit', 'F')
+        }
+        
+        alert = alert_manager.create_alert(
+            user_id=current_user.id,
+            device_id=data['device_id'],
+            probe_id=data['probe_id'],
+            alert_type=alert_type,
+            **alert_data
+        )
+        
+        return jsonify({
+            'success': True,
+            'data': alert.to_dict(),
+            'message': 'Alert created successfully'
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error creating alert: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error creating alert: {str(e)}'
+        }), 500
+
+@app.route('/api/alerts', methods=['GET'])
+@login_required
+def get_alerts():
+    """Get all alerts for the current user"""
+    try:
+        active_only = request.args.get('active_only', 'true').lower() == 'true'
+        device_id = request.args.get('device_id')
+        probe_id = request.args.get('probe_id')
+        
+        if device_id and probe_id:
+            # Get alerts for specific device/probe
+            alerts = alert_manager.get_alerts_for_device_probe(device_id, probe_id, active_only)
+        else:
+            # Get all user alerts
+            alerts = alert_manager.get_user_alerts(current_user.id, active_only)
+        
+        alerts_data = [alert.to_dict() for alert in alerts]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'alerts': alerts_data,
+                'count': len(alerts_data)
+            },
+            'message': f'Retrieved {len(alerts_data)} alerts'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching alerts: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching alerts: {str(e)}'
+        }), 500
+
+@app.route('/api/alerts/<int:alert_id>', methods=['GET'])
+@login_required
+def get_alert(alert_id):
+    """Get a specific alert by ID"""
+    try:
+        alert = alert_manager.get_alert_by_id(alert_id, current_user.id)
+        
+        if not alert:
+            return jsonify({
+                'success': False,
+                'message': 'Alert not found'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'data': alert.to_dict(),
+            'message': 'Alert retrieved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching alert {alert_id}: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching alert: {str(e)}'
+        }), 500
+
+@app.route('/api/alerts/<int:alert_id>', methods=['PUT'])
+@login_required
+def update_alert(alert_id):
+    """Update an existing alert"""
+    try:
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'message': 'No data provided'
+            }), 400
+        
+        # Get existing alert
+        existing_alert = alert_manager.get_alert_by_id(alert_id, current_user.id)
+        if not existing_alert:
+            return jsonify({
+                'success': False,
+                'message': 'Alert not found'
+            }), 404
+        
+        # Validate alert type if being changed
+        if 'alert_type' in data:
+            try:
+                alert_type = AlertType(data['alert_type'])
+                # Validate new alert configuration
+                errors = alert_manager.validate_alert_data(alert_type, **data)
+                if errors:
+                    return jsonify({
+                        'success': False,
+                        'message': 'Validation errors',
+                        'errors': errors
+                    }), 400
+            except ValueError:
+                return jsonify({
+                    'success': False,
+                    'message': f'Invalid alert type. Must be one of: {[t.value for t in AlertType]}'
+                }), 400
+        
+        # Update the alert
+        updated_alert = alert_manager.update_alert(alert_id, current_user.id, **data)
+        
+        if not updated_alert:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to update alert'
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'data': updated_alert.to_dict(),
+            'message': 'Alert updated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating alert {alert_id}: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error updating alert: {str(e)}'
+        }), 500
+
+@app.route('/api/alerts/<int:alert_id>', methods=['DELETE'])
+@login_required
+def delete_alert(alert_id):
+    """Delete (deactivate) an alert"""
+    try:
+        success = alert_manager.delete_alert(alert_id, current_user.id)
+        
+        if not success:
+            return jsonify({
+                'success': False,
+                'message': 'Alert not found'
+            }), 404
+        
+        return jsonify({
+            'success': True,
+            'message': 'Alert deleted successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error deleting alert {alert_id}: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error deleting alert: {str(e)}'
+        }), 500
+
+@app.route('/api/alerts/types', methods=['GET'])
+@login_required
+def get_alert_types():
+    """Get available alert types and their descriptions"""
+    alert_types = [
+        {
+            'value': 'target',
+            'label': 'Target Temperature',
+            'description': 'Alert when probe reaches a specific temperature',
+            'fields': ['target_temperature']
+        },
+        {
+            'value': 'range',
+            'label': 'Temperature Range',
+            'description': 'Alert when probe goes outside a temperature range',
+            'fields': ['min_temperature', 'max_temperature']
+        },
+        {
+            'value': 'rising',
+            'label': 'Rising Temperature',
+            'description': 'Alert when temperature rises by a specific amount',
+            'fields': ['threshold_value']
+        },
+        {
+            'value': 'falling',
+            'label': 'Falling Temperature',
+            'description': 'Alert when temperature falls by a specific amount',
+            'fields': ['threshold_value']
+        }
+    ]
+    
+    return jsonify({
+        'success': True,
+        'data': {
+            'alert_types': alert_types
+        },
+        'message': 'Alert types retrieved successfully'
+    })
+
+@app.route('/api/alerts/monitor/status', methods=['GET'])
+@login_required
+def get_alert_monitor_status():
+    """Get status of the alert monitoring service"""
+    try:
+        if alert_monitor:
+            status = alert_monitor.get_status()
+            return jsonify({
+                'success': True,
+                'data': status,
+                'message': 'Alert monitor status retrieved'
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Alert monitor not initialized'
+            }), 503
+    except Exception as e:
+        logger.error(f"Error getting alert monitor status: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error getting alert monitor status: {str(e)}'
+        }), 500
+
+@app.route('/api/alerts/monitor/check', methods=['POST'])
+@login_required
+def trigger_alert_check():
+    """Trigger an immediate check of all alerts"""
+    try:
+        if alert_monitor:
+            success = alert_monitor.trigger_immediate_check()
+            if success:
+                return jsonify({
+                    'success': True,
+                    'message': 'Alert check triggered successfully'
+                })
+            else:
+                return jsonify({
+                    'success': False,
+                    'message': 'Failed to trigger alert check'
+                }), 500
+        else:
+            return jsonify({
+                'success': False,
+                'message': 'Alert monitor not initialized'
+            }), 503
+    except Exception as e:
+        logger.error(f"Error triggering alert check: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error triggering alert check: {str(e)}'
+        }), 500
+
+@app.route('/api/notifications/latest', methods=['GET'])
+@login_required
+def get_latest_notifications():
+    """Get latest notifications for the current user"""
+    try:
+        if alert_monitor and alert_monitor.redis_client:
+            try:
+                import json
+                user_notifications_key = f"notifications:user:{current_user.id}:latest"
+                notifications_data = alert_monitor.redis_client.lrange(user_notifications_key, 0, -1)
+                
+                notifications = []
+                for notification_json in notifications_data:
+                    try:
+                        notifications.append(json.loads(notification_json))
+                    except json.JSONDecodeError:
+                        continue
+                
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'notifications': notifications,
+                        'count': len(notifications)
+                    },
+                    'message': f'Retrieved {len(notifications)} notifications'
+                })
+                
+            except Exception as e:
+                logger.error(f"Error fetching notifications from Redis: {e}")
+                return jsonify({
+                    'success': True,
+                    'data': {
+                        'notifications': [],
+                        'count': 0
+                    },
+                    'message': 'No notifications available'
+                })
+        else:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'notifications': [],
+                    'count': 0
+                },
+                'message': 'Notification system not available'
+            })
+            
+    except Exception as e:
+        logger.error(f"Error getting latest notifications: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error getting notifications: {str(e)}'
+        }), 500
+
+# ============ WEBSOCKET EVENT HANDLERS ============
+
+@socketio.on('connect')
+def handle_connect():
+    """Handle WebSocket connection"""
+    if current_user.is_authenticated:
+        user_room = f"user_{current_user.id}"
+        join_room(user_room)
+        emit('status', {'message': 'Connected to notification system'})
+        logger.info(f"User {current_user.id} connected to WebSocket")
+
+@socketio.on('disconnect')
+def handle_disconnect():
+    """Handle WebSocket disconnection"""
+    if current_user.is_authenticated:
+        user_room = f"user_{current_user.id}"
+        leave_room(user_room)
+        logger.info(f"User {current_user.id} disconnected from WebSocket")
+
+@socketio.on('join_notifications')
+def handle_join_notifications():
+    """Join the user-specific notification room"""
+    if current_user.is_authenticated:
+        user_room = f"user_{current_user.id}"
+        join_room(user_room)
+        emit('status', {'message': 'Joined notification room'})
+
+@socketio.on('test_notification')
+def handle_test_notification():
+    """Send a test notification (for debugging)"""
+    if current_user.is_authenticated:
+        user_room = f"user_{current_user.id}"
+        test_notification = {
+            'alert_id': 'test',
+            'alert_name': 'Test Alert',
+            'message': 'This is a test notification',
+            'alert_type': 'target',
+            'device_id': 'test_device',
+            'probe_id': 'test_probe',
+            'current_temperature': 200.0,
+            'temperature_unit': 'F',
+            'timestamp': datetime.now().isoformat()
+        }
+        socketio.emit('notification', test_notification, room=user_room)
+
+# ============ END WEBSOCKET EVENT HANDLERS ============
+
+# ============ END TEMPERATURE ALERT APIS ============
+
+# ============ SESSION TRACKING APIS ============
+
+@app.route('/api/sessions/history', methods=['GET'])
+@login_required
+def get_session_history():
+    """Get session history for the current user"""
+    try:
+        # Get query parameters
+        limit = int(request.args.get('limit', 50))
+        offset = int(request.args.get('offset', 0))
+        status = request.args.get('status')  # 'active', 'completed', 'cancelled'
+        
+        # Validate limit
+        if limit > 100:
+            limit = 100
+        
+        # Get user sessions
+        sessions = session_manager.get_user_sessions(
+            user_id=current_user.id,
+            status=status,
+            limit=limit,
+            offset=offset
+        )
+        
+        # Convert to dictionaries
+        sessions_data = [session.to_dict() for session in sessions]
+        
+        # Add additional computed fields
+        for session_data in sessions_data:
+            session_obj = next((s for s in sessions if s.id == session_data['id']), None)
+            if session_obj:
+                session_data['current_duration'] = session_obj.calculate_duration()
+                session_data['is_active'] = session_obj.is_active()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'sessions': sessions_data,
+                'count': len(sessions_data),
+                'limit': limit,
+                'offset': offset
+            },
+            'message': f'Retrieved {len(sessions_data)} sessions'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching session history: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching session history: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/<int:session_id>', methods=['GET'])
+@login_required
+def get_session(session_id):
+    """Get a specific session by ID"""
+    try:
+        session = session_manager.get_session_by_id(session_id)
+        
+        if not session or session.user_id != current_user.id:
+            return jsonify({
+                'success': False,
+                'message': 'Session not found'
+            }), 404
+        
+        session_data = session.to_dict()
+        session_data['current_duration'] = session.calculate_duration()
+        session_data['is_active'] = session.is_active()
+        
+        return jsonify({
+            'success': True,
+            'data': session_data,
+            'message': 'Session retrieved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching session {session_id}: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching session: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/<int:session_id>/name', methods=['POST'])
+@login_required
+def update_session_name(session_id):
+    """Update session name"""
+    try:
+        data = request.get_json()
+        if not data or 'name' not in data:
+            return jsonify({
+                'success': False,
+                'message': 'Name is required'
+            }), 400
+        
+        # Verify session ownership
+        session = session_manager.get_session_by_id(session_id)
+        if not session or session.user_id != current_user.id:
+            return jsonify({
+                'success': False,
+                'message': 'Session not found'
+            }), 404
+        
+        # Update session name
+        updated_session = session_manager.update_session(
+            session_id, 
+            name=data['name']
+        )
+        
+        if not updated_session:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to update session'
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'data': updated_session.to_dict(),
+            'message': 'Session name updated successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error updating session {session_id} name: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error updating session name: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/active', methods=['GET'])
+@login_required
+def get_active_sessions():
+    """Get currently active sessions for the user"""
+    try:
+        active_sessions = session_manager.get_active_sessions(user_id=current_user.id)
+        
+        sessions_data = []
+        for session in active_sessions:
+            session_data = session.to_dict()
+            session_data['current_duration'] = session.calculate_duration()
+            session_data['is_active'] = True
+            sessions_data.append(session_data)
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'sessions': sessions_data,
+                'count': len(sessions_data)
+            },
+            'message': f'Retrieved {len(sessions_data)} active sessions'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching active sessions: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error fetching active sessions: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/start', methods=['POST'])
+@login_required
+def start_session_manually():
+    """Manually start a grilling session"""
+    try:
+        data = request.get_json()
+        device_id = data.get('device_id') if data else None
+        session_type = data.get('session_type', 'manual') if data else 'manual'
+        
+        if not device_id:
+            return jsonify({
+                'success': False,
+                'message': 'Device ID is required'
+            }), 400
+        
+        # Start session
+        session = session_tracker.force_start_session(
+            device_id=device_id,
+            user_id=current_user.id,
+            session_type=session_type
+        )
+        
+        if not session:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to start session'
+            }), 500
+        
+        return jsonify({
+            'success': True,
+            'data': session.to_dict(),
+            'message': 'Session started successfully'
+        }), 201
+        
+    except Exception as e:
+        logger.error(f"Error starting manual session: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error starting session: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/<int:session_id>/end', methods=['POST'])
+@login_required
+def end_session_manually(session_id):
+    """Manually end a grilling session"""
+    try:
+        # Verify session ownership
+        session = session_manager.get_session_by_id(session_id)
+        if not session or session.user_id != current_user.id:
+            return jsonify({
+                'success': False,
+                'message': 'Session not found'
+            }), 404
+        
+        # End session
+        ended_session = session_manager.end_session(session_id)
+        
+        if not ended_session:
+            return jsonify({
+                'success': False,
+                'message': 'Failed to end session'
+            }), 500
+        
+        # Generate name if not set
+        if not ended_session.name:
+            name = session_manager.generate_session_name(ended_session)
+            session_manager.update_session(session_id, name=name)
+            ended_session = session_manager.get_session_by_id(session_id)
+        
+        return jsonify({
+            'success': True,
+            'data': ended_session.to_dict(),
+            'message': 'Session ended successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error ending session {session_id}: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error ending session: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/tracker/status', methods=['GET'])
+@login_required
+def get_session_tracker_status():
+    """Get session tracker status and device statuses"""
+    try:
+        # Get tracker health
+        health = session_tracker.health_check()
+        
+        # Get all session statuses
+        device_statuses = session_tracker.get_all_session_statuses()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'tracker_health': health,
+                'device_statuses': device_statuses
+            },
+            'message': 'Session tracker status retrieved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting session tracker status: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error getting tracker status: {str(e)}'
+        }), 500
+
+@app.route('/api/sessions/simulate', methods=['POST'])
+@login_required
+def simulate_session():
+    """Simulate a grilling session for testing (mock mode only)"""
+    try:
+        if not app.config.get('MOCK_MODE', False):
+            return jsonify({
+                'success': False,
+                'message': 'Simulation only available in mock mode'
+            }), 403
+        
+        data = request.get_json()
+        device_id = data.get('device_id', 'mock_device_001')
+        profile = data.get('profile', 'grilling')  # grilling, smoking, roasting
+        
+        # Start simulation
+        session_tracker.simulate_temperature_data(
+            device_id=device_id,
+            user_id=current_user.id,
+            session_profile=profile
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': f'Session simulation started for device {device_id} with profile {profile}'
+        })
+        
+    except Exception as e:
+        logger.error(f"Error starting session simulation: {e}")
+        return jsonify({
+            'success': False,
+            'message': f'Error starting simulation: {str(e)}'
+        }), 500
+
+# ============ END SESSION TRACKING APIS ============
 
 @app.route('/')
 def index():
@@ -139,6 +901,15 @@ def monitoring():
 @app.route('/health')
 def health_check():
     return jsonify({'status': 'healthy', 'timestamp': datetime.now().isoformat()})
+
+@app.route('/api/config')
+def get_app_config():
+    """Get application configuration info for UI"""
+    return jsonify({
+        'mock_mode': app.config.get('MOCK_MODE', False),
+        'environment': os.getenv('FLASK_ENV', 'development'),
+        'version': open('VERSION').read().strip() if os.path.exists('VERSION') else 'unknown'
+    })
 
 @app.route('/devices')
 @login_required
@@ -416,9 +1187,19 @@ def create_tables():
 # Initialize database - Flask 3.0+ compatible
 def initialize_app():
     """Initialize application with database setup and scheduler"""
+    global alert_monitor
+    
     with app.app_context():
         create_tables()
         logger.info("Database initialization completed")
+    
+    # Initialize and start alert monitor
+    try:
+        alert_monitor = AlertMonitor(app, alert_manager, socketio)
+        alert_monitor.start()
+        logger.info("Alert monitoring service started")
+    except Exception as e:
+        logger.error(f"Failed to start alert monitor: {e}")
     
     # Set up the scheduler for temperature sync
     scheduler.add_job(
@@ -427,8 +1208,47 @@ def initialize_app():
         minutes=5,
         id='temperature_sync'
     )
+    
+    # Add session tracker maintenance jobs
+    def cleanup_session_tracker():
+        """Clean up inactive device tracking data"""
+        try:
+            with app.app_context():
+                cleaned_count = session_tracker.cleanup_inactive_devices(hours_inactive=24)
+                if cleaned_count > 0:
+                    logger.info(f"Cleaned up {cleaned_count} inactive devices from session tracker")
+        except Exception as e:
+            logger.error(f"Error cleaning up session tracker: {e}")
+    
+    def cleanup_old_sessions():
+        """Clean up old incomplete sessions"""
+        try:
+            with app.app_context():
+                cleaned_count = session_manager.cleanup_old_sessions(days_old=7)
+                if cleaned_count > 0:
+                    logger.info(f"Cleaned up {cleaned_count} old incomplete sessions")
+        except Exception as e:
+            logger.error(f"Error cleaning up old sessions: {e}")
+    
+    # Schedule session tracker cleanup every hour
+    scheduler.add_job(
+        func=cleanup_session_tracker,
+        trigger="interval",
+        hours=1,
+        id='session_tracker_cleanup'
+    )
+    
+    # Schedule old session cleanup daily at 2 AM
+    scheduler.add_job(
+        func=cleanup_old_sessions,
+        trigger="cron",
+        hour=2,
+        minute=0,
+        id='old_sessions_cleanup'
+    )
+    
     scheduler.start()
-    logger.info("Temperature sync scheduler started")
+    logger.info("Temperature sync and session tracking schedulers started")
 
 # Call initialization immediately when module is loaded (works in all deployment scenarios)
 logger.info("Attempting to initialize application...")
@@ -470,9 +1290,11 @@ if __name__ == '__main__':
         debug_mode = not is_production
         logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}")
         logger.info("About to call app.run...")
-        app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+        socketio.run(app, host='0.0.0.0', port=5000, debug=debug_mode)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
+        if alert_monitor:
+            alert_monitor.stop()
         scheduler.shutdown()
     except Exception as run_e:
         logger.error(f"Error starting Flask server: {run_e}")

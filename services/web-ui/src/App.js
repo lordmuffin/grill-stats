@@ -3,8 +3,10 @@ import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-d
 import './App.css';
 import Login from './components/Login';
 import DeviceList from './components/DeviceList';
+import DeviceManagement from './components/DeviceManagement';
 import LiveDeviceDashboard from './components/LiveDeviceDashboard';
 import HistoricalGraph from './components/HistoricalGraph';
+import HistoryPage from './components/HistoryPage';
 import Header from './components/Header';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { ApiProvider } from './contexts/ApiContext';
@@ -52,12 +54,20 @@ function AppContent() {
           element={user ? <DeviceList /> : <Navigate to="/login" replace />} 
         />
         <Route 
+          path="/devices/manage" 
+          element={user ? <DeviceManagement /> : <Navigate to="/login" replace />} 
+        />
+        <Route 
           path="/devices/:deviceId/live" 
           element={user ? <LiveDeviceDashboard /> : <Navigate to="/login" replace />} 
         />
         <Route 
           path="/devices/:deviceId/history" 
           element={user ? <HistoricalGraph /> : <Navigate to="/login" replace />} 
+        />
+        <Route 
+          path="/sessions/history" 
+          element={user ? <HistoryPage /> : <Navigate to="/login" replace />} 
         />
         <Route 
           path="*" 

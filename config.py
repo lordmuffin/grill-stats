@@ -31,6 +31,14 @@ class Config:
     
     # Authentication settings
     MAX_LOGIN_ATTEMPTS = 5
+    
+    # Mock Mode settings (for development and testing)
+    MOCK_MODE = os.getenv('MOCK_MODE', 'false').lower() in ('true', '1', 'yes', 'on')
+    
+    @property
+    def is_mock_mode_enabled(self):
+        """Check if mock mode is enabled - only allow in development"""
+        return self.MOCK_MODE and not os.getenv('FLASK_ENV', '').lower() == 'production'
 
 
 class TestConfig(Config):
@@ -38,3 +46,5 @@ class TestConfig(Config):
     TESTING = True
     SQLALCHEMY_DATABASE_URI = 'postgresql://test:test@localhost:5432/grillstats_test'
     WTF_CSRF_ENABLED = False
+    # Always enable mock mode in testing
+    MOCK_MODE = True
