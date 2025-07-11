@@ -1,0 +1,111 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: postgresql-backup
+spec:
+  schedule: "0 2 * * *"  # Daily at 2 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: postgresql-backup
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "200m"
+                ephemeral-storage: "2Gi"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+                ephemeral-storage: "10Gi"
+            env:
+            - name: BACKUP_RETENTION_DAYS
+              value: "30"
+            - name: BACKUP_REMOTE_SYNC
+              value: "true"
+            - name: BACKUP_REMOTE_BASE
+              value: "s3://grill-stats-backups-prod"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: influxdb-backup
+spec:
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: influxdb-backup
+            resources:
+              requests:
+                memory: "1Gi"
+                cpu: "500m"
+                ephemeral-storage: "5Gi"
+              limits:
+                memory: "4Gi"
+                cpu: "2000m"
+                ephemeral-storage: "20Gi"
+            env:
+            - name: BACKUP_RETENTION_DAYS
+              value: "7"
+            - name: BACKUP_REMOTE_SYNC
+              value: "true"
+            - name: BACKUP_REMOTE_BASE
+              value: "s3://grill-stats-backups-prod"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+spec:
+  schedule: "0 4 * * *"  # Daily at 4 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: redis-backup
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "200m"
+                ephemeral-storage: "2Gi"
+              limits:
+                memory: "1Gi"
+                cpu: "1000m"
+                ephemeral-storage: "10Gi"
+            env:
+            - name: BACKUP_RETENTION_DAYS
+              value: "7"
+            - name: BACKUP_REMOTE_SYNC
+              value: "true"
+            - name: BACKUP_REMOTE_BASE
+              value: "s3://grill-stats-backups-prod"
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-verification
+spec:
+  schedule: "0 6 * * *"  # Daily at 6 AM
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: backup-verification
+            resources:
+              requests:
+                memory: "256Mi"
+                cpu: "100m"
+                ephemeral-storage: "1Gi"
+              limits:
+                memory: "512Mi"
+                cpu: "500m"
+                ephemeral-storage: "5Gi"

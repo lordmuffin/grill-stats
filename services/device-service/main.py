@@ -37,6 +37,19 @@ from rfx_gateway_client import (
     GatewaySetupStatus,
 )
 from rfx_gateway_routes import register_gateway_routes
+from device_manager import DeviceManager
+import psycopg2
+from psycopg2.extras import RealDictCursor
+import jwt
+from functools import wraps
+
+try:
+    # Try to import python-thermoworks-cloud if available
+    from thermoworks_cloud import ThermoWorksCloud
+    THERMOWORKS_CLOUD_AVAILABLE = True
+except ImportError:
+    THERMOWORKS_CLOUD_AVAILABLE = False
+    logger.warning("python-thermoworks-cloud library not available")
 
 # Load environment variables
 load_dotenv()
@@ -51,6 +64,33 @@ logger = logging.getLogger("device_service")
 # Initialize Flask app
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
+
+# JWT configuration
+JWT_SECRET = os.environ.get('JWT_SECRET', 'your-secret-key')
+JWT_ALGORITHM = 'HS256'
+
+# Database configuration
+DATABASE_CONFIG = {
+    'host': os.environ.get('DB_HOST', 'localhost'),
+    'port': int(os.environ.get('DB_PORT', 5432)),
+    'database': os.environ.get('DB_NAME', 'grill_stats'),
+    'user': os.environ.get('DB_USER', 'postgres'),
+    'password': os.environ.get('DB_PASSWORD', ''),
+}
+
+# Initialize database manager
+try:
+    device_manager = DeviceManager(
+        db_host=DATABASE_CONFIG['host'],
+        db_port=DATABASE_CONFIG['port'],
+        db_name=DATABASE_CONFIG['database'],
+        db_username=DATABASE_CONFIG['user'],
+        db_password=DATABASE_CONFIG['password']
+    )
+    logger.info("Database manager initialized successfully")
+except Exception as e:
+    logger.error(f"Failed to initialize database manager: {e}")
+    device_manager = None
 
 # Redis connection for sharing device data with other services
 try:
@@ -113,6 +153,44 @@ class CustomJSONEncoder(json.JSONEncoder):
 
 
 app.json_encoder = CustomJSONEncoder
+
+
+def verify_jwt_token(token):
+    """Verify JWT token and extract user information"""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+        return payload
+    except jwt.ExpiredSignatureError:
+        return None
+    except jwt.InvalidTokenError:
+        return None
+
+
+def jwt_required(f):
+    """Decorator for JWT authentication"""
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify(error_response("No token provided", 401)), 401
+        
+        if token.startswith('Bearer '):
+            token = token[7:]
+        
+        payload = verify_jwt_token(token)
+        if not payload:
+            return jsonify(error_response("Invalid or expired token", 401)), 401
+        
+        request.current_user = payload
+        return f(*args, **kwargs)
+    return decorated_function
+
+
+def get_current_user_id():
+    """Get current user ID from request context"""
+    if hasattr(request, 'current_user') and request.current_user:
+        return request.current_user.get('user_id')
+    return None
 
 
 class TemperatureHandler:
@@ -450,34 +528,134 @@ def auth_thermoworks_refresh():
 
 
 @app.route("/api/devices", methods=["GET"])
+@jwt_required
 def get_devices():
     """
-    Get all discovered devices
+    Get all devices for the authenticated user
     
     Returns:
         JSON with list of devices
     """
     try:
-        # Ensure authenticated
-        if not thermoworks_client.token:
-            return jsonify(error_response("Not authenticated", 401)), 401
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify(error_response("User ID not found", 401)), 401
             
         # Get force_refresh parameter
         force_refresh = request.args.get("force_refresh", "false").lower() == "true"
         
-        # Get devices
-        devices = thermoworks_client.get_devices(force_refresh=force_refresh)
+        # Get devices from database (user-specific)
+        db_devices = []
+        if device_manager:
+            db_devices = device_manager.get_devices(active_only=True, user_id=user_id)
+        
+        # Get devices from ThermoWorks Cloud API if available and authenticated
+        cloud_devices = []
+        if thermoworks_client.token and (force_refresh or not db_devices):
+            try:
+                cloud_devices = thermoworks_client.get_devices(force_refresh=force_refresh)
+                
+                # Sync cloud devices to database with user association
+                if device_manager:
+                    for device in cloud_devices:
+                        device_data = {
+                            'device_id': device.device_id,
+                            'name': device.name,
+                            'device_type': 'thermoworks',
+                            'user_id': user_id,
+                            'configuration': {
+                                'model': device.model,
+                                'firmware_version': device.firmware_version,
+                                'probes': device.probes
+                            }
+                        }
+                        device_manager.register_device(device_data)
+                        
+                        # Update device health
+                        health_data = {
+                            'battery_level': device.battery_level,
+                            'signal_strength': device.signal_strength,
+                            'last_seen': device.last_seen,
+                            'status': 'online' if device.is_online else 'offline'
+                        }
+                        device_manager.update_device_health(device.device_id, health_data)
+                    
+                    # Refresh database devices after sync
+                    db_devices = device_manager.get_devices(active_only=True, user_id=user_id)
+            except Exception as e:
+                logger.warning(f"Failed to sync devices from ThermoWorks Cloud: {e}")
+        
+        # Combine and format devices
+        all_devices = []
+        
+        # Add database devices with enhanced info
+        for device in db_devices:
+            device_info = {
+                'device_id': device['device_id'],
+                'name': device['name'],
+                'device_type': device['device_type'],
+                'model': device.get('configuration', {}).get('model', 'Unknown'),
+                'firmware_version': device.get('configuration', {}).get('firmware_version'),
+                'status': 'offline',  # Default, will be updated if we have health data
+                'last_seen': None,
+                'battery_level': None,
+                'signal_strength': None,
+                'is_online': False,
+                'probes': device.get('configuration', {}).get('probes', []),
+                'created_at': device['created_at'],
+                'updated_at': device['updated_at']
+            }
+            
+            # Try to get latest health data
+            if device_manager:
+                try:
+                    conn = device_manager.get_connection()
+                    with conn.cursor() as cur:
+                        cur.execute("""
+                            SELECT battery_level, signal_strength, last_seen, status
+                            FROM device_health 
+                            WHERE device_id = %s 
+                            ORDER BY created_at DESC 
+                            LIMIT 1
+                        """, (device['device_id'],))
+                        health = cur.fetchone()
+                        if health:
+                            device_info['battery_level'] = health[0]
+                            device_info['signal_strength'] = health[1]
+                            device_info['last_seen'] = health[2].isoformat() if health[2] else None
+                            device_info['status'] = health[3] or 'offline'
+                            device_info['is_online'] = health[3] == 'online'
+                    conn.close()
+                except Exception as e:
+                    logger.warning(f"Failed to get health data for device {device['device_id']}: {e}")
+            
+            all_devices.append(device_info)
+        
+        # Add cloud devices that might not be in database yet
+        for device in cloud_devices:
+            if not any(d['device_id'] == device.device_id for d in all_devices):
+                device_info = {
+                    'device_id': device.device_id,
+                    'name': device.name,
+                    'device_type': 'thermoworks',
+                    'model': device.model,
+                    'firmware_version': device.firmware_version,
+                    'status': 'online' if device.is_online else 'offline',
+                    'last_seen': device.last_seen,
+                    'battery_level': device.battery_level,
+                    'signal_strength': device.signal_strength,
+                    'is_online': device.is_online,
+                    'probes': device.probes,
+                    'created_at': None,
+                    'updated_at': None
+                }
+                all_devices.append(device_info)
         
         return jsonify(success_response({
-            "devices": devices,
-            "count": len(devices),
+            "devices": all_devices,
+            "count": len(all_devices),
+            "source": "database" if db_devices else "cloud" if cloud_devices else "none"
         }))
-    except ThermoworksAuthenticationError as e:
-        logger.error(f"Authentication error getting devices: {e}")
-        return jsonify(error_response(f"Authentication failed: {str(e)}", 401)), 401
-    except ThermoworksAPIError as e:
-        logger.error(f"API error getting devices: {e}")
-        return jsonify(error_response(f"API error: {str(e)}", 400)), 400
     except Exception as e:
         logger.error(f"Error getting devices: {e}")
         return jsonify(error_response(f"Error getting devices: {str(e)}", 500)), 500
@@ -719,35 +897,67 @@ def get_device_health(device_id):
 
 
 @app.route("/api/sync", methods=["POST"])
+@jwt_required
 def sync():
     """
-    Manually trigger a data sync
+    Manually trigger a data sync for the authenticated user
     
     Returns:
         JSON with sync status
     """
     try:
-        # Ensure authenticated
+        user_id = get_current_user_id()
+        if not user_id:
+            return jsonify(error_response("User ID not found", 401)), 401
+            
+        # Ensure authenticated with ThermoWorks
         if not thermoworks_client.token:
-            return jsonify(error_response("Not authenticated", 401)), 401
+            return jsonify(error_response("Not authenticated with ThermoWorks", 401)), 401
             
         # Create a background thread to sync data
         def sync_data():
             try:
-                # Get devices
+                # Get devices from ThermoWorks Cloud
                 devices = thermoworks_client.get_devices(force_refresh=True)
-                logger.info(f"Synced {len(devices)} devices")
+                logger.info(f"Synced {len(devices)} devices from ThermoWorks Cloud")
                 
-                # Get temperature for each device
-                for device in devices:
-                    try:
-                        readings = thermoworks_client.get_device_temperature(device.device_id)
-                        logger.info(f"Synced {len(readings)} temperature readings for device {device.device_id}")
+                # Sync devices to database
+                if device_manager:
+                    for device in devices:
+                        device_data = {
+                            'device_id': device.device_id,
+                            'name': device.name,
+                            'device_type': 'thermoworks',
+                            'user_id': user_id,
+                            'configuration': {
+                                'model': device.model,
+                                'firmware_version': device.firmware_version,
+                                'probes': device.probes
+                            }
+                        }
+                        device_manager.register_device(device_data)
                         
-                        # Handle readings
-                        temperature_handler.handle_temperature_readings(device, readings)
-                    except Exception as e:
-                        logger.error(f"Error syncing temperature for device {device.device_id}: {e}")
+                        # Update device health
+                        health_data = {
+                            'battery_level': device.battery_level,
+                            'signal_strength': device.signal_strength,
+                            'last_seen': device.last_seen,
+                            'status': 'online' if device.is_online else 'offline'
+                        }
+                        device_manager.update_device_health(device.device_id, health_data)
+                        
+                        # Get temperature for each device
+                        try:
+                            readings = thermoworks_client.get_device_temperature(device.device_id)
+                            logger.info(f"Synced {len(readings)} temperature readings for device {device.device_id}")
+                            
+                            # Handle readings
+                            temperature_handler.handle_temperature_readings(device, readings)
+                        except Exception as e:
+                            logger.error(f"Error syncing temperature for device {device.device_id}: {e}")
+                
+                logger.info(f"Sync completed for user {user_id}")
+                
             except Exception as e:
                 logger.error(f"Error during sync: {e}")
                 
@@ -760,9 +970,6 @@ def sync():
             "message": "Sync started in background",
             "timestamp": datetime.datetime.now().isoformat(),
         }))
-    except ThermoworksAuthenticationError as e:
-        logger.error(f"Authentication error during sync: {e}")
-        return jsonify(error_response(f"Authentication failed: {str(e)}", 401)), 401
     except Exception as e:
         logger.error(f"Error during sync: {e}")
         return jsonify(error_response(f"Error during sync: {str(e)}", 500)), 500

@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import RealTimeChart from './RealTimeChart';
-import { getDevices, triggerSync } from '../utils/api';
+import { getDevices, triggerSync, logoutUser } from '../utils/api';
 import './TemperatureDashboard.css';
 
 /**
  * Temperature Dashboard component that allows selecting devices and
  * configuring the real-time chart display
  */
-const TemperatureDashboard = () => {
+const TemperatureDashboard = ({ user, onLogout }) => {
   // Device selection state
   const [devices, setDevices] = useState([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
@@ -73,6 +73,18 @@ const TemperatureDashboard = () => {
     setHistoryHours(parseInt(event.target.value, 10));
   };
   
+  // Handle user logout
+  const handleLogout = async () => {
+    try {
+      await logoutUser();
+    } catch (error) {
+      console.error('Logout error:', error);
+    } finally {
+      // Call the parent callback to handle logout
+      onLogout();
+    }
+  };
+  
   // Render loading state
   if (loading) {
     return (
@@ -113,7 +125,15 @@ const TemperatureDashboard = () => {
   return (
     <div className="temperature-dashboard">
       <div className="dashboard-header">
-        <h2>Temperature Monitor</h2>
+        <div className="dashboard-title">
+          <h2>Temperature Monitor</h2>
+          <div className="user-info">
+            <span className="user-greeting">Welcome, {user?.name || user?.email}!</span>
+            <button className="logout-button" onClick={handleLogout}>
+              Logout
+            </button>
+          </div>
+        </div>
         
         <div className="dashboard-controls">
           {/* Device selection */}

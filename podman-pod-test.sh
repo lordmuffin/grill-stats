@@ -5,7 +5,7 @@
 
 set -e
 
-POD_NAME="grill-monitoring-test-pod"
+POD_NAME="grill-stats-test-pod"
 POSTGRES_CONTAINER="postgres-pod"
 REDIS_CONTAINER="redis-pod"
 INFLUXDB_CONTAINER="influxdb-pod"

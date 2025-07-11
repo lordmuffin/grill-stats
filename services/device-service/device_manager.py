@@ -128,30 +128,49 @@ class DeviceManager:
                 
                 if existing_device:
                     # Update existing device
-                    cur.execute("""
-                        UPDATE devices 
-                        SET name = %s, device_type = %s, configuration = %s, 
-                            active = TRUE, updated_at = CURRENT_TIMESTAMP
-                        WHERE device_id = %s
-                        RETURNING *
-                    """, (
+                    update_fields = ["name = %s", "device_type = %s", "configuration = %s", 
+                                   "active = TRUE", "updated_at = CURRENT_TIMESTAMP"]
+                    update_values = [
                         device_data['name'],
                         device_data['device_type'],
-                        device_data.get('configuration', {}),
-                        device_data['device_id']
-                    ))
+                        device_data.get('configuration', {})
+                    ]
+                    
+                    # Add user_id if provided
+                    if 'user_id' in device_data:
+                        update_fields.insert(3, "user_id = %s")
+                        update_values.append(device_data['user_id'])
+                    
+                    update_values.append(device_data['device_id'])
+                    
+                    cur.execute(f"""
+                        UPDATE devices 
+                        SET {', '.join(update_fields)}
+                        WHERE device_id = %s
+                        RETURNING *
+                    """, update_values)
                 else:
                     # Insert new device
-                    cur.execute("""
-                        INSERT INTO devices (device_id, name, device_type, configuration)
-                        VALUES (%s, %s, %s, %s)
-                        RETURNING *
-                    """, (
+                    fields = ["device_id", "name", "device_type", "configuration"]
+                    values = [
                         device_data['device_id'],
                         device_data['name'],
                         device_data['device_type'],
                         device_data.get('configuration', {})
-                    ))
+                    ]
+                    
+                    # Add user_id if provided
+                    if 'user_id' in device_data:
+                        fields.append("user_id")
+                        values.append(device_data['user_id'])
+                    
+                    placeholders = ', '.join(['%s'] * len(values))
+                    
+                    cur.execute(f"""
+                        INSERT INTO devices ({', '.join(fields)})
+                        VALUES ({placeholders})
+                        RETURNING *
+                    """, values)
                 
                 device = cur.fetchone()
                 conn.commit()
@@ -170,16 +189,24 @@ class DeviceManager:
             logger.error("Device registration failed", device_id=device_data['device_id'], error=str(e))
             raise
     
-    def get_devices(self, active_only: bool = True) -> List[Dict]:
-        """Get all devices"""
+    def get_devices(self, active_only: bool = True, user_id: Optional[int] = None) -> List[Dict]:
+        """Get all devices, optionally filtered by user"""
         try:
             conn = self.get_connection()
             with conn.cursor() as cur:
-                if active_only:
-                    cur.execute("SELECT * FROM devices WHERE active = TRUE ORDER BY created_at DESC")
-                else:
-                    cur.execute("SELECT * FROM devices ORDER BY created_at DESC")
+                query = "SELECT * FROM devices WHERE 1=1"
+                params = []
                 
+                if active_only:
+                    query += " AND active = TRUE"
+                
+                if user_id is not None:
+                    query += " AND user_id = %s"
+                    params.append(user_id)
+                
+                query += " ORDER BY created_at DESC"
+                
+                cur.execute(query, params)
                 devices = cur.fetchall()
             conn.close()
             

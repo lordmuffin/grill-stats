@@ -29,7 +29,7 @@ Create a Kubernetes secret for pulling from your Gitea registry:
 
 ```bash
 kubectl create secret docker-registry gitea-registry \
-  --namespace grill-monitoring \
+  --namespace grill-stats \
   --docker-server=gitea-internal \
   --docker-username=your-gitea-username \
   --docker-password=your-gitea-password
@@ -43,14 +43,14 @@ The application requires several secrets to function properly:
 
 ```bash
 # API keys
-kubectl create secret generic grill-monitoring-secrets \
-  --namespace grill-monitoring \
+kubectl create secret generic grill-stats-secrets \
+  --namespace grill-stats \
   --from-literal=thermoworks-api-key=your-api-key \
   --from-literal=homeassistant-token=your-token
 
 # Database credentials
-kubectl create secret generic grill-monitoring-db-credentials \
-  --namespace grill-monitoring \
+kubectl create secret generic grill-stats-db-credentials \
+  --namespace grill-stats \
   --from-literal=username=grill-admin \
   --from-literal=password=$(openssl rand -base64 20)
 ```
@@ -79,7 +79,7 @@ Repeat this process for each environment as needed.
        path: apps/services/grill-stats
      destination:
        server: https://kubernetes.default.svc
-       namespace: grill-monitoring
+       namespace: grill-stats
      syncPolicy:
        automated:
          prune: true

@@ -56,7 +56,7 @@ The existing grill-stats application is a monolithic Flask application with the 
 # Priority Tasks
 - analyze_existing_cluster: "Document current Kubernetes setup and CNI"
 - cilium_migration_plan: "Create zero-downtime CNI migration strategy"
-- namespace_design: "Design grill-monitoring namespace structure"
+- namespace_design: "Design grill-stats namespace structure"
 - network_policies: "Create security policies for microservices"
 ```
 

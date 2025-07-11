@@ -8,3 +8,6 @@ resources:
 - supporting-services
 - ingress
 - operators
+- vault
+- external-services
+- monitoring

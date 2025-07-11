@@ -5,3 +5,5 @@ resources:
 - namespace.yaml
 - resourcequota.yaml
 - networkpolicy.yaml
+- vault-token-1password.yaml
+- 1password-secrets.yaml

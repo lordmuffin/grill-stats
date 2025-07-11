@@ -166,7 +166,7 @@ kubectl apply -f kubernetes/configmap.yaml
 kubectl apply -k kustomize/overlays/dev
 
 # Verify deployment
-kubectl get pods -n grill-monitoring-dev
+kubectl get pods -n grill-stats-dev
 ```
 
 ### 4. Deploy Infrastructure
@@ -187,15 +187,15 @@ kubectl apply -f kubernetes/device-service.yaml
 kubectl apply -f kubernetes/temperature-service.yaml
 
 # Verify deployment
-kubectl get pods -n grill-monitoring
+kubectl get pods -n grill-stats
 ```
 
 ### 6. Access Services
 ```bash
 # Port forward for local access
-kubectl port-forward -n grill-monitoring svc/device-service 8080:8080
-kubectl port-forward -n grill-monitoring svc/temperature-service 8081:8080
-kubectl port-forward -n grill-monitoring svc/web-ui 3000:3000
+kubectl port-forward -n grill-stats svc/device-service 8080:8080
+kubectl port-forward -n grill-stats svc/temperature-service 8081:8080
+kubectl port-forward -n grill-stats svc/web-ui 3000:3000
 
 # Test endpoints
 curl http://localhost:8080/health
@@ -363,10 +363,10 @@ kubectl apply -k kustomize/overlays/staging  # Staging environment
 kubectl apply -k kustomize/overlays/prod  # Production environment
 
 # Monitor deployment
-kubectl get pods -n grill-monitoring -w
+kubectl get pods -n grill-stats -w
 
 # View logs
-kubectl logs -f deployment/device-service -n grill-monitoring
+kubectl logs -f deployment/device-service -n grill-stats
 ```
 
 ### ArgoCD Deployment
@@ -375,7 +375,7 @@ kubectl logs -f deployment/device-service -n grill-monitoring
 kubectl apply -f argocd/application.yaml
 
 # Sync application
-argocd app sync grill-monitoring
+argocd app sync grill-stats
 ```
 
 ## 🔧 Development

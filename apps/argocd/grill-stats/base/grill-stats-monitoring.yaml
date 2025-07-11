@@ -1,0 +1,194 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-monitoring
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: grill-stats-monitoring
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "5"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: grill-stats
+  
+  source:
+    repoURL: https://github.com/lordmuffin/grill-stats.git
+    targetRevision: main
+    path: kustomize/base/core-services
+    directory:
+      include: 'monitoring.yaml'
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grill-stats
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10
+  
+  info:
+  - name: Description
+    value: Monitoring and observability for grill-stats platform
+  - name: Environment
+    value: prod-lab
+  - name: Components
+    value: ServiceMonitors, PrometheusRules, Grafana Dashboards
+    
+  # Ignore differences in monitoring resource status
+  ignoreDifferences:
+  - group: 'monitoring.coreos.com'
+    kind: ServiceMonitor
+    jsonPointers:
+    - /status
+  - group: 'monitoring.coreos.com'
+    kind: PrometheusRule
+    jsonPointers:
+    - /status
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-vault
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: grill-stats-vault
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: vault
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "2"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: grill-stats
+  
+  source:
+    repoURL: https://github.com/lordmuffin/grill-stats.git
+    targetRevision: main
+    path: kustomize/base/vault
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grill-stats
+    
+  syncPolicy:
+    automated:
+      prune: false  # Never auto-prune vault resources
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - RespectIgnoreDifferences=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+        
+  revisionHistoryLimit: 10
+  
+  info:
+  - name: Description
+    value: HashiCorp Vault integration for encryption services
+  - name: Environment
+    value: prod-lab
+  - name: Components
+    value: Vault Agent, Service Accounts, Transit Engine
+    
+  # Ignore differences in vault dynamic fields
+  ignoreDifferences:
+  - group: ''
+    kind: ServiceAccount
+    jsonPointers:
+    - /secrets
+  - group: ''
+    kind: ConfigMap
+    jsonPointers:
+    - /data/vault-agent.hcl
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-supporting-services
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: grill-stats-supporting-services
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: supporting-services
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "4"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: grill-stats
+  
+  source:
+    repoURL: https://github.com/lordmuffin/grill-stats.git
+    targetRevision: main
+    path: kustomize/base/supporting-services
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grill-stats
+    
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+        
+  revisionHistoryLimit: 10
+  
+  info:
+  - name: Description
+    value: Supporting services for grill-stats platform
+  - name: Environment
+    value: prod-lab
+  - name: Components
+    value: Data Processing, Home Assistant Integration, Notifications
+    
+  # Ignore differences in dynamic fields
+  ignoreDifferences:
+  - group: 'apps'
+    kind: Deployment
+    jsonPointers:
+    - /spec/replicas
+    - /spec/template/spec/containers/0/resources
+  - group: ''
+    kind: Service
+    jsonPointers:
+    - /spec/clusterIP
+    - /spec/clusterIPs

@@ -13,6 +13,7 @@ from thermoworks_client import ThermoWorksClient
 import asyncio
 import redis
 import json
+import time
 
 # Configure structured logging
 structlog.configure(
@@ -387,6 +388,219 @@ def temperature_stream(device_id):
                     yield f"data: {json.dumps(data)}\n\n"
     
     return app.response_class(generate(), mimetype='text/plain')
+
+# Live device data endpoint for User Story 3
+@app.route('/api/devices/<device_id>/live', methods=['GET'])
+def get_device_live_data(device_id):
+    """Get current live data for a device including all channels and status"""
+    with tracer.start_as_current_span("get_device_live_data"):
+        try:
+            # Get current temperature data from ThermoWorks API
+            device_data = thermoworks_client.get_device_data(device_id)
+            device_status = thermoworks_client.get_device_status(device_id)
+            
+            # Format live data response
+            live_data = {
+                'device_id': device_id,
+                'timestamp': datetime.utcnow().isoformat(),
+                'channels': [],
+                'status': {
+                    'battery_level': device_status.get('battery_level', 0),
+                    'signal_strength': device_status.get('signal_strength', 0),
+                    'connection_status': device_status.get('connection_status', 'unknown'),
+                    'last_seen': device_status.get('last_seen', datetime.utcnow().isoformat())
+                }
+            }
+            
+            # Process channels/probes
+            for channel in device_data.get('channels', []):
+                channel_data = {
+                    'channel_id': channel.get('channel_id'),
+                    'probe_type': channel.get('probe_type', 'meat'),
+                    'temperature': channel.get('temperature'),
+                    'unit': channel.get('unit', 'F'),
+                    'name': channel.get('name', f"Channel {channel.get('channel_id')}"),
+                    'is_connected': channel.get('is_connected', True)
+                }
+                live_data['channels'].append(channel_data)
+            
+            # Cache the live data
+            cache_key = f"live_data:{device_id}"
+            redis_client.setex(cache_key, 30, json.dumps(live_data))
+            
+            # Store in time-series database
+            if temperature_manager:
+                for channel in live_data['channels']:
+                    temperature_manager.store_temperature_reading({
+                        'device_id': device_id,
+                        'probe_id': channel['channel_id'],
+                        'temperature': channel['temperature'],
+                        'unit': channel['unit'],
+                        'timestamp': datetime.utcnow().isoformat()
+                    })
+            
+            logger.info("Live device data retrieved", device_id=device_id, channels=len(live_data['channels']))
+            return jsonify({
+                'status': 'success',
+                'data': live_data
+            })
+            
+        except Exception as e:
+            logger.error("Failed to get live device data", device_id=device_id, error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+# Device channels configuration endpoint
+@app.route('/api/devices/<device_id>/channels', methods=['GET'])
+def get_device_channels(device_id):
+    """Get device channel configuration"""
+    with tracer.start_as_current_span("get_device_channels"):
+        try:
+            # Get channel configuration from ThermoWorks API
+            device_data = thermoworks_client.get_device_data(device_id)
+            
+            channels = []
+            for channel in device_data.get('channels', []):
+                channel_config = {
+                    'channel_id': channel.get('channel_id'),
+                    'probe_type': channel.get('probe_type', 'meat'),
+                    'name': channel.get('name', f"Channel {channel.get('channel_id')}"),
+                    'unit': channel.get('unit', 'F'),
+                    'is_active': channel.get('is_active', True),
+                    'min_temp': channel.get('min_temp', 32),
+                    'max_temp': channel.get('max_temp', 500)
+                }
+                channels.append(channel_config)
+            
+            logger.info("Device channels retrieved", device_id=device_id, count=len(channels))
+            return jsonify({
+                'status': 'success',
+                'data': {
+                    'device_id': device_id,
+                    'channels': channels,
+                    'count': len(channels)
+                }
+            })
+            
+        except Exception as e:
+            logger.error("Failed to get device channels", device_id=device_id, error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+# Device status endpoint
+@app.route('/api/devices/<device_id>/status', methods=['GET'])
+def get_device_status(device_id):
+    """Get device status including battery, signal, and connection info"""
+    with tracer.start_as_current_span("get_device_status"):
+        try:
+            # Get device status from ThermoWorks API
+            device_status = thermoworks_client.get_device_status(device_id)
+            
+            status_data = {
+                'device_id': device_id,
+                'battery_level': device_status.get('battery_level', 0),
+                'signal_strength': device_status.get('signal_strength', 0),
+                'connection_status': device_status.get('connection_status', 'unknown'),
+                'last_seen': device_status.get('last_seen', datetime.utcnow().isoformat()),
+                'firmware_version': device_status.get('firmware_version', 'unknown'),
+                'hardware_version': device_status.get('hardware_version', 'unknown'),
+                'timestamp': datetime.utcnow().isoformat()
+            }
+            
+            # Cache the status data
+            cache_key = f"status:{device_id}"
+            redis_client.setex(cache_key, 60, json.dumps(status_data))
+            
+            logger.info("Device status retrieved", device_id=device_id, battery=status_data['battery_level'])
+            return jsonify({
+                'status': 'success',
+                'data': status_data
+            })
+            
+        except Exception as e:
+            logger.error("Failed to get device status", device_id=device_id, error=str(e))
+            return jsonify({
+                'status': 'error',
+                'message': str(e)
+            }), 500
+
+# Live data stream endpoint for User Story 3
+@app.route('/api/devices/<device_id>/stream', methods=['GET'])
+def device_live_stream(device_id):
+    """Server-sent events stream for live device data updates"""
+    def generate():
+        last_update = datetime.utcnow()
+        
+        while True:
+            try:
+                # Get current live data
+                live_data = get_device_live_data_internal(device_id)
+                
+                if live_data:
+                    yield f"data: {json.dumps(live_data)}\n\n"
+                    
+                # Wait for next update (5 seconds)
+                time.sleep(5)
+                
+            except Exception as e:
+                error_data = {
+                    'device_id': device_id,
+                    'error': str(e),
+                    'timestamp': datetime.utcnow().isoformat()
+                }
+                yield f"data: {json.dumps(error_data)}\n\n"
+                time.sleep(10)  # Wait longer on error
+    
+    return app.response_class(generate(), mimetype='text/plain')
+
+# Internal helper function for live data
+def get_device_live_data_internal(device_id):
+    """Internal helper to get live device data"""
+    try:
+        # Check cache first
+        cache_key = f"live_data:{device_id}"
+        cached_data = redis_client.get(cache_key)
+        if cached_data:
+            return json.loads(cached_data)
+        
+        # Get from ThermoWorks API
+        device_data = thermoworks_client.get_device_data(device_id)
+        device_status = thermoworks_client.get_device_status(device_id)
+        
+        live_data = {
+            'device_id': device_id,
+            'timestamp': datetime.utcnow().isoformat(),
+            'channels': [],
+            'status': {
+                'battery_level': device_status.get('battery_level', 0),
+                'signal_strength': device_status.get('signal_strength', 0),
+                'connection_status': device_status.get('connection_status', 'unknown')
+            }
+        }
+        
+        # Process channels
+        for channel in device_data.get('channels', []):
+            channel_data = {
+                'channel_id': channel.get('channel_id'),
+                'probe_type': channel.get('probe_type', 'meat'),
+                'temperature': channel.get('temperature'),
+                'unit': channel.get('unit', 'F'),
+                'name': channel.get('name', f"Channel {channel.get('channel_id')}"),
+                'is_connected': channel.get('is_connected', True)
+            }
+            live_data['channels'].append(channel_data)
+        
+        # Cache the result
+        redis_client.setex(cache_key, 30, json.dumps(live_data))
+        
+        return live_data
+    except Exception as e:
+        logger.error("Failed to get live device data internally", device_id=device_id, error=str(e))
+        return None
 
 # Temperature alerts endpoint
 @app.route('/api/temperature/alerts/<device_id>', methods=['GET'])

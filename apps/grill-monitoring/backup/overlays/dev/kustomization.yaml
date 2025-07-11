@@ -1,0 +1,36 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: grill-stats
+
+resources:
+  - ../../base
+
+patchesStrategicMerge:
+  - backup-config.yaml
+  - storage-config.yaml
+
+configMapGenerator:
+  - name: backup-environment-config
+    literals:
+      - ENVIRONMENT=development
+      - BACKUP_REMOTE_SYNC=false
+      - BACKUP_REMOTE_BASE=s3://grill-stats-backups-dev
+      - BACKUP_RETENTION_DAYS=7
+      - NOTIFICATION_ENABLED=false
+      - MONITORING_ENABLED=true
+      - LOG_LEVEL=DEBUG
+
+commonLabels:
+  environment: development
+  app.kubernetes.io/instance: grill-stats-dev
+
+images:
+  - name: postgres
+    newTag: 15-alpine
+  - name: influxdb
+    newTag: 2.7-alpine
+  - name: redis
+    newTag: 7-alpine
+  - name: alpine
+    newTag: 3.18

@@ -6,18 +6,20 @@
  */
 
 const API_BASE_URL = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080';
+const AUTH_API_BASE_URL = process.env.REACT_APP_AUTH_API_BASE_URL || 'http://localhost:8082';
 
 /**
  * Generic API request function with error handling
  * 
  * @param {string} endpoint - API endpoint to request
  * @param {Object} options - Fetch options
+ * @param {string} baseUrl - Base URL to use (defaults to API_BASE_URL)
  * @returns {Promise<any>} - Response data
  * @throws {Error} - Throws error on failed requests
  */
-async function apiRequest(endpoint, options = {}) {
+async function apiRequest(endpoint, options = {}, baseUrl = API_BASE_URL) {
   try {
-    const url = `${API_BASE_URL}${endpoint}`;
+    const url = `${baseUrl}${endpoint}`;
     const response = await fetch(url, {
       ...options,
       headers: {
@@ -50,6 +52,35 @@ async function apiRequest(endpoint, options = {}) {
     console.error(`API request error for ${endpoint}:`, error);
     throw error;
   }
+}
+
+/**
+ * Make authenticated API request with JWT token
+ * 
+ * @param {string} endpoint - API endpoint to request
+ * @param {Object} options - Fetch options
+ * @param {string} baseUrl - Base URL to use (defaults to API_BASE_URL)
+ * @returns {Promise<any>} - Response data
+ * @throws {Error} - Throws error on failed requests
+ */
+async function authenticatedApiRequest(endpoint, options = {}, baseUrl = API_BASE_URL) {
+  const token = localStorage.getItem('jwt_token');
+  const sessionToken = localStorage.getItem('session_token');
+  
+  const headers = {
+    'Content-Type': 'application/json',
+    ...options.headers,
+  };
+  
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  if (sessionToken) {
+    headers['Session-Token'] = sessionToken;
+  }
+  
+  return apiRequest(endpoint, { ...options, headers }, baseUrl);
 }
 
 /**
@@ -144,6 +175,16 @@ export async function getDeviceHealth(deviceId) {
 }
 
 /**
+ * Get device health information (alias for getDeviceHealth)
+ * 
+ * @param {string} deviceId - Device ID
+ * @returns {Promise<Object>} - Device health information
+ */
+export async function getDeviceHealthStatus(deviceId) {
+  return getDeviceHealth(deviceId);
+}
+
+/**
  * Set up a server-sent events connection for real-time temperature updates
  * 
  * @param {string} deviceId - Device ID
@@ -226,4 +267,238 @@ export async function getThermoworksConnectionStatus() {
 export async function discoverDevices() {
   const response = await apiRequest('/api/devices/discover', { method: 'POST' });
   return response.data?.devices || [];
+}
+
+// Authentication API functions
+
+/**
+ * Login user with email and password
+ * 
+ * @param {Object} credentials - Login credentials
+ * @param {string} credentials.email - User email
+ * @param {string} credentials.password - User password
+ * @param {string} credentials.login_type - Login type ('local' or 'thermoworks')
+ * @returns {Promise<Object>} - Login response with tokens and user data
+ */
+export async function loginUser(credentials) {
+  return apiRequest('/api/auth/login', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  }, AUTH_API_BASE_URL);
+}
+
+/**
+ * Logout current user
+ * 
+ * @returns {Promise<Object>} - Logout response
+ */
+export async function logoutUser() {
+  return authenticatedApiRequest('/api/auth/logout', {
+    method: 'POST',
+  }, AUTH_API_BASE_URL);
+}
+
+/**
+ * Register new user
+ * 
+ * @param {Object} userData - User registration data
+ * @param {string} userData.email - User email
+ * @param {string} userData.password - User password
+ * @param {string} userData.name - User name
+ * @returns {Promise<Object>} - Registration response
+ */
+export async function registerUser(userData) {
+  return apiRequest('/api/auth/register', {
+    method: 'POST',
+    body: JSON.stringify(userData),
+  }, AUTH_API_BASE_URL);
+}
+
+/**
+ * Check authentication status
+ * 
+ * @param {string} token - JWT token to check
+ * @returns {Promise<Object>} - Authentication status
+ */
+export async function checkAuthStatus(token) {
+  const headers = {};
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+  
+  return apiRequest('/api/auth/status', {
+    method: 'GET',
+    headers,
+  }, AUTH_API_BASE_URL);
+}
+
+/**
+ * Get current user information
+ * 
+ * @returns {Promise<Object>} - Current user data
+ */
+export async function getCurrentUser() {
+  return authenticatedApiRequest('/api/auth/me', {
+    method: 'GET',
+  }, AUTH_API_BASE_URL);
+}
+
+/**
+ * Connect ThermoWorks account
+ * 
+ * @param {Object} credentials - ThermoWorks credentials
+ * @param {string} credentials.thermoworks_email - ThermoWorks email
+ * @param {string} credentials.thermoworks_password - ThermoWorks password
+ * @returns {Promise<Object>} - Connection response
+ */
+export async function connectThermoWorksAccount(credentials) {
+  return authenticatedApiRequest('/api/auth/thermoworks/connect', {
+    method: 'POST',
+    body: JSON.stringify(credentials),
+  }, AUTH_API_BASE_URL);
+}
+
+/**
+ * Get user's active sessions
+ * 
+ * @returns {Promise<Object>} - User sessions
+ */
+export async function getUserSessions() {
+  return authenticatedApiRequest('/api/auth/sessions', {
+    method: 'GET',
+  }, AUTH_API_BASE_URL);
+}
+
+// Live Device Data API functions for User Story 3
+
+/**
+ * Get live device data including all channels and status
+ * 
+ * @param {string} deviceId - Device ID
+ * @returns {Promise<Object>} - Live device data
+ */
+export async function getLiveDeviceData(deviceId) {
+  const response = await apiRequest(`/api/devices/${deviceId}/live`);
+  return response.data;
+}
+
+/**
+ * Get device channel configuration
+ * 
+ * @param {string} deviceId - Device ID
+ * @returns {Promise<Object>} - Device channel configuration
+ */
+export async function getDeviceChannels(deviceId) {
+  const response = await apiRequest(`/api/devices/${deviceId}/channels`);
+  return response.data;
+}
+
+/**
+ * Get device status including battery, signal, and connection info
+ * 
+ * @param {string} deviceId - Device ID
+ * @returns {Promise<Object>} - Device status
+ */
+export async function getDeviceStatus(deviceId) {
+  const response = await apiRequest(`/api/devices/${deviceId}/status`);
+  return response.data;
+}
+
+/**
+ * Set up a server-sent events connection for live device data updates
+ * 
+ * @param {string} deviceId - Device ID
+ * @param {Function} onMessage - Callback function for live data updates
+ * @param {Function} onError - Callback function for errors
+ * @param {Function} onOpen - Callback function when connection opens
+ * @returns {EventSource} - EventSource object that can be closed with .close()
+ */
+export function getLiveDeviceDataStream(deviceId, onMessage, onError, onOpen) {
+  try {
+    const eventSource = new EventSource(`${API_BASE_URL}/api/devices/${deviceId}/stream`);
+    
+    eventSource.onopen = (event) => {
+      console.log('Live device data stream connected');
+      if (onOpen) {
+        onOpen(event);
+      }
+    };
+    
+    eventSource.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        onMessage(data);
+      } catch (error) {
+        console.error('Error parsing live device data:', error);
+        if (onError) {
+          onError(error);
+        }
+      }
+    };
+    
+    eventSource.onerror = (error) => {
+      console.error('Live device data stream error:', error);
+      if (onError) {
+        onError(error);
+      }
+    };
+    
+    return eventSource;
+  } catch (error) {
+    console.error('Failed to create live device data stream:', error);
+    if (onError) {
+      onError(error);
+    }
+    return null;
+  }
+}
+
+/**
+ * Get temperature alerts for a device
+ * 
+ * @param {string} deviceId - Device ID
+ * @param {Object} options - Query options
+ * @param {string} options.startTime - Start time in ISO format
+ * @param {string} options.endTime - End time in ISO format
+ * @param {string} options.alertLevel - Alert level filter
+ * @returns {Promise<Array>} - Array of temperature alerts
+ */
+export async function getTemperatureAlerts(deviceId, options = {}) {
+  let endpoint = `/api/devices/${deviceId}/alerts`;
+  
+  const params = new URLSearchParams();
+  if (options.startTime) params.append('start_time', options.startTime);
+  if (options.endTime) params.append('end_time', options.endTime);
+  if (options.alertLevel) params.append('alert_level', options.alertLevel);
+  
+  if (params.toString()) {
+    endpoint += `?${params.toString()}`;
+  }
+  
+  const response = await apiRequest(endpoint);
+  return response.data?.alerts || [];
+}
+
+/**
+ * Acknowledge a temperature alert
+ * 
+ * @param {string} deviceId - Device ID
+ * @param {number} alertId - Alert ID
+ * @returns {Promise<Object>} - Acknowledgment response
+ */
+export async function acknowledgeTemperatureAlert(deviceId, alertId) {
+  return apiRequest(`/api/devices/${deviceId}/alerts/${alertId}/acknowledge`, {
+    method: 'POST'
+  });
+}
+
+/**
+ * Get device summary with live status
+ * 
+ * @param {string} deviceId - Device ID
+ * @returns {Promise<Object>} - Device summary with live status
+ */
+export async function getDeviceSummary(deviceId) {
+  const response = await apiRequest(`/api/devices/${deviceId}/summary`);
+  return response.data;
 }

@@ -1,0 +1,121 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: backup-verification
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-verification
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+spec:
+  schedule: "0 6 * * *"  # Daily at 6 AM
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  suspend: false
+  jobTemplate:
+    spec:
+      backoffLimit: 1
+      activeDeadlineSeconds: 1800  # 30 minute timeout
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: backup-verification
+            app.kubernetes.io/component: backup
+            app.kubernetes.io/part-of: grill-stats
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-operator
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: backup-verification
+            image: alpine:latest
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: ENVIRONMENT
+              value: "production"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: TZ
+              value: "UTC"
+            command:
+            - /bin/sh
+            - -c
+            - |
+              # Install required packages
+              apk add --no-cache bash jq curl openssl
+              
+              # Make scripts executable
+              chmod +x /scripts/*.sh
+              
+              # Run verification script
+              /scripts/verify-backups.sh
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+              readOnly: true
+            - name: backup-temp
+              mountPath: /tmp
+            - name: backup-scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: backup-encryption-secret
+              mountPath: /secrets/backup-encryption
+              readOnly: true
+            - name: backup-notification-secret
+              mountPath: /secrets/backup-notification
+              readOnly: true
+            resources:
+              requests:
+                memory: "128Mi"
+                cpu: "100m"
+                ephemeral-storage: "1Gi"
+              limits:
+                memory: "256Mi"
+                cpu: "200m"
+                ephemeral-storage: "2Gi"
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-storage-pvc
+          - name: backup-temp
+            persistentVolumeClaim:
+              claimName: backup-temp-pvc
+          - name: backup-scripts
+            configMap:
+              name: backup-scripts
+              defaultMode: 0755
+          - name: backup-encryption-secret
+            secret:
+              secretName: backup-encryption-secret
+              defaultMode: 0600
+          - name: backup-notification-secret
+            secret:
+              secretName: backup-notification-secret
+              defaultMode: 0600
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          tolerations:
+          - key: node.kubernetes.io/not-ready
+            operator: Exists
+            effect: NoExecute
+            tolerationSeconds: 300
+          - key: node.kubernetes.io/unreachable
+            operator: Exists
+            effect: NoExecute
+            tolerationSeconds: 300

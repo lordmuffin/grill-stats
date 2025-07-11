@@ -1,13 +1,15 @@
 apiVersion: kustomize.config.k8s.io/v1beta1
 kind: Kustomization
 
-namespace: grill-monitoring-dev
+namespace: grill-stats-dev
 
 bases:
 - ../../base
 
 resources:
 - namespace.yaml
+- vault-dev-config.yaml
+- network-policies-dev.yaml
 
 patches:
 - path: patches/replicas-patch.yaml
@@ -17,13 +19,13 @@ patches:
 - path: patches/grill-stats-replicas-patch.yaml
 
 configMapGenerator:
-- name: grill-monitoring-config
+- name: grill-stats-config
   behavior: merge
   literals:
   - SYNC_INTERVAL="60"  # Faster sync for dev environment
 
 secretGenerator:
-- name: grill-monitoring-secrets
+- name: grill-stats-secrets
   behavior: merge
   envs:
   - secrets/dev.env  # Will contain dev environment secrets

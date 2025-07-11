@@ -61,8 +61,8 @@ cleanup_all() {
     podman rm grill-stats-enhanced device-service-enhanced temperature-service-enhanced 2>/dev/null || true
     
     # Clean up pod if it exists
-    podman pod stop grill-monitoring-test-pod 2>/dev/null || true
-    podman pod rm grill-monitoring-test-pod 2>/dev/null || true
+    podman pod stop grill-stats-test-pod 2>/dev/null || true
+    podman pod rm grill-stats-test-pod 2>/dev/null || true
     
     # Clean up Docker Compose if running
     docker-compose -f docker-compose.enhanced.yml down 2>/dev/null || true

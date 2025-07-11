@@ -19,6 +19,50 @@ GET /health
 ```
 Returns the health status of the service and its dependencies.
 
+### User Story 4: Device History (NEW)
+```
+GET /api/devices/{device_id}/history
+```
+Gets historical temperature data for a specific device with user authentication.
+
+**Authentication:** Requires JWT token in Authorization header
+**Query Parameters:**
+- `start_time`: Start time in ISO 8601 format (default: 24 hours ago)
+- `end_time`: End time in ISO 8601 format (default: now)
+- `probe_id`: Optional specific probe ID to filter
+- `aggregation`: Optional aggregation function (`none`, `avg`, `min`, `max`)
+- `interval`: Optional time interval for aggregation (1m, 5m, 15m, 1h, 6h, 1d)
+- `limit`: Optional maximum number of readings (default: 1000)
+
+**Response Format:**
+```json
+{
+  "status": "success",
+  "data": {
+    "device_id": "test_device_001",
+    "probes": [
+      {
+        "probe_id": "probe_1",
+        "readings": [
+          {
+            "timestamp": "2023-01-01T12:00:00Z",
+            "temperature": 225.5,
+            "unit": "F",
+            "battery_level": 85.2,
+            "signal_strength": 92.1
+          }
+        ]
+      }
+    ],
+    "total_readings": 1440,
+    "time_range": {
+      "start": "2023-01-01T00:00:00Z",
+      "end": "2023-01-02T00:00:00Z"
+    }
+  }
+}
+```
+
 ### Store Temperature Reading
 ```
 POST /api/temperature
@@ -144,8 +188,32 @@ GET /api/temperature/statistics
 - `TIMESCALEDB_DATABASE`: Database name (default: grill_monitoring)
 - `TIMESCALEDB_USERNAME`: Database username (default: grill_monitor)
 - `TIMESCALEDB_PASSWORD`: Database password
+- `JWT_SECRET_KEY`: Secret key for JWT token validation (required for User Story 4)
 - `DEBUG`: Enable debug mode (default: false)
-- `PORT`: Port to run the service on (default: 8080)
+- `PORT`: Port to run the service on (default: 8083)
+
+## Development Tools
+
+### Data Seeding
+Populate the database with sample data for testing:
+```bash
+python seed_data.py
+```
+
+### Endpoint Testing
+Test all endpoints including the new User Story 4 device history:
+```bash
+python test_endpoints.py
+```
+
+## Frontend Integration
+
+The historical data service integrates with the React frontend through:
+
+1. **ApiContext**: `historicalApi.getDeviceHistory()` method
+2. **HistoricalGraph Component**: Chart.js visualization with date picker
+3. **Authentication**: JWT token-based user authentication
+4. **Device Navigation**: Direct links from device cards to historical views
 
 ## Testing
 

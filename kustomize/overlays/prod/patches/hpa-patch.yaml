@@ -1,19 +1,51 @@
 apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
-  name: device-service-hpa
-  namespace: grill-monitoring
+  name: auth-service-hpa
+  namespace: grill-stats
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
-    name: device-service
+    name: auth-service
   minReplicas: 2
   maxReplicas: 5
   metrics:
   - type: Resource
     resource:
       name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: device-service-hpa
+  namespace: grill-stats
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: device-service
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
       target:
         type: Utilization
         averageUtilization: 80
@@ -22,18 +54,102 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: temperature-service-hpa
-  namespace: grill-monitoring
+  namespace: grill-stats
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: temperature-service
-  minReplicas: 2
-  maxReplicas: 5
+  minReplicas: 3
+  maxReplicas: 8
   metrics:
   - type: Resource
     resource:
       name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: historical-data-service-hpa
+  namespace: grill-stats
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: historical-data-service
+  minReplicas: 2
+  maxReplicas: 6
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: encryption-service-hpa
+  namespace: grill-stats
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: encryption-service
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
+      target:
+        type: Utilization
+        averageUtilization: 80
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: web-ui-service-hpa
+  namespace: grill-stats
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: web-ui-service
+  minReplicas: 2
+  maxReplicas: 4
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
       target:
         type: Utilization
         averageUtilization: 80
@@ -42,18 +158,24 @@ apiVersion: autoscaling/v2
 kind: HorizontalPodAutoscaler
 metadata:
   name: homeassistant-service-hpa
-  namespace: grill-monitoring
+  namespace: grill-stats
 spec:
   scaleTargetRef:
     apiVersion: apps/v1
     kind: Deployment
     name: homeassistant-service
   minReplicas: 2
-  maxReplicas: 5
+  maxReplicas: 4
   metrics:
   - type: Resource
     resource:
       name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 70
+  - type: Resource
+    resource:
+      name: memory
       target:
         type: Utilization
         averageUtilization: 80

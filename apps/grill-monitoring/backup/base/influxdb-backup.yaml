@@ -1,0 +1,147 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: influxdb-backup
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: influxdb-backup
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+spec:
+  schedule: "0 3 * * *"  # Daily at 3 AM
+  timeZone: "UTC"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 7
+  failedJobsHistoryLimit: 3
+  suspend: false
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 7200  # 2 hour timeout
+      template:
+        metadata:
+          labels:
+            app.kubernetes.io/name: influxdb-backup
+            app.kubernetes.io/component: backup
+            app.kubernetes.io/part-of: grill-stats
+        spec:
+          restartPolicy: OnFailure
+          serviceAccountName: backup-operator
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            runAsGroup: 65534
+            fsGroup: 65534
+            seccompProfile:
+              type: RuntimeDefault
+          containers:
+          - name: influxdb-backup
+            image: influxdb:2.7-alpine
+            imagePullPolicy: IfNotPresent
+            securityContext:
+              allowPrivilegeEscalation: false
+              readOnlyRootFilesystem: true
+              capabilities:
+                drop:
+                - ALL
+            env:
+            - name: INFLUX_HOST
+              value: "http://influxdb:8086"
+            - name: INFLUX_ORG
+              value: "grill-stats"
+            - name: BACKUP_REMOTE_SYNC
+              value: "true"
+            - name: BACKUP_REMOTE_TYPE
+              value: "s3"
+            - name: BACKUP_REMOTE_BASE
+              value: "s3://grill-stats-backups"
+            - name: ENVIRONMENT
+              value: "production"
+            - name: NAMESPACE
+              valueFrom:
+                fieldRef:
+                  fieldPath: metadata.namespace
+            - name: TZ
+              value: "UTC"
+            command:
+            - /bin/bash
+            - -c
+            - |
+              # Install required packages
+              apk add --no-cache curl openssl jq awscli
+              
+              # Make scripts executable
+              chmod +x /scripts/*.sh
+              
+              # Run backup script
+              /scripts/influxdb-backup.sh
+            volumeMounts:
+            - name: backup-storage
+              mountPath: /backup
+            - name: backup-temp
+              mountPath: /tmp
+            - name: backup-scripts
+              mountPath: /scripts
+              readOnly: true
+            - name: influxdb-secrets
+              mountPath: /secrets/influxdb
+              readOnly: true
+            - name: backup-encryption-secret
+              mountPath: /secrets/backup-encryption
+              readOnly: true
+            - name: backup-notification-secret
+              mountPath: /secrets/backup-notification
+              readOnly: true
+            resources:
+              requests:
+                memory: "512Mi"
+                cpu: "200m"
+                ephemeral-storage: "2Gi"
+              limits:
+                memory: "2Gi"
+                cpu: "1000m"
+                ephemeral-storage: "10Gi"
+            livenessProbe:
+              exec:
+                command:
+                - /bin/sh
+                - -c
+                - "ps aux | grep -v grep | grep -q influxdb-backup"
+              initialDelaySeconds: 60
+              periodSeconds: 60
+              timeoutSeconds: 10
+              failureThreshold: 3
+          volumes:
+          - name: backup-storage
+            persistentVolumeClaim:
+              claimName: backup-storage-pvc
+          - name: backup-temp
+            persistentVolumeClaim:
+              claimName: backup-temp-pvc
+          - name: backup-scripts
+            configMap:
+              name: backup-scripts
+              defaultMode: 0755
+          - name: influxdb-secrets
+            secret:
+              secretName: influxdb-secret
+              defaultMode: 0600
+          - name: backup-encryption-secret
+            secret:
+              secretName: backup-encryption-secret
+              defaultMode: 0600
+          - name: backup-notification-secret
+            secret:
+              secretName: backup-notification-secret
+              defaultMode: 0600
+          nodeSelector:
+            kubernetes.io/arch: amd64
+          tolerations:
+          - key: node.kubernetes.io/not-ready
+            operator: Exists
+            effect: NoExecute
+            tolerationSeconds: 300
+          - key: node.kubernetes.io/unreachable
+            operator: Exists
+            effect: NoExecute
+            tolerationSeconds: 300

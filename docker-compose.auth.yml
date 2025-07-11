@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  # PostgreSQL database
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: grill_stats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-init/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql
+    networks:
+      - grill-stats-network
+
+  # Redis for session storage
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - grill-stats-network
+
+  # Authentication service
+  auth-service:
+    build: ./services/auth-service
+    ports:
+      - "8082:8082"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - SECRET_KEY=your-secret-key-here
+      - JWT_SECRET=your-jwt-secret-here
+      - THERMOWORKS_CLIENT_ID=${THERMOWORKS_CLIENT_ID}
+      - THERMOWORKS_CLIENT_SECRET=${THERMOWORKS_CLIENT_SECRET}
+      - THERMOWORKS_BASE_URL=${THERMOWORKS_BASE_URL:-https://api.thermoworks.com}
+      - THERMOWORKS_AUTH_URL=${THERMOWORKS_AUTH_URL:-https://auth.thermoworks.com}
+    depends_on:
+      - postgres
+      - redis
+    networks:
+      - grill-stats-network
+    restart: unless-stopped
+
+  # Web UI service
+  web-ui:
+    build: ./services/web-ui
+    ports:
+      - "3000:3000"
+    environment:
+      - REACT_APP_API_BASE_URL=http://localhost:8080
+      - REACT_APP_AUTH_API_BASE_URL=http://localhost:8082
+    depends_on:
+      - auth-service
+    networks:
+      - grill-stats-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  grill-stats-network:
+    driver: bridge

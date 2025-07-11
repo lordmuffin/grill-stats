@@ -1,0 +1,336 @@
+/* Historical Graph Component Styles */
+.historical-graph {
+  padding: 1rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.graph-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 2px solid #e9ecef;
+}
+
+.header-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.graph-header h2 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.5rem;
+}
+
+/* Controls Panel */
+.controls-panel {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.date-range-picker {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+}
+
+.date-input {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.date-input label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.date-picker-input {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  min-width: 200px;
+}
+
+.date-picker-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.chart-controls {
+  display: flex;
+  gap: 1rem;
+  align-items: end;
+}
+
+.control-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.control-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #495057;
+}
+
+.control-select {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background: white;
+  min-width: 120px;
+}
+
+.control-select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Data Summary */
+.data-summary {
+  text-align: center;
+  margin-bottom: 1rem;
+  padding: 0.75rem;
+  background: #e3f2fd;
+  border-radius: 4px;
+  border-left: 4px solid #2196f3;
+}
+
+.data-summary p {
+  margin: 0;
+  color: #1976d2;
+  font-weight: 500;
+}
+
+/* Probe Selection */
+.probe-selection {
+  margin-bottom: 2rem;
+}
+
+.probe-selection h4 {
+  margin-bottom: 0.75rem;
+  color: #2c3e50;
+}
+
+.probe-checkboxes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.probe-checkbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #f8f9fa;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.probe-checkbox:hover {
+  background: #e9ecef;
+}
+
+.probe-checkbox input[type="checkbox"] {
+  margin: 0;
+}
+
+.reading-count {
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+/* Chart Container */
+.chart-container {
+  height: 500px;
+  margin-bottom: 2rem;
+  padding: 1rem;
+  background: white;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+/* Error and Loading States */
+.error-message {
+  background: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+  color: #721c24;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #6c757d;
+}
+
+.spinner {
+  border: 3px solid #f3f3f3;
+  border-top: 3px solid #007bff;
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* No Data Message */
+.no-data-message {
+  text-align: center;
+  padding: 3rem;
+  color: #6c757d;
+  background: #f8f9fa;
+  border-radius: 8px;
+  border: 1px solid #dee2e6;
+}
+
+.no-data-message p {
+  margin-bottom: 1rem;
+}
+
+/* Button Styles */
+.btn {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: #007bff;
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.btn-secondary {
+  background: #6c757d;
+  color: white;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: #545b62;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .historical-graph {
+    padding: 0.5rem;
+  }
+  
+  .controls-panel {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .date-range-picker {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .chart-controls {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+  
+  .date-picker-input {
+    min-width: 100%;
+  }
+  
+  .control-select {
+    min-width: 100%;
+  }
+  
+  .probe-checkboxes {
+    flex-direction: column;
+  }
+  
+  .chart-container {
+    height: 400px;
+    padding: 0.5rem;
+  }
+  
+  .graph-header {
+    flex-direction: column;
+    gap: 1rem;
+    text-align: center;
+  }
+  
+  .header-left {
+    flex-direction: column;
+    gap: 0.5rem;
+  }
+}
+
+/* DatePicker custom styling */
+.react-datepicker__input-container input {
+  padding: 0.5rem;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  min-width: 200px;
+}
+
+.react-datepicker__input-container input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+/* Custom scrollbar for small screens */
+@media (max-width: 480px) {
+  .controls-panel {
+    overflow-x: auto;
+    white-space: nowrap;
+  }
+  
+  .date-range-picker {
+    flex-direction: row;
+    min-width: fit-content;
+  }
+}

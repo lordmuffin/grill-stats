@@ -1,0 +1,19 @@
+# Core dependencies
+Flask==2.3.3
+flask-healthz==0.0.3
+hvac==1.2.1
+requests==2.31.0
+python-dotenv==1.0.0
+
+# Security and encryption
+cryptography==41.0.7
+
+# Development and testing
+pytest==7.4.3
+pytest-cov==4.1.0
+pytest-mock==3.12.0
+black==23.11.0
+flake8==6.1.0
+
+# Production deployment
+gunicorn==21.2.0

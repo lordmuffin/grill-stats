@@ -1,0 +1,92 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: grill-stats-argocd-prod-lab
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: argocd
+
+resources:
+  - ../../base
+
+commonLabels:
+  app.kubernetes.io/environment: prod-lab
+  app.kubernetes.io/instance: prod
+
+commonAnnotations:
+  argocd.argoproj.io/environment: "prod-lab"
+  argocd.argoproj.io/cluster: "prod-lab"
+
+patchesStrategicMerge:
+  - production-overrides.yaml
+
+patchesJson6902:
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: grill-stats-core-services
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: "kustomize/overlays/prod-lab"
+      - op: replace
+        path: /spec/syncPolicy/automated/prune
+        value: true
+      - op: replace
+        path: /spec/syncPolicy/automated/selfHeal
+        value: true
+        
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: grill-stats-databases
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: "kustomize/overlays/prod-lab"
+      - op: replace
+        path: /spec/syncPolicy/automated/prune
+        value: false
+      - op: replace
+        path: /spec/syncPolicy/automated/selfHeal
+        value: true
+        
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: grill-stats-secrets
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: "apps/secrets/grill-stats/prod-lab"
+      - op: replace
+        path: /spec/syncPolicy/automated/prune
+        value: false
+      - op: replace
+        path: /spec/syncPolicy/automated/selfHeal
+        value: true
+
+# Namespace override for production
+namePrefix: ""
+nameSuffix: ""
+
+# Production-specific configurations
+configMapGenerator: []
+secretGenerator: []
+
+# Production images (can be overridden by CI/CD)
+images: []
+
+# Production-specific generators
+generators: []
+
+# Production-specific transformers
+transformers: []
+
+# Production-specific validators
+validators: []

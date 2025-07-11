@@ -6,9 +6,41 @@ from datetime import datetime, timedelta
 import structlog
 from opentelemetry import trace
 import json
+import jwt
+import os
 
 logger = structlog.get_logger()
 tracer = trace.get_tracer(__name__)
+
+def get_user_id_from_jwt(token):
+    """Extract user ID from JWT token."""
+    try:
+        if not token:
+            return None
+            
+        # Remove 'Bearer ' prefix if present
+        if token.startswith('Bearer '):
+            token = token[7:]
+            
+        # Decode JWT token
+        secret_key = os.getenv('JWT_SECRET_KEY', 'your-secret-key')
+        decoded_token = jwt.decode(token, secret_key, algorithms=['HS256'])
+        return decoded_token.get('user_id')
+    except Exception as e:
+        logger.warning("Failed to decode JWT token", error=str(e))
+        return None
+
+def get_user_devices(user_id):
+    """Get list of device IDs that belong to the user."""
+    try:
+        # This would typically query the user-device mapping table
+        # For now, we'll return a simple check or assume all devices belong to the user
+        # In a real implementation, this would query the PostgreSQL database
+        # to get the user's devices from the user_devices table
+        return None  # Return None to indicate we should use the device_id from request
+    except Exception as e:
+        logger.error("Error getting user devices", error=str(e))
+        return []
 
 def register_routes(app, timescale_manager: TimescaleManager):
     """Register all API routes with the Flask app."""
@@ -22,6 +54,12 @@ def register_routes(app, timescale_manager: TimescaleManager):
             'version': '1.0.0',
             'timestamp': datetime.utcnow().isoformat(),
             'status': 'healthy',
+            'features': {
+                'device_history': True,
+                'user_authentication': True,
+                'data_aggregation': True,
+                'time_series_storage': True
+            },
             'dependencies': {}
         }
         
@@ -244,6 +282,138 @@ def register_routes(app, timescale_manager: TimescaleManager):
                 
             except Exception as e:
                 logger.error("Failed to get temperature history", error=str(e))
+                return jsonify({
+                    'status': 'error',
+                    'message': str(e)
+                }), 500
+    
+    # User-specific device history endpoint
+    @app.route('/api/devices/<device_id>/history', methods=['GET'])
+    def get_device_history(device_id):
+        """Get historical temperature data for a specific device (with user authentication)."""
+        with tracer.start_as_current_span("get_device_history"):
+            try:
+                # Get user ID from JWT token
+                auth_header = request.headers.get('Authorization')
+                user_id = get_user_id_from_jwt(auth_header)
+                
+                if not user_id:
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Authentication required'
+                    }), 401
+                
+                # Parse query parameters
+                start_time_str = request.args.get('start_time')
+                end_time_str = request.args.get('end_time')
+                probe_id = request.args.get('probe_id')
+                aggregation = request.args.get('aggregation', 'none')
+                interval = request.args.get('interval', '1m')
+                limit = request.args.get('limit')
+                
+                # Convert limit to integer if provided
+                if limit:
+                    try:
+                        limit = int(limit)
+                    except ValueError:
+                        limit = 1000  # Default limit
+                else:
+                    limit = 1000
+                
+                # Parse datetime strings
+                start_time = None
+                end_time = None
+                
+                if start_time_str:
+                    try:
+                        start_time = datetime.fromisoformat(start_time_str.replace('Z', '+00:00'))
+                    except ValueError:
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'Invalid start_time format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)'
+                        }), 400
+                else:
+                    # Default to 24 hours ago
+                    start_time = datetime.utcnow() - timedelta(hours=24)
+                
+                if end_time_str:
+                    try:
+                        end_time = datetime.fromisoformat(end_time_str.replace('Z', '+00:00'))
+                    except ValueError:
+                        return jsonify({
+                            'status': 'error',
+                            'message': 'Invalid end_time format. Use ISO 8601 format (YYYY-MM-DDTHH:MM:SSZ)'
+                        }), 400
+                else:
+                    # Default to now
+                    end_time = datetime.utcnow()
+                
+                # Validate time range
+                if start_time >= end_time:
+                    return jsonify({
+                        'status': 'error',
+                        'message': 'Start time must be before end time'
+                    }), 400
+                
+                # Get historical data
+                history_data = timescale_manager.get_temperature_history(
+                    device_id=device_id,
+                    probe_id=probe_id,
+                    start_time=start_time,
+                    end_time=end_time,
+                    aggregation=aggregation,
+                    interval=interval,
+                    limit=limit
+                )
+                
+                # Group data by probe for easier frontend consumption
+                probes = {}
+                for reading in history_data:
+                    probe_key = reading.get('probe_id', 'unknown')
+                    if probe_key not in probes:
+                        probes[probe_key] = {
+                            'probe_id': probe_key,
+                            'readings': []
+                        }
+                    probes[probe_key]['readings'].append({
+                        'timestamp': reading['time'],
+                        'temperature': reading['temperature'],
+                        'unit': reading.get('unit', 'F'),
+                        'battery_level': reading.get('battery_level'),
+                        'signal_strength': reading.get('signal_strength')
+                    })
+                
+                # Convert to list and sort by timestamp
+                probe_list = []
+                for probe_data in probes.values():
+                    probe_data['readings'].sort(key=lambda x: x['timestamp'])
+                    probe_list.append(probe_data)
+                
+                probe_list.sort(key=lambda x: x['probe_id'])
+                
+                logger.info("Device history retrieved", 
+                          device_id=device_id,
+                          user_id=user_id,
+                          probe_count=len(probe_list),
+                          total_readings=len(history_data))
+                
+                return jsonify({
+                    'status': 'success',
+                    'data': {
+                        'device_id': device_id,
+                        'probes': probe_list,
+                        'total_readings': len(history_data),
+                        'time_range': {
+                            'start': start_time.isoformat(),
+                            'end': end_time.isoformat()
+                        }
+                    }
+                })
+                
+            except Exception as e:
+                logger.error("Failed to get device history", 
+                           device_id=device_id, 
+                           error=str(e))
                 return jsonify({
                     'status': 'error',
                     'message': str(e)

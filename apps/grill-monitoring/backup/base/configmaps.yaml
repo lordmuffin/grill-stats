@@ -1,0 +1,560 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-config
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-config
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+data:
+  backup.conf: |
+    # Backup Configuration
+    
+    # Global Settings
+    BACKUP_RETENTION_DAYS=30
+    BACKUP_VERIFICATION_ENABLED=true
+    BACKUP_ENCRYPTION_ENABLED=true
+    BACKUP_COMPRESSION_ENABLED=true
+    
+    # Remote Storage Settings
+    BACKUP_REMOTE_SYNC=true
+    BACKUP_REMOTE_TYPE=s3
+    BACKUP_REMOTE_BASE=s3://grill-stats-backups
+    BACKUP_REMOTE_REGION=us-east-1
+    
+    # PostgreSQL Settings
+    POSTGRES_BACKUP_ENABLED=true
+    POSTGRES_BACKUP_RETENTION_DAYS=30
+    POSTGRES_BACKUP_SCHEDULE="0 2 * * *"
+    POSTGRES_BACKUP_TIMEOUT=3600
+    POSTGRES_BACKUP_COMPRESS=true
+    
+    # InfluxDB Settings
+    INFLUXDB_BACKUP_ENABLED=true
+    INFLUXDB_BACKUP_RETENTION_DAYS=7
+    INFLUXDB_BACKUP_SCHEDULE="0 3 * * *"
+    INFLUXDB_BACKUP_TIMEOUT=7200
+    INFLUXDB_BACKUP_COMPRESS=true
+    
+    # Redis Settings
+    REDIS_BACKUP_ENABLED=true
+    REDIS_BACKUP_RETENTION_DAYS=7
+    REDIS_BACKUP_SCHEDULE="0 4 * * *"
+    REDIS_BACKUP_TIMEOUT=1800
+    REDIS_BACKUP_COMPRESS=true
+    
+    # Verification Settings
+    VERIFICATION_SCHEDULE="0 6 * * *"
+    VERIFICATION_TIMEOUT=1800
+    VERIFICATION_MAX_BACKUP_AGE_HOURS=48
+    VERIFICATION_MIN_BACKUP_SIZE_KB=1024
+    
+    # Notification Settings
+    NOTIFICATION_ENABLED=true
+    NOTIFICATION_WEBHOOK_ENABLED=true
+    NOTIFICATION_EMAIL_ENABLED=false
+    NOTIFICATION_SLACK_ENABLED=false
+    
+    # Storage Monitoring
+    STORAGE_WARNING_THRESHOLD=80
+    STORAGE_CRITICAL_THRESHOLD=95
+    
+    # Logging
+    LOG_LEVEL=INFO
+    LOG_FORMAT=json
+    LOG_RETENTION_DAYS=7
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-scripts-config
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-scripts-config
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+data:
+  postgresql.conf: |
+    # PostgreSQL Backup Configuration
+    
+    # Connection Settings
+    POSTGRES_HOST=postgresql
+    POSTGRES_PORT=5432
+    POSTGRES_DB=grill_stats
+    POSTGRES_USER=grill_stats
+    
+    # Backup Settings
+    BACKUP_TYPE=full
+    BACKUP_FORMAT=custom
+    BACKUP_COMPRESSION=9
+    BACKUP_PARALLEL_JOBS=1
+    
+    # Tables to backup individually
+    CRITICAL_TABLES="users devices device_channels device_health api_keys"
+    
+    # WAL Settings
+    WAL_ARCHIVE_ENABLED=false
+    WAL_ARCHIVE_PATH=/backup/postgresql/wal
+    
+    # Point-in-time Recovery Settings
+    PITR_ENABLED=false
+    PITR_RETENTION_DAYS=7
+  
+  influxdb.conf: |
+    # InfluxDB Backup Configuration
+    
+    # Connection Settings
+    INFLUX_HOST=http://influxdb:8086
+    INFLUX_ORG=grill-stats
+    
+    # Backup Settings
+    BACKUP_COMPRESSION=gzip
+    BACKUP_SKIP_VERIFY=false
+    
+    # Bucket Settings
+    BUCKETS_TO_BACKUP="grill-stats-realtime grill-stats-hourly grill-stats-daily grill-stats-archive"
+    
+    # Retention Policies
+    REALTIME_RETENTION=7
+    HOURLY_RETENTION=30
+    DAILY_RETENTION=365
+    ARCHIVE_RETENTION=3650
+    
+    # Metadata Backup
+    BACKUP_METADATA=true
+    BACKUP_DASHBOARDS=true
+    BACKUP_TASKS=true
+    BACKUP_USERS=true
+  
+  redis.conf: |
+    # Redis Backup Configuration
+    
+    # Connection Settings
+    REDIS_HOST=redis
+    REDIS_PORT=6379
+    
+    # Backup Settings
+    BACKUP_METHOD=rdb
+    BACKUP_RDB_ENABLED=true
+    BACKUP_AOF_ENABLED=true
+    
+    # Database Settings
+    DATABASES_TO_BACKUP="0"
+    
+    # Memory Settings
+    MEMORY_OPTIMIZATION=true
+    MEMORY_THRESHOLD_MB=1024
+    
+    # Persistence Settings
+    RDB_SAVE_ENABLED=true
+    AOF_ENABLED=true
+    AOF_REWRITE_ENABLED=true
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-monitoring-config
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-monitoring-config
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+data:
+  monitoring.conf: |
+    # Backup Monitoring Configuration
+    
+    # Prometheus Metrics
+    METRICS_ENABLED=true
+    METRICS_PORT=8080
+    METRICS_PATH=/metrics
+    
+    # Health Check Settings
+    HEALTH_CHECK_ENABLED=true
+    HEALTH_CHECK_INTERVAL=30s
+    HEALTH_CHECK_TIMEOUT=10s
+    
+    # Alert Settings
+    ALERT_ENABLED=true
+    ALERT_WEBHOOK_URL=http://alertmanager:9093/api/v1/alerts
+    
+    # Thresholds
+    BACKUP_FAILURE_THRESHOLD=1
+    BACKUP_AGE_WARNING_HOURS=30
+    BACKUP_AGE_CRITICAL_HOURS=48
+    STORAGE_WARNING_PERCENT=80
+    STORAGE_CRITICAL_PERCENT=95
+    
+    # Grafana Dashboard
+    DASHBOARD_ENABLED=true
+    DASHBOARD_REFRESH_INTERVAL=5m
+    DASHBOARD_TIME_RANGE=24h
+  
+  alerts.yaml: |
+    groups:
+    - name: backup-alerts
+      rules:
+      - alert: BackupJobFailed
+        expr: increase(kube_job_failed_total{job_name=~".*backup.*", namespace="grill-stats"}[1h]) > 0
+        for: 5m
+        labels:
+          severity: critical
+          team: devops
+        annotations:
+          summary: "Backup job {{ $labels.job_name }} failed"
+          description: "Backup job {{ $labels.job_name }} has failed in the last hour"
+          runbook_url: "https://runbooks.example.com/backup-job-failed"
+      
+      - alert: BackupStorageFull
+        expr: (1 - (node_filesystem_avail_bytes{mountpoint="/backup"} / node_filesystem_size_bytes{mountpoint="/backup"})) * 100 > 95
+        for: 15m
+        labels:
+          severity: critical
+          team: devops
+        annotations:
+          summary: "Backup storage is critically full"
+          description: "Backup storage usage is at {{ $value }}% on {{ $labels.instance }}"
+          runbook_url: "https://runbooks.example.com/backup-storage-full"
+      
+      - alert: BackupVerificationFailed
+        expr: increase(kube_job_failed_total{job_name="backup-verification", namespace="grill-stats"}[1h]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          team: devops
+        annotations:
+          summary: "Backup verification failed"
+          description: "Backup verification job has failed"
+          runbook_url: "https://runbooks.example.com/backup-verification-failed"
+
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backup-documentation
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-documentation
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+data:
+  README.md: |
+    # Grill Stats Backup System
+    
+    ## Overview
+    
+    This backup system provides comprehensive data protection for the Grill Stats platform, including:
+    
+    - **PostgreSQL**: User data, device configurations, encrypted credentials
+    - **InfluxDB**: Time-series temperature data with multiple retention policies
+    - **Redis**: Session data and caching (less critical)
+    
+    ## Features
+    
+    - **Automated Backups**: Daily scheduled backups for all databases
+    - **Encryption**: AES-256-CBC encryption for all backup files
+    - **Compression**: Gzip compression to reduce storage requirements
+    - **Verification**: Daily integrity checks and backup validation
+    - **Remote Storage**: S3-compatible remote backup storage
+    - **Monitoring**: Prometheus metrics and Grafana dashboards
+    - **Alerting**: Comprehensive alert rules for backup failures
+    - **Recovery**: Automated restore scripts with testing capabilities
+    
+    ## Architecture
+    
+    ```
+    ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
+    │   PostgreSQL    │    │    InfluxDB     │    │     Redis       │
+    │     Backup      │    │     Backup      │    │     Backup      │
+    │   (Daily 2AM)   │    │   (Daily 3AM)   │    │   (Daily 4AM)   │
+    └─────────────────┘    └─────────────────┘    └─────────────────┘
+             │                       │                       │
+             └───────────────────────┼───────────────────────┘
+                                     │
+                            ┌─────────────────┐
+                            │     Backup      │
+                            │   Verification  │
+                            │   (Daily 6AM)   │
+                            └─────────────────┘
+                                     │
+                            ┌─────────────────┐
+                            │   Monitoring    │
+                            │   & Alerting    │
+                            └─────────────────┘
+    ```
+    
+    ## Backup Schedule
+    
+    | Service    | Schedule  | Retention | RTO    | RPO    |
+    |------------|-----------|-----------|--------|--------|
+    | PostgreSQL | 2:00 AM   | 30 days   | 1 hour | 24 hrs |
+    | InfluxDB   | 3:00 AM   | 7 days    | 2 hours| 24 hrs |
+    | Redis      | 4:00 AM   | 7 days    | 30 min | 24 hrs |
+    
+    ## Storage Structure
+    
+    ```
+    /backup/
+    ├── postgresql/
+    │   ├── postgresql_20240101_020000.tar.gz.enc
+    │   ├── weekly/
+    │   ├── monthly/
+    │   └── latest_backup.tar.gz.enc -> postgresql_20240101_020000.tar.gz.enc
+    ├── influxdb/
+    │   ├── influxdb_20240101_030000.tar.gz.enc
+    │   ├── weekly/
+    │   └── monthly/
+    ├── redis/
+    │   ├── redis_20240101_040000.tar.gz.enc
+    │   └── weekly/
+    └── verification/
+        ├── verification_report_20240101.json
+        └── latest_verification.json
+    ```
+    
+    ## Quick Start
+    
+    ### Check Backup Status
+    
+    ```bash
+    kubectl get cronjobs -n grill-stats
+    kubectl get jobs -n grill-stats -l app.kubernetes.io/component=backup
+    ```
+    
+    ### Manual Backup
+    
+    ```bash
+    # PostgreSQL
+    kubectl create job --from=cronjob/postgresql-backup manual-pg-backup -n grill-stats
+    
+    # InfluxDB
+    kubectl create job --from=cronjob/influxdb-backup manual-influx-backup -n grill-stats
+    
+    # Redis
+    kubectl create job --from=cronjob/redis-backup manual-redis-backup -n grill-stats
+    ```
+    
+    ### Test Restore
+    
+    ```bash
+    # Deploy restore job
+    kubectl apply -f backup-restore-job.yaml
+    
+    # Test restore (dry run)
+    kubectl exec -it backup-restore-job -- /scripts/full-restore.sh --test --dry-run
+    ```
+    
+    ### Monitor Backups
+    
+    - **Grafana Dashboard**: http://grafana.example.com/d/backup-monitoring
+    - **Prometheus Metrics**: http://prometheus.example.com/graph
+    - **Alert Manager**: http://alertmanager.example.com
+    
+    ## Configuration
+    
+    ### Backup Configuration
+    
+    Edit the `backup-config` ConfigMap to adjust settings:
+    
+    ```bash
+    kubectl edit configmap backup-config -n grill-stats
+    ```
+    
+    ### Secrets Configuration
+    
+    The system uses 1Password Connect for secret management:
+    
+    - `backup-encryption-secret`: Encryption keys and S3 credentials
+    - `backup-notification-secret`: Webhook URLs and notification tokens
+    
+    ### Schedule Modification
+    
+    To modify backup schedules:
+    
+    ```bash
+    kubectl edit cronjob postgresql-backup -n grill-stats
+    kubectl edit cronjob influxdb-backup -n grill-stats
+    kubectl edit cronjob redis-backup -n grill-stats
+    ```
+    
+    ## Disaster Recovery
+    
+    ### Full Platform Recovery
+    
+    1. **Assess the situation** - Determine what needs to be restored
+    2. **Deploy restore job** - `kubectl apply -f backup-restore-job.yaml`
+    3. **Test restore** - Run with `--dry-run` flag first
+    4. **Execute restore** - Run full restore with `--force` flag
+    5. **Verify services** - Check all services are operational
+    
+    ### Partial Recovery
+    
+    For individual service recovery:
+    
+    ```bash
+    # PostgreSQL only
+    kubectl exec -it backup-restore-job -- /scripts/postgresql-restore.sh --force /backup/postgresql/latest_backup.tar.gz.enc
+    
+    # InfluxDB only
+    kubectl exec -it backup-restore-job -- /scripts/influxdb-restore.sh --force /backup/influxdb/latest_backup.tar.gz.enc
+    
+    # Redis only
+    kubectl exec -it backup-restore-job -- /scripts/redis-restore.sh --force /backup/redis/latest_backup.tar.gz.enc
+    ```
+    
+    ## Troubleshooting
+    
+    ### Common Issues
+    
+    1. **Backup Job Fails**
+       - Check service connectivity
+       - Verify storage availability
+       - Review job logs
+    
+    2. **Storage Full**
+       - Clean up old backups
+       - Increase storage allocation
+       - Check retention policies
+    
+    3. **Verification Fails**
+       - Check backup file integrity
+       - Verify encryption keys
+       - Test restore process
+    
+    ### Logs and Debugging
+    
+    ```bash
+    # Check job logs
+    kubectl logs -n grill-stats job/postgresql-backup
+    kubectl logs -n grill-stats job/influxdb-backup
+    kubectl logs -n grill-stats job/redis-backup
+    kubectl logs -n grill-stats job/backup-verification
+    
+    # Check storage usage
+    kubectl exec -n grill-stats -it backup-restore-job -- df -h /backup
+    
+    # List backup files
+    kubectl exec -n grill-stats -it backup-restore-job -- find /backup -name "*.tar.gz.enc" -ls
+    ```
+    
+    ## Security Considerations
+    
+    - All backups are encrypted with AES-256-CBC
+    - Encryption keys are managed via 1Password Connect
+    - Access to backup storage is restricted via RBAC
+    - Backup verification ensures data integrity
+    - Remote storage provides additional protection
+    
+    ## Monitoring and Alerting
+    
+    The system includes comprehensive monitoring:
+    
+    - **Backup Success/Failure**: Alerts on job failures
+    - **Storage Usage**: Monitors backup storage capacity
+    - **Backup Age**: Alerts on stale backups
+    - **Verification Status**: Monitors backup integrity
+    - **Performance Metrics**: Tracks backup duration and size
+    
+    For more detailed information, see the [Backup Runbook](./runbook.md).
+  
+  architecture.md: |
+    # Backup Architecture
+    
+    ## System Design
+    
+    The Grill Stats backup system is designed with the following principles:
+    
+    1. **Reliability**: Multiple layers of verification and monitoring
+    2. **Security**: Encryption at rest and in transit
+    3. **Scalability**: Modular design for easy expansion
+    4. **Recoverability**: Automated restore procedures
+    5. **Observability**: Comprehensive monitoring and alerting
+    
+    ## Component Overview
+    
+    ### Backup Jobs
+    
+    - **PostgreSQL Backup**: Full database dumps with individual table backups
+    - **InfluxDB Backup**: Bucket-based backups with metadata
+    - **Redis Backup**: RDB and AOF file backups
+    - **Verification Job**: Integrity checks and validation
+    
+    ### Storage Layer
+    
+    - **Local Storage**: Kubernetes PVCs for immediate access
+    - **Remote Storage**: S3-compatible storage for disaster recovery
+    - **Encryption**: AES-256-CBC encryption for all backup files
+    - **Compression**: Gzip compression to reduce storage requirements
+    
+    ### Monitoring Layer
+    
+    - **Prometheus Metrics**: Job status, duration, and storage metrics
+    - **Grafana Dashboards**: Visual monitoring and reporting
+    - **Alert Rules**: Automated alerting for failures and issues
+    - **Notification System**: Webhook-based notifications
+    
+    ## Data Flow
+    
+    1. **Backup Creation**
+       - CronJob triggers backup script
+       - Script connects to database
+       - Creates backup files
+       - Compresses and encrypts data
+       - Stores locally and remotely
+    
+    2. **Verification**
+       - Daily verification job runs
+       - Checks backup integrity
+       - Validates file sizes and ages
+       - Generates verification report
+       - Sends notifications if issues found
+    
+    3. **Restoration**
+       - Manual or automated restore process
+       - Decrypts and decompresses backup
+       - Restores data to target database
+       - Verifies restoration success
+       - Restarts services if needed
+    
+    ## Security Architecture
+    
+    - **Encryption Keys**: Managed via 1Password Connect
+    - **Access Control**: RBAC for backup operations
+    - **Network Security**: NetworkPolicies for backup traffic
+    - **Audit Logging**: All backup operations logged
+    - **Secret Management**: No secrets in configuration files
+    
+    ## Disaster Recovery Scenarios
+    
+    1. **Single Database Failure**
+       - Restore individual service
+       - Minimal downtime
+       - Automated health checks
+    
+    2. **Multiple Database Failure**
+       - Coordinated restore process
+       - Service dependency management
+       - Extended downtime expected
+    
+    3. **Complete Platform Failure**
+       - Full disaster recovery
+       - Infrastructure rebuild
+       - Maximum downtime scenario
+    
+    ## Performance Considerations
+    
+    - **Backup Windows**: Scheduled during low-usage periods
+    - **Resource Limits**: CPU and memory constraints
+    - **I/O Optimization**: Efficient backup strategies
+    - **Network Bandwidth**: Throttled remote sync
+    - **Storage Efficiency**: Compression and deduplication
+    
+    ## Future Enhancements
+    
+    - **Incremental Backups**: Reduce backup time and storage
+    - **Cross-Region Replication**: Enhanced disaster recovery
+    - **Automated Testing**: Regular restore testing
+    - **Machine Learning**: Predictive failure detection
+    - **API Integration**: RESTful backup management

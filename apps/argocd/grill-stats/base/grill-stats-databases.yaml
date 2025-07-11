@@ -1,0 +1,164 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-databases
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: grill-stats-databases
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: databases
+    app.kubernetes.io/managed-by: argocd
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: grill-stats
+  
+  source:
+    repoURL: https://github.com/lordmuffin/grill-stats.git
+    targetRevision: main
+    path: kustomize/base/databases
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grill-stats
+    
+  syncPolicy:
+    automated:
+      prune: false  # Never auto-prune databases for safety
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - RespectIgnoreDifferences=true
+    - Replace=false  # Use patch instead of replace for StatefulSets
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+        
+  revisionHistoryLimit: 10
+  
+  info:
+  - name: Description
+    value: Database infrastructure (PostgreSQL, InfluxDB, Redis)
+  - name: Environment
+    value: prod-lab
+  - name: Components
+    value: PostgreSQL, InfluxDB, Redis, Backup Jobs
+    
+  # Ignore differences in dynamic fields
+  ignoreDifferences:
+  - group: 'apps'
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/replicas
+    - /spec/template/spec/containers/0/resources
+  - group: ''
+    kind: PersistentVolumeClaim
+    jsonPointers:
+    - /spec/resources/requests/storage
+    - /status
+  - group: ''
+    kind: Service
+    jsonPointers:
+    - /spec/clusterIP
+    - /spec/clusterIPs
+    
+  # Custom health checks for databases
+  health:
+    - group: 'apps'
+      kind: StatefulSet
+      check: |
+        health_status = {}
+        if obj.status ~= nil then
+          if obj.status.readyReplicas ~= nil and obj.status.replicas ~= nil then
+            if obj.status.readyReplicas == obj.status.replicas then
+              health_status.status = "Healthy"
+              health_status.message = "All replicas are ready"
+              return health_status
+            end
+          end
+        end
+        health_status.status = "Progressing"
+        health_status.message = "StatefulSet is being updated"
+        return health_status
+        
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-databases-dev
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: grill-stats-databases-dev
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: databases
+    app.kubernetes.io/managed-by: argocd
+    app.kubernetes.io/environment: dev-lab
+  annotations:
+    argocd.argoproj.io/sync-wave: "1"
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: grill-stats
+  
+  source:
+    repoURL: https://github.com/lordmuffin/grill-stats.git
+    targetRevision: develop
+    path: kustomize/overlays/dev-lab
+    directory:
+      include: '{databases,namespace}/**'
+    
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: grill-stats-dev
+    
+  syncPolicy:
+    automated:
+      prune: false  # Never auto-prune databases
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - RespectIgnoreDifferences=true
+    - Replace=false
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+        
+  revisionHistoryLimit: 5
+  
+  info:
+  - name: Description
+    value: Development database infrastructure
+  - name: Environment
+    value: dev-lab
+  - name: Components
+    value: PostgreSQL, InfluxDB, Redis (dev configuration)
+    
+  # Ignore differences in dynamic fields
+  ignoreDifferences:
+  - group: 'apps'
+    kind: StatefulSet
+    jsonPointers:
+    - /spec/replicas
+    - /spec/template/spec/containers/0/resources
+  - group: ''
+    kind: PersistentVolumeClaim
+    jsonPointers:
+    - /spec/resources/requests/storage
+    - /status
+  - group: ''
+    kind: Service
+    jsonPointers:
+    - /spec/clusterIP
+    - /spec/clusterIPs

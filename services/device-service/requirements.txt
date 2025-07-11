@@ -1,9 +1,9 @@
-Flask==2.3.3
-requests==2.31.0
+flask==2.3.3
+flask-cors==4.0.0
+redis==4.6.0
 python-dotenv==1.0.0
-pydantic==2.4.2
-APScheduler==3.10.4
-redis==5.0.0
-gunicorn==21.2.0
-Flask-Cors==4.0.0
-homeassistant-api==5.0.0
+requests==2.31.0
+psycopg2-binary==2.9.7
+structlog==23.1.0
+PyJWT==2.8.0
+python-thermoworks-cloud==1.0.0

@@ -1,0 +1,37 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: grill-stats
+
+resources:
+  - namespace.yaml
+  - rbac.yaml
+  - storage.yaml
+  - secrets.yaml
+  - configmaps.yaml
+  - postgresql-backup.yaml
+  - influxdb-backup.yaml
+  - redis-backup.yaml
+  - backup-verification.yaml
+  - backup-restore-job.yaml
+  - monitoring.yaml
+
+configMapGenerator:
+  - name: backup-scripts
+    files:
+      - scripts/backup-common.sh
+      - scripts/postgresql-backup.sh
+      - scripts/influxdb-backup.sh
+      - scripts/redis-backup.sh
+      - scripts/verify-backups.sh
+  
+  - name: recovery-scripts
+    files:
+      - scripts/postgresql-restore.sh
+      - scripts/influxdb-restore.sh
+      - scripts/redis-restore.sh
+      - scripts/full-restore.sh
+
+commonLabels:
+  app.kubernetes.io/part-of: grill-stats
+  app.kubernetes.io/component: backup

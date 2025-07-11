@@ -1,0 +1,203 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-core-services
+  namespace: argocd
+spec:
+  source:
+    targetRevision: develop
+    path: kustomize/overlays/dev-lab
+  destination:
+    namespace: grill-stats-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 5  # Keep fewer revisions for dev
+  
+  # Development sync windows (more permissive)
+  syncWindows:
+  - kind: allow
+    schedule: '* * * * *'  # Always allow syncs in development
+    duration: 24h
+    applications:
+    - grill-stats-core-services-dev
+    manualSync: true
+    
+  # Faster health checks for development
+  health:
+  - timeout: 120s
+    
+  info:
+  - name: Environment
+    value: dev-lab
+  - name: Cluster
+    value: dev-lab
+  - name: High Availability
+    value: "false"
+  - name: Backup Strategy
+    value: "Daily backups with 7-day retention"
+  - name: Auto-Deploy
+    value: "Enabled on develop branch"
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-databases
+  namespace: argocd
+spec:
+  source:
+    targetRevision: develop
+    path: kustomize/overlays/dev-lab
+  destination:
+    namespace: grill-stats-dev
+  syncPolicy:
+    automated:
+      prune: true  # Allow pruning in dev for easier cleanup
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - Replace=false
+    retry:
+      limit: 3
+      backoff:
+        duration: 10s
+        factor: 2
+        maxDuration: 5m
+  revisionHistoryLimit: 5
+  
+  # Development database sync windows
+  syncWindows:
+  - kind: allow
+    schedule: '* * * * *'  # Always allow syncs in development
+    duration: 24h
+    applications:
+    - grill-stats-databases-dev
+    manualSync: true
+    
+  # Standard health checks for development
+  health:
+  - timeout: 300s
+    
+  info:
+  - name: Environment
+    value: dev-lab
+  - name: Cluster
+    value: dev-lab
+  - name: High Availability
+    value: "false"
+  - name: Backup Strategy
+    value: "Daily backups with 7-day retention"
+  - name: Data Persistence
+    value: "Enabled with smaller volumes"
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-secrets
+  namespace: argocd
+spec:
+  source:
+    targetRevision: develop
+    path: apps/secrets/grill-stats/dev-lab
+  destination:
+    namespace: grill-stats-dev
+  syncPolicy:
+    automated:
+      prune: true  # Allow pruning in dev for easier cleanup
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - RespectIgnoreDifferences=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 15s
+        factor: 2
+        maxDuration: 10m
+  revisionHistoryLimit: 5
+  
+  # Development secret sync windows
+  syncWindows:
+  - kind: allow
+    schedule: '* * * * *'  # Always allow syncs in development
+    duration: 24h
+    applications:
+    - grill-stats-secrets-dev
+    manualSync: true
+    
+  # Standard health checks for development
+  health:
+  - timeout: 180s
+    
+  info:
+  - name: Environment
+    value: dev-lab
+  - name: Cluster
+    value: dev-lab
+  - name: Security
+    value: "1Password Connect with development secrets"
+  - name: Rotation Policy
+    value: "Manual rotation for development"
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-monitoring
+  namespace: argocd
+spec:
+  source:
+    targetRevision: develop
+  destination:
+    namespace: grill-stats-dev
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 5
+  
+  # Development monitoring health checks
+  health:
+  - timeout: 120s
+    
+  info:
+  - name: Environment
+    value: dev-lab
+  - name: Cluster
+    value: dev-lab
+  - name: Alerting
+    value: "Development alerts with Slack integration"
+  - name: Metrics Retention
+    value: "30 days retention for development metrics"
+  - name: Debug Mode
+    value: "Enabled with verbose logging"

@@ -14,7 +14,7 @@ class ThermoWorksClient:
         
         headers = {
             'Content-Type': 'application/json',
-            'User-Agent': 'grill-monitoring-temperature-service/1.0'
+            'User-Agent': 'grill-stats-temperature-service/1.0'
         }
         
         if api_key:

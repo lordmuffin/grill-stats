@@ -1,0 +1,175 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: backup-restore-job
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-restore-job
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+spec:
+  backoffLimit: 1
+  activeDeadlineSeconds: 7200  # 2 hour timeout
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: backup-restore-job
+        app.kubernetes.io/component: backup
+        app.kubernetes.io/part-of: grill-stats
+    spec:
+      restartPolicy: Never
+      serviceAccountName: backup-restore
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65534
+        runAsGroup: 65534
+        fsGroup: 65534
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+      - name: backup-restore
+        image: alpine:latest
+        imagePullPolicy: IfNotPresent
+        securityContext:
+          allowPrivilegeEscalation: false
+          readOnlyRootFilesystem: true
+          capabilities:
+            drop:
+            - ALL
+        env:
+        - name: ENVIRONMENT
+          value: "production"
+        - name: NAMESPACE
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.namespace
+        - name: TZ
+          value: "UTC"
+        command:
+        - /bin/sh
+        - -c
+        - |
+          # Install required packages
+          apk add --no-cache bash jq curl openssl postgresql-client redis awscli kubectl
+          
+          # Make scripts executable
+          chmod +x /scripts/*.sh
+          
+          # This job provides a pod for manual restore operations
+          # It will sleep to allow kubectl exec for restore operations
+          echo "Backup restore job started. Use 'kubectl exec' to run restore operations."
+          echo ""
+          echo "Available restore scripts:"
+          echo "- /scripts/postgresql-restore.sh"
+          echo "- /scripts/influxdb-restore.sh"
+          echo "- /scripts/redis-restore.sh"
+          echo "- /scripts/full-restore.sh"
+          echo ""
+          echo "Examples:"
+          echo "kubectl exec -it backup-restore-job -- /scripts/postgresql-restore.sh --help"
+          echo "kubectl exec -it backup-restore-job -- /scripts/full-restore.sh --test --dry-run"
+          echo ""
+          echo "Pod will remain running for 2 hours for manual operations..."
+          
+          # Sleep for 2 hours to allow manual operations
+          sleep 7200
+        volumeMounts:
+        - name: backup-storage
+          mountPath: /backup
+        - name: backup-temp
+          mountPath: /tmp
+        - name: backup-scripts
+          mountPath: /scripts
+          readOnly: true
+        - name: recovery-scripts
+          mountPath: /scripts/recovery
+          readOnly: true
+        - name: postgresql-secrets
+          mountPath: /secrets/postgresql
+          readOnly: true
+        - name: influxdb-secrets
+          mountPath: /secrets/influxdb
+          readOnly: true
+        - name: redis-secrets
+          mountPath: /secrets/redis
+          readOnly: true
+        - name: backup-encryption-secret
+          mountPath: /secrets/backup-encryption
+          readOnly: true
+        - name: backup-notification-secret
+          mountPath: /secrets/backup-notification
+          readOnly: true
+        resources:
+          requests:
+            memory: "512Mi"
+            cpu: "200m"
+            ephemeral-storage: "2Gi"
+          limits:
+            memory: "2Gi"
+            cpu: "1000m"
+            ephemeral-storage: "10Gi"
+      volumes:
+      - name: backup-storage
+        persistentVolumeClaim:
+          claimName: backup-storage-pvc
+      - name: backup-temp
+        persistentVolumeClaim:
+          claimName: backup-temp-pvc
+      - name: backup-scripts
+        configMap:
+          name: backup-scripts
+          defaultMode: 0755
+      - name: recovery-scripts
+        configMap:
+          name: recovery-scripts
+          defaultMode: 0755
+      - name: postgresql-secrets
+        secret:
+          secretName: postgresql-secret
+          defaultMode: 0600
+      - name: influxdb-secrets
+        secret:
+          secretName: influxdb-secret
+          defaultMode: 0600
+      - name: redis-secrets
+        secret:
+          secretName: redis-secret
+          defaultMode: 0600
+      - name: backup-encryption-secret
+        secret:
+          secretName: backup-encryption-secret
+          defaultMode: 0600
+      - name: backup-notification-secret
+        secret:
+          secretName: backup-notification-secret
+          defaultMode: 0600
+      nodeSelector:
+        kubernetes.io/arch: amd64
+      tolerations:
+      - key: node.kubernetes.io/not-ready
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 300
+      - key: node.kubernetes.io/unreachable
+        operator: Exists
+        effect: NoExecute
+        tolerationSeconds: 300
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: backup-restore-service
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: backup-restore-service
+    app.kubernetes.io/component: backup
+    app.kubernetes.io/part-of: grill-stats
+spec:
+  selector:
+    app.kubernetes.io/name: backup-restore-job
+  ports:
+  - name: http
+    port: 8080
+    targetPort: 8080
+  type: ClusterIP

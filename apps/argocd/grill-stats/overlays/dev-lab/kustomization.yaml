@@ -1,0 +1,110 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: grill-stats-argocd-dev-lab
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: argocd
+
+resources:
+  - ../../base
+
+commonLabels:
+  app.kubernetes.io/environment: dev-lab
+  app.kubernetes.io/instance: dev
+
+commonAnnotations:
+  argocd.argoproj.io/environment: "dev-lab"
+  argocd.argoproj.io/cluster: "dev-lab"
+
+patchesStrategicMerge:
+  - development-overrides.yaml
+
+patchesJson6902:
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: grill-stats-core-services
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: "kustomize/overlays/dev-lab"
+      - op: replace
+        path: /spec/source/targetRevision
+        value: "develop"
+      - op: replace
+        path: /spec/destination/namespace
+        value: "grill-stats-dev"
+      - op: replace
+        path: /spec/syncPolicy/automated/prune
+        value: true
+      - op: replace
+        path: /spec/syncPolicy/automated/selfHeal
+        value: true
+        
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: grill-stats-databases
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: "kustomize/overlays/dev-lab"
+      - op: replace
+        path: /spec/source/targetRevision
+        value: "develop"
+      - op: replace
+        path: /spec/destination/namespace
+        value: "grill-stats-dev"
+      - op: replace
+        path: /spec/syncPolicy/automated/prune
+        value: true
+      - op: replace
+        path: /spec/syncPolicy/automated/selfHeal
+        value: true
+        
+  - target:
+      group: argoproj.io
+      version: v1alpha1
+      kind: Application
+      name: grill-stats-secrets
+    patch: |-
+      - op: replace
+        path: /spec/source/path
+        value: "apps/secrets/grill-stats/dev-lab"
+      - op: replace
+        path: /spec/source/targetRevision
+        value: "develop"
+      - op: replace
+        path: /spec/destination/namespace
+        value: "grill-stats-dev"
+      - op: replace
+        path: /spec/syncPolicy/automated/prune
+        value: true
+      - op: replace
+        path: /spec/syncPolicy/automated/selfHeal
+        value: true
+
+# Development-specific naming
+namePrefix: ""
+nameSuffix: "-dev"
+
+# Development-specific configurations
+configMapGenerator: []
+secretGenerator: []
+
+# Development images (latest or develop tags)
+images: []
+
+# Development-specific generators
+generators: []
+
+# Development-specific transformers
+transformers: []
+
+# Development-specific validators
+validators: []

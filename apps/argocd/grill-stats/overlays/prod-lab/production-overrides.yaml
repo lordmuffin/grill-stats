@@ -1,0 +1,185 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-core-services
+  namespace: argocd
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    - ApplyOutOfSyncOnly=true
+    - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+  
+  # Production-specific sync windows
+  syncWindows:
+  - kind: deny
+    schedule: '0 2 * * 0'  # Sunday 2 AM maintenance window
+    duration: 2h
+    applications:
+    - grill-stats-core-services
+    manualSync: false
+    
+  # Production health checks
+  health:
+  - timeout: 300s
+    
+  info:
+  - name: Environment
+    value: prod-lab
+  - name: Cluster
+    value: prod-lab
+  - name: High Availability
+    value: "true"
+  - name: Backup Strategy
+    value: "Automated daily backups"
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-databases
+  namespace: argocd
+spec:
+  syncPolicy:
+    automated:
+      prune: false  # Never auto-prune production databases
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - RespectIgnoreDifferences=true
+    - Replace=false
+    - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 10m
+  revisionHistoryLimit: 20  # Keep more history for databases
+  
+  # Production database sync windows
+  syncWindows:
+  - kind: deny
+    schedule: '0 1-4 * * *'  # Deny syncs between 1-4 AM daily
+    duration: 3h
+    applications:
+    - grill-stats-databases
+    manualSync: true
+    
+  # Extended health checks for databases
+  health:
+  - timeout: 600s
+    
+  info:
+  - name: Environment
+    value: prod-lab
+  - name: Cluster
+    value: prod-lab
+  - name: High Availability
+    value: "true"
+  - name: Backup Strategy
+    value: "Automated hourly backups with 30-day retention"
+  - name: Disaster Recovery
+    value: "Cross-region replication enabled"
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-secrets
+  namespace: argocd
+spec:
+  syncPolicy:
+    automated:
+      prune: false  # Never auto-prune production secrets
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - RespectIgnoreDifferences=true
+    - ServerSideApply=true
+    retry:
+      limit: 3
+      backoff:
+        duration: 30s
+        factor: 2
+        maxDuration: 15m
+  revisionHistoryLimit: 15
+  
+  # Production secret sync windows
+  syncWindows:
+  - kind: allow
+    schedule: '0 6-22 * * *'  # Allow syncs between 6 AM - 10 PM
+    duration: 16h
+    applications:
+    - grill-stats-secrets
+    manualSync: true
+    
+  # Extended health checks for secrets
+  health:
+  - timeout: 300s
+    
+  info:
+  - name: Environment
+    value: prod-lab
+  - name: Cluster
+    value: prod-lab
+  - name: Security
+    value: "1Password Connect with encryption at rest"
+  - name: Rotation Policy
+    value: "Automated secret rotation every 90 days"
+    
+---
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: grill-stats-monitoring
+  namespace: argocd
+spec:
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+      allowEmpty: false
+    syncOptions:
+    - CreateNamespace=true
+    - PrunePropagationPolicy=foreground
+    - PruneLast=true
+    - ServerSideApply=true
+    retry:
+      limit: 5
+      backoff:
+        duration: 5s
+        factor: 2
+        maxDuration: 3m
+  revisionHistoryLimit: 10
+  
+  # Production monitoring health checks
+  health:
+  - timeout: 180s
+    
+  info:
+  - name: Environment
+    value: prod-lab
+  - name: Cluster
+    value: prod-lab
+  - name: Alerting
+    value: "24/7 monitoring with PagerDuty integration"
+  - name: Metrics Retention
+    value: "1 year retention for production metrics"

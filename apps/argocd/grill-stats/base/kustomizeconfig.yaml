@@ -1,0 +1,80 @@
+# Kustomization configuration for ArgoCD applications
+nameReference:
+- kind: Application
+  version: v1alpha1
+  group: argoproj.io
+  fieldSpecs:
+  - path: spec/source/repoURL
+    kind: Application
+  - path: spec/destination/namespace
+    kind: Application
+  - path: spec/project
+    kind: Application
+
+# Common labels configuration
+commonLabels:
+- path: metadata/labels
+  create: true
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+# Common annotations configuration  
+commonAnnotations:
+- path: metadata/annotations
+  create: true
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+# Namespace configuration
+namespace:
+- path: metadata/namespace
+  create: true
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+# Resource naming configuration
+namePrefix:
+- path: metadata/name
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+nameSuffix:
+- path: metadata/name
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+# Replica configuration
+replicas:
+- path: spec/replicas
+  create: false
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+# Image configuration
+images:
+- path: spec/source/helm/values
+  create: false
+  group: argoproj.io
+  version: v1alpha1
+  kind: Application
+
+# Variable substitution configuration
+varReference:
+- path: spec/source/repoURL
+  kind: Application
+- path: spec/source/targetRevision
+  kind: Application
+- path: spec/source/path
+  kind: Application
+- path: spec/destination/server
+  kind: Application
+- path: spec/destination/namespace
+  kind: Application
+- path: spec/project
+  kind: Application

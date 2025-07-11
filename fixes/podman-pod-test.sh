@@ -5,7 +5,7 @@
 
 set -e
 
-POD_NAME="grill-monitoring-test-pod"
+POD_NAME="grill-stats-test-pod"
 
 echo "🚀 Starting Podman Pod Test (Kubernetes-style)"
 echo "=============================================="

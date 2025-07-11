@@ -1,0 +1,52 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+metadata:
+  name: grill-stats-argocd-base
+  annotations:
+    config.kubernetes.io/local-config: "true"
+
+namespace: argocd
+
+resources:
+  - grill-stats-project.yaml
+  - grill-stats-platform.yaml
+  - grill-stats-secrets.yaml
+  - grill-stats-databases.yaml
+  - grill-stats-core-services.yaml
+  - grill-stats-monitoring.yaml
+
+commonLabels:
+  app.kubernetes.io/name: grill-stats
+  app.kubernetes.io/part-of: grill-stats-platform
+  app.kubernetes.io/managed-by: argocd
+  app.kubernetes.io/version: "1.0.0"
+
+commonAnnotations:
+  argocd.argoproj.io/managed: "true"
+  argocd.argoproj.io/tracking-id: "grill-stats"
+  config.kubernetes.io/origin: |
+    path: apps/argocd/grill-stats/base
+    repo: https://github.com/lordmuffin/grill-stats.git
+
+# Configuration for all ArgoCD applications
+configurations:
+- kustomizeconfig.yaml
+
+# Patches for environment-specific overrides
+patchesStrategicMerge: []
+
+# JSON patches for fine-grained modifications
+patchesJson6902: []
+
+# Images to be updated (for CI/CD integration)
+images: []
+
+# Generators for creating resources
+generators: []
+
+# Transformers for modifying resources
+transformers: []
+
+# Validators for resource validation
+validators: []

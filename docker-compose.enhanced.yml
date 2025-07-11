@@ -21,7 +21,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - grill-monitoring
+      - grill-stats
 
   timescaledb:
     image: timescale/timescaledb:latest-pg14
@@ -42,7 +42,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - grill-monitoring
+      - grill-stats
 
   influxdb:
     image: influxdb:1.8
@@ -65,7 +65,7 @@ services:
       start_period: 30s
     restart: unless-stopped
     networks:
-      - grill-monitoring
+      - grill-stats
 
   redis:
     image: redis:6-alpine
@@ -82,7 +82,7 @@ services:
       start_period: 10s
     restart: unless-stopped
     networks:
-      - grill-monitoring
+      - grill-stats
 
   # Application services with proper dependencies
   device-service:
@@ -111,7 +111,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - grill-monitoring
+      - grill-stats
 
   temperature-service:
     build: 
@@ -144,7 +144,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - grill-monitoring
+      - grill-stats
 
   historical-data-service:
     build: 
@@ -171,7 +171,7 @@ services:
       retries: 3
       start_period: 60s
     networks:
-      - grill-monitoring
+      - grill-stats
 
   # Original monolithic app for comparison
   monolithic-app:
@@ -191,7 +191,7 @@ services:
       retries: 3
       start_period: 45s
     networks:
-      - grill-monitoring
+      - grill-stats
     profiles:
       - monolithic
 
@@ -235,7 +235,7 @@ services:
         echo '🎉 Comprehensive testing complete!'
       "
     networks:
-      - grill-monitoring
+      - grill-stats
     profiles:
       - testing
 
@@ -252,12 +252,12 @@ services:
     volumes:
       - ./tests/api:/etc/newman
     command: |
-      run /etc/newman/grill-monitoring-api-tests.json 
+      run /etc/newman/grill-stats-api-tests.json 
       --environment /etc/newman/test-environment.json
       --reporters cli,json
       --reporter-json-export /etc/newman/results.json
     networks:
-      - grill-monitoring
+      - grill-stats
     profiles:
       - api-testing
 
@@ -272,6 +272,6 @@ volumes:
     driver: local
 
 networks:
-  grill-monitoring:
+  grill-stats:
     driver: bridge
-    name: grill-monitoring-enhanced
+    name: grill-stats-enhanced
