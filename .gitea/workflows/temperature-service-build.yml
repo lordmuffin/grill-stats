@@ -95,7 +95,7 @@ jobs:
           echo "Building container image to local tar..."
           
           # Create tar context for temperature service
-          tar -czf /tmp/context.tar.gz --exclude='.git' --exclude='.gitea' -C services/temperature-service .
+          tar -czf /tmp/context.tar.gz --exclude='.git' --exclude='.gitea' .
           
           # Run Kaniko to build and export to tar (no push)
           /tmp/executor \
