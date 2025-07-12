@@ -1290,7 +1290,7 @@ if __name__ == '__main__':
         debug_mode = not is_production
         logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}")
         logger.info("About to call app.run...")
-        socketio.run(app, host='0.0.0.0', port=5000, debug=debug_mode)
+        socketio.run(app, host='0.0.0.0', port=5000, debug=debug_mode, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         if alert_monitor:
