@@ -35,7 +35,9 @@
       "WebFetch(domain:raw.githubusercontent.com)",
       "Bash(pip show:*)",
       "Bash(python:*)",
-      "Bash(mv:*)"
+      "Bash(mv:*)",
+      "Bash(cat:*)",
+      "Bash(./TRACK1_API_CORE.sh:*)"
     ],
     "deny": []
   }
