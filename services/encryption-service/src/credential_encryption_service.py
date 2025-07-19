@@ -252,11 +252,7 @@ class CredentialEncryptionService:
             # Log successful authentication
             log_authentication(
                 user_id="service-account",
-                success=True,
-                details={
-                    "vault_url": self.vault_url,
-                    "auth_method": "kubernetes" if not self.vault_token else "token",
-                },
+                success=True
             )
 
         except Exception as e:

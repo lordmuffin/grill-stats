@@ -149,6 +149,11 @@ class TestLiveDataEndpoints(unittest.TestCase):
         # Mock Redis to return None (cache miss)
         mock_redis.get.return_value = None
         mock_redis.setex.return_value = True
+        
+        # Important: Create a MagicMock for redis_client to handle None object
+        app.redis_client = MagicMock()
+        app.redis_client.get.return_value = None
+        app.redis_client.setex.return_value = True
 
         # Mock ThermoWorks client responses
         mock_client.get_device_data.return_value = self.mock_device_data
@@ -189,17 +194,23 @@ class TestLiveDataEndpoints(unittest.TestCase):
                 "connection_status": "online",
             },
         }
+        
+        # Create mock redis client and set return value
+        app.redis_client = MagicMock()
+        app.redis_client.get.return_value = json.dumps(cached_data)
         mock_redis.get.return_value = json.dumps(cached_data)
+        
+        # Also patch thermoworks_client to avoid dependency on it
+        with patch("main.thermoworks_client") as mock_client:
+            # Make request
+            response = self.app.get(f"/api/devices/{self.device_id}/live")
 
-        # Make request
-        response = self.app.get(f"/api/devices/{self.device_id}/live")
-
-        # Verify response uses cached data
-        self.assertEqual(response.status_code, 200)
-        data = json.loads(response.data)
-        self.assertEqual(data["status"], "success")
-        self.assertEqual(data["data"]["channels"][0]["temperature"], 170.0)
-        self.assertEqual(data["data"]["status"]["battery_level"], 80)
+            # Verify response uses cached data
+            self.assertEqual(response.status_code, 200)
+            data = json.loads(response.data)
+            self.assertEqual(data["status"], "success")
+            self.assertEqual(data["data"]["channels"][0]["temperature"], 170.0)
+            self.assertEqual(data["data"]["status"]["battery_level"], 80)
 
 
 class TestLiveDataDatabase(unittest.TestCase):

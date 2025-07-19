@@ -257,6 +257,134 @@ class ThermoWorksClient:
             )
             return []
 
+    def get_device_data(self, device_id: str) -> Dict:
+        """Get device data including channel information from ThermoWorks API"""
+        if self.mock_mode and self.mock_service:
+            return self.mock_service.get_device_data(device_id)
+
+        if not self.api_key:
+            # Return mock data for testing
+            mock_data = {
+                "device_id": device_id,
+                "channels": [
+                    {
+                        "channel_id": 1,
+                        "channel_name": "Meat Probe 1",
+                        "probe_type": "meat",
+                        "temperature": 165.5,
+                        "unit": "F",
+                        "is_connected": True,
+                    },
+                    {
+                        "channel_id": 2,
+                        "channel_name": "Ambient Probe",
+                        "probe_type": "ambient",
+                        "temperature": 225.0,
+                        "unit": "F",
+                        "is_connected": True,
+                    },
+                ],
+            }
+            logger.debug("Returning mock device data", device_id=device_id)
+            return mock_data
+
+        try:
+            endpoint = f"{self.base_url}/devices/{device_id}"
+            response = self.session.get(endpoint)
+            response.raise_for_status()
+            data = response.json()
+
+            # Normalize device data
+            normalized_data = {
+                "device_id": device_id,
+                "channels": []
+            }
+
+            # Extract channel data if available
+            for channel in data.get("channels", []):
+                normalized_data["channels"].append({
+                    "channel_id": channel.get("id"),
+                    "channel_name": channel.get("name"),
+                    "probe_type": channel.get("type"),
+                    "temperature": channel.get("temperature"),
+                    "unit": channel.get("unit", "F"),
+                    "is_connected": channel.get("is_connected", False),
+                })
+
+            logger.info(
+                "Device data retrieved from ThermoWorks",
+                device_id=device_id,
+                channels_count=len(normalized_data["channels"]),
+            )
+
+            return normalized_data
+
+        except requests.RequestException as e:
+            logger.error(
+                "Failed to get device data from ThermoWorks",
+                device_id=device_id,
+                error=str(e),
+            )
+            return {"device_id": device_id, "channels": []}
+
+    def get_device_status(self, device_id: str) -> Dict:
+        """Get device status information from ThermoWorks API"""
+        if self.mock_mode and self.mock_service:
+            return self.mock_service.get_device_status(device_id)
+
+        if not self.api_key:
+            # Return mock data for testing
+            mock_status = {
+                "device_id": device_id,
+                "battery_level": 85,
+                "signal_strength": 92,
+                "connection_status": "online",
+                "last_seen": datetime.utcnow().isoformat(),
+                "firmware_version": "1.2.3",
+                "hardware_version": "2.0",
+            }
+            logger.debug("Returning mock device status", device_id=device_id)
+            return mock_status
+
+        try:
+            endpoint = f"{self.base_url}/devices/{device_id}/status"
+            response = self.session.get(endpoint)
+            response.raise_for_status()
+            data = response.json()
+
+            # Normalize status data
+            normalized_status = {
+                "device_id": device_id,
+                "battery_level": data.get("battery_level", 0),
+                "signal_strength": data.get("signal_strength", 0),
+                "connection_status": data.get("connection_status", "unknown"),
+                "last_seen": data.get("last_seen", datetime.utcnow().isoformat()),
+                "firmware_version": data.get("firmware_version", "unknown"),
+                "hardware_version": data.get("hardware_version", "unknown"),
+            }
+
+            logger.info(
+                "Device status retrieved from ThermoWorks",
+                device_id=device_id,
+                battery_level=normalized_status["battery_level"],
+                connection_status=normalized_status["connection_status"],
+            )
+
+            return normalized_status
+
+        except requests.RequestException as e:
+            logger.error(
+                "Failed to get device status from ThermoWorks",
+                device_id=device_id,
+                error=str(e),
+            )
+            return {
+                "device_id": device_id,
+                "battery_level": 0,
+                "signal_strength": 0,
+                "connection_status": "error",
+            }
+            
     def test_api_connection(self) -> bool:
         """Test ThermoWorks API connection"""
         try:
