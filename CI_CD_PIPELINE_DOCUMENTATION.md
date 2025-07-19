@@ -105,13 +105,28 @@ The pipelines are configured to use the Gitea registry at `gitea-internal`. Imag
 
 The following secrets must be configured in your Gitea repository:
 
-- `REGISTRY_USERNAME`: Your Gitea username with access to the container registry
-- `REGISTRY_PASSWORD`: Your Gitea password or token with registry write permissions
+- `DOCKER_AUTH`: Base64-encoded string containing your Docker Hub credentials in format `username:password` or `username:token`
 
-To add these secrets:
+Creating the DOCKER_AUTH secret:
+
+```bash
+# Generate the base64-encoded auth string
+echo -n "yourusername:yourtoken" | base64
+# Example output: eW91cnVzZXJuYW1lOnlvdXJ0b2tlbg==
+```
+
+To add the secret:
 1. Go to your repository settings in Gitea
 2. Navigate to "Secrets"
-3. Add the secrets with the appropriate values
+3. Add a new secret named `DOCKER_AUTH` with the base64-encoded value
+4. Make sure the secret is available to the workflows
+
+#### Security Best Practices
+
+- **Use tokens instead of passwords**: Create a Docker Hub Personal Access Token with minimal permissions rather than using your account password
+- **Limit token scope**: Restrict the token to only what's needed (usually just `read:packages`, `write:packages`)
+- **Set token expiration**: Use tokens with expirations and rotate them regularly
+- **Monitor usage**: Regularly review access logs for unusual activity
 
 ## Pipeline Triggers
 
