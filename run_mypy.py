@@ -16,34 +16,34 @@ def run_mypy(files: Optional[List[str]] = None) -> int:
     # Default mypy options
     mypy_options = [
         "--ignore-missing-imports",  # Ignore errors about imports without type hints
-        "--disallow-untyped-defs",   # Disallow functions without type annotations
-        "--disallow-incomplete-defs", # Disallow incomplete type annotations
-        "--check-untyped-defs",      # Check the body of functions without annotations
-        "--disallow-untyped-decorators", # Disallow decorators without type annotations
-        "--no-implicit-optional",    # Don't treat arguments with default values as Optional
-        "--warn-redundant-casts",    # Warn about casting an expression to its inferred type
-        "--warn-return-any",         # Warn about returning Any from a typed function
-        "--warn-unreachable",        # Warn about code that's unreachable
+        "--disallow-untyped-defs",  # Disallow functions without type annotations
+        "--disallow-incomplete-defs",  # Disallow incomplete type annotations
+        "--check-untyped-defs",  # Check the body of functions without annotations
+        "--disallow-untyped-decorators",  # Disallow decorators without type annotations
+        "--no-implicit-optional",  # Don't treat arguments with default values as Optional
+        "--warn-redundant-casts",  # Warn about casting an expression to its inferred type
+        "--warn-return-any",  # Warn about returning Any from a typed function
+        "--warn-unreachable",  # Warn about code that's unreachable
     ]
-    
+
     mypy_cmd = ["mypy"] + mypy_options
-    
+
     # If specific files are provided, use those; otherwise check all Python files
     if files:
         mypy_cmd.extend(files)
     else:
         # Find all Python files in the project
         mypy_cmd.append(".")
-    
+
     print(f"Running: {' '.join(mypy_cmd)}")
-    
+
     try:
         result = subprocess.run(mypy_cmd, capture_output=True, text=True)
         if result.stdout:
             print(result.stdout)
         if result.stderr:
             print(result.stderr, file=sys.stderr)
-        
+
         # Return mypy's exit code
         return result.returncode
     except FileNotFoundError:
@@ -56,7 +56,8 @@ def print_guidance() -> None:
     print("\n" + "=" * 80)
     print("MYPY TYPE CHECKING GUIDANCE")
     print("=" * 80)
-    print("""
+    print(
+        """
 Common errors and how to fix them:
 
 1. Function is missing a type annotation [no-untyped-def]
@@ -92,20 +93,21 @@ Common errors and how to fix them:
    if function:  # Wrong
    if function is not None:  # Correct
    if function() is not None:  # Correct if checking return value
-""")
+"""
+    )
     print("=" * 80)
 
 
 if __name__ == "__main__":
     # Get file list from command line arguments
     files_to_check = sys.argv[1:] if len(sys.argv) > 1 else None
-    
+
     print_guidance()
     exit_code = run_mypy(files_to_check)
-    
+
     if exit_code == 0:
         print("\nSuccess: No type errors found!")
     else:
         print("\nType errors found. Please fix them according to the guidance above.")
-    
+
     sys.exit(exit_code)
