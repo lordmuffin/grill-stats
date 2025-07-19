@@ -22,7 +22,7 @@ Config = load_config()
 
 # Import requests for external API calls
 try:
-    from typing import Any, Dict, List, Optional, Union, cast
+    from typing import Any, Dict, List, Optional, Union, cast, Callable
 
     import requests
 except ImportError:
@@ -49,6 +49,15 @@ if app.config.get("MOCK_MODE") and os.environ.get("LOCAL_DB", "true").lower() in
     logger.info(f"Using SQLite database: {app.config['SQLALCHEMY_DATABASE_URI']}")
 else:
     logger.info(f"Using database: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+
+# Import database utilities (must be imported after app configuration)
+try:
+    from utils.db_utils import close_db_connections, get_pool_status, init_connection_pool
+except ImportError:
+    logger.warning("Database utilities not available. Connection pooling will use default settings.")
+    init_connection_pool = None  # type: Optional[Callable[[Flask, SQLAlchemy], None]]
+    close_db_connections = None  # type: Optional[Callable[[SQLAlchemy], None]]
+    get_pool_status = None  # type: Optional[Callable[[SQLAlchemy], Dict[str, Any]]]
 
 
 # Validate critical configuration on startup
@@ -94,6 +103,17 @@ login_manager = LoginManager(app)
 login_manager.login_view = "login"
 migrate = Migrate(app, db)
 socketio = SocketIO(app, cors_allowed_origins="*")
+
+# Initialize database connection pooling
+if init_connection_pool is not None:
+    init_connection_pool(app, db)
+    logger.info("Database connection pooling initialized")
+    # Log pool status
+    try:
+        pool_status = get_pool_status(db)
+        logger.info(f"Database connection pool status: {pool_status}")
+    except Exception as e:
+        logger.warning(f"Could not get connection pool status: {e}")
 
 # Initialize User model
 from models.user import User
@@ -1001,7 +1021,18 @@ def monitoring() -> str:
 
 @app.route("/health")
 def health_check() -> Any:
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    """Health check endpoint that reports basic application status"""
+    health_data = {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
+    # Add database connection pool status if available
+    if get_pool_status is not None:
+        try:
+            pool_data = get_pool_status(db)
+            health_data["database"] = {"connection_pool": pool_data}
+        except Exception as e:
+            health_data["database"] = {"error": str(e)}
+
+    return jsonify(health_data)
 
 
 @app.route("/api/config")
@@ -1014,6 +1045,36 @@ def get_app_config() -> Any:
             "version": (open("VERSION").read().strip() if os.path.exists("VERSION") else "unknown"),
         }
     )
+
+
+@app.route("/api/database/pool")
+@login_required
+def get_db_pool_status() -> Any:
+    """Get database connection pool status for monitoring"""
+    if get_pool_status is None:
+        return jsonify({"status": "error", "message": "Database pool status not available"}), 404
+
+    try:
+        pool_status = get_pool_status(db)
+        return jsonify(
+            {
+                "status": "success",
+                "data": {
+                    "pool_status": pool_status,
+                    "config": {
+                        "pool_size": app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}).get("pool_size", 0),
+                        "max_overflow": app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}).get("max_overflow", 0),
+                        "pool_recycle": app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}).get("pool_recycle", 0),
+                        "pool_timeout": app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}).get("pool_timeout", 0),
+                        "pool_pre_ping": app.config.get("SQLALCHEMY_ENGINE_OPTIONS", {}).get("pool_pre_ping", False),
+                    },
+                },
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
+    except Exception as e:
+        logger.error(f"Error getting database pool status: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/devices")
@@ -1423,6 +1484,14 @@ if __name__ == "__main__":
         if alert_monitor:
             alert_monitor.stop()
         scheduler.shutdown()
+
+        # Close database connections
+        if close_db_connections is not None:
+            try:
+                close_db_connections(db)
+                logger.info("Database connections closed")
+            except Exception as db_e:
+                logger.error(f"Error closing database connections: {db_e}")
     except Exception as run_e:
         logger.error(f"Error starting Flask server: {run_e}")
         import traceback

@@ -8,7 +8,7 @@ logger = logging.getLogger(__name__)
 
 
 class HomeAssistantClient:
-    def __init__(self, base_url: Optional[str] = None, access_token: Optional[str] = None, mock_mode: bool = False):
+    def __init__(self, base_url: Optional[str] = None, access_token: Optional[str] = None, mock_mode: bool = False) -> None:
         self.mock_mode = mock_mode
 
         if mock_mode:
@@ -35,6 +35,8 @@ class HomeAssistantClient:
             return True
 
         try:
+            if self.session is None:
+                return False
             response = self.session.get(f"{self.base_url}/api/")
             return response.status_code == 200
         except requests.RequestException as e:
@@ -47,9 +49,12 @@ class HomeAssistantClient:
             return []
 
         try:
+            if self.session is None:
+                return []
             response = self.session.get(f"{self.base_url}/api/states")
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            return result
         except requests.RequestException as e:
             logger.error(f"Failed to get states: {e}")
             return []
@@ -60,11 +65,14 @@ class HomeAssistantClient:
             return None
 
         try:
+            if self.session is None:
+                return None
             response = self.session.get(f"{self.base_url}/api/states/{entity_id}")
             if response.status_code == 404:
                 return None
             response.raise_for_status()
-            return response.json()
+            result = response.json()
+            return result
         except requests.RequestException as e:
             logger.error(f"Failed to get state for {entity_id}: {e}")
             return None
@@ -76,6 +84,8 @@ class HomeAssistantClient:
 
         try:
             data = {"state": state, "attributes": attributes or {}}
+            if self.session is None:
+                return False
             response = self.session.post(f"{self.base_url}/api/states/{entity_id}", json=data)
             response.raise_for_status()
             return True
@@ -101,6 +111,8 @@ class HomeAssistantClient:
             if target:
                 data["target"] = target
 
+            if self.session is None:
+                return False
             response = self.session.post(f"{self.base_url}/api/services/{domain}/{service}", json=data)
             response.raise_for_status()
             return True

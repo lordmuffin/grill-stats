@@ -52,7 +52,7 @@ class DeviceModel(Base):
 class DeviceManager:
     """Manager class for device operations."""
 
-    def __init__(self, db_instance=None):
+    def __init__(self, db_instance=None) -> None:
         """Initialize device manager with database instance."""
         self.db = db_instance or db
 
@@ -93,18 +93,21 @@ class DeviceManager:
 
     def get_device_by_id(self, device_id: str) -> Optional[DeviceModel]:
         """Get device by device_id."""
-        return DeviceModel.query.filter_by(device_id=device_id.upper()).first()
+        device = DeviceModel.query.filter_by(device_id=device_id.upper()).first()
+        return device
 
     def get_user_devices(self, user_id: int, include_inactive: bool = False) -> List[DeviceModel]:
         """Get all devices for a user."""
         query = DeviceModel.query.filter_by(user_id=user_id)
         if not include_inactive:
             query = query.filter_by(is_active=True)
-        return query.all()
+        devices = query.all()
+        return devices
 
     def get_user_device(self, user_id: int, device_id: str) -> Optional[DeviceModel]:
         """Get a specific device for a user."""
-        return DeviceModel.query.filter_by(user_id=user_id, device_id=device_id.upper(), is_active=True).first()
+        device = DeviceModel.query.filter_by(user_id=user_id, device_id=device_id.upper(), is_active=True).first()
+        return device
 
     def soft_delete_device(self, user_id: int, device_id: str) -> DeviceModel:
         """Soft delete a device (set is_active=False)."""

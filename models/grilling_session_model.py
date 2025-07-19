@@ -83,13 +83,15 @@ class GrillingSessionModel(Base):
 
     def is_active(self) -> bool:
         """Check if session is currently active."""
-        return self.status == "active"
+        result = self.status == "active"
+        return result
 
     def get_device_list(self) -> List[str]:
         """Get list of device IDs used in session."""
         if self.devices_used:
             try:
-                return json.loads(self.devices_used) if isinstance(self.devices_used, str) else self.devices_used
+                devices = json.loads(self.devices_used) if isinstance(self.devices_used, str) else self.devices_used
+                return devices
             except json.JSONDecodeError:
                 return []
         return []
@@ -114,7 +116,7 @@ class GrillingSessionModel(Base):
 class GrillingSessionManager:
     """Manager class for grilling session operations."""
 
-    def __init__(self, db_instance=None):
+    def __init__(self, db_instance=None) -> None:
         """Initialize grilling session manager with database instance."""
         self.db = db_instance or db
 
@@ -145,7 +147,8 @@ class GrillingSessionManager:
 
     def get_session_by_id(self, session_id: int) -> Optional[GrillingSessionModel]:
         """Get a session by ID."""
-        return GrillingSessionModel.query.get(session_id)
+        session = GrillingSessionModel.query.get(session_id)
+        return session
 
     def get_user_sessions(
         self, user_id: int, status: Optional[str] = None, limit: int = 50, offset: int = 0
@@ -156,7 +159,8 @@ class GrillingSessionManager:
         if status:
             query = query.filter_by(status=status)
 
-        return query.order_by(GrillingSessionModel.start_time.desc()).limit(limit).offset(offset).all()
+        sessions = query.order_by(GrillingSessionModel.start_time.desc()).limit(limit).offset(offset).all()
+        return sessions
 
     def get_active_sessions(self, user_id: Optional[int] = None) -> List[GrillingSessionModel]:
         """Get currently active sessions."""
@@ -165,7 +169,8 @@ class GrillingSessionManager:
         if user_id:
             query = query.filter_by(user_id=user_id)
 
-        return query.all()
+        sessions = query.all()
+        return sessions
 
     def update_session(self, session_id: int, **kwargs: Any) -> Optional[GrillingSessionModel]:
         """Update session with provided fields."""

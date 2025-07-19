@@ -15,7 +15,7 @@ class SessionTracker:
     Service for automatically detecting, tracking, and managing grilling sessions
     """
 
-    def __init__(self, session_manager, device_manager=None, mock_mode=False):
+    def __init__(self, session_manager, device_manager=None, mock_mode=False) -> None:
         """
         Initialize the session tracker
 
@@ -50,9 +50,9 @@ class SessionTracker:
         self,
         device_id: str,
         temperature: float,
-        timestamp: datetime = None,
-        user_id: int = None,
-    ):
+        timestamp: Optional[datetime] = None,
+        user_id: Optional[int] = None,
+    ) -> None:
         """
         Process a new temperature reading and check for session events
 
@@ -88,7 +88,7 @@ class SessionTracker:
         # Update active session statistics
         self._update_active_session_stats(device_id, temperature)
 
-    def _update_ambient_temperature(self, device_id: str):
+    def _update_ambient_temperature(self, device_id: str) -> None:
         """Update the ambient temperature baseline for a device"""
         buffer = self.device_temp_buffers[device_id]
         if len(buffer) >= 5:  # Need at least 5 readings
@@ -96,7 +96,7 @@ class SessionTracker:
             recent_temps = [r["temperature"] for r in list(buffer)[-10:]]
             self.device_ambient_temps[device_id] = statistics.median(recent_temps)
 
-    def _check_session_start(self, device_id: str, user_id: int):
+    def _check_session_start(self, device_id: str, user_id: Optional[int]) -> None:
         """Check if a grilling session should start for this device"""
         buffer = self.device_temp_buffers[device_id]
 
@@ -132,7 +132,7 @@ class SessionTracker:
             # Reset potential start if temperature drops
             self.potential_starts.pop(device_id, None)
 
-    def _check_session_end(self, device_id: str):
+    def _check_session_end(self, device_id: str) -> None:
         """Check if a grilling session should end for this device"""
         buffer = self.device_temp_buffers[device_id]
 
@@ -172,7 +172,7 @@ class SessionTracker:
                 # Reset potential end
                 self.potential_ends.pop(device_id, None)
 
-    def _start_session(self, device_id: str, start_time: datetime, user_id: int):
+    def _start_session(self, device_id: str, start_time: datetime, user_id: Optional[int]) -> Any:
         """Start a new grilling session"""
         try:
             # Create new session
@@ -197,7 +197,7 @@ class SessionTracker:
             logger.error(f"Failed to start session for device {device_id}: {e}")
             return None
 
-    def _end_session(self, device_id: str):
+    def _end_session(self, device_id: str) -> None:
         """End the active grilling session for a device"""
         try:
             # Find active session for this device
@@ -240,7 +240,7 @@ class SessionTracker:
         except Exception as e:
             logger.error(f"Failed to end session for device {device_id}: {e}")
 
-    def _update_active_session_stats(self, device_id: str, temperature: float):
+    def _update_active_session_stats(self, device_id: str, temperature: float) -> None:
         """Update statistics for active session"""
         try:
             active_sessions = self.session_manager.get_active_sessions()
@@ -276,7 +276,7 @@ class SessionTracker:
         else:
             return "cooking"
 
-    def force_start_session(self, device_id: str, user_id: int, session_type: str = None) -> Optional[Any]:
+    def force_start_session(self, device_id: str, user_id: int, session_type: Optional[str] = None) -> Optional[Any]:
         """Manually start a session for a device"""
         try:
             session = self.session_manager.create_session(
@@ -303,7 +303,7 @@ class SessionTracker:
             logger.error(f"Failed to manually end session for device {device_id}: {e}")
             return False
 
-    def get_session_status(self, device_id: str) -> Dict:
+    def get_session_status(self, device_id: str) -> Dict[str, Any]:
         """Get current session status for a device"""
         return {
             "device_id": device_id,
@@ -349,11 +349,11 @@ class SessionTracker:
 
         return len(devices_to_remove)
 
-    def get_all_session_statuses(self) -> Dict:
+    def get_all_session_statuses(self) -> Dict[str, Dict[str, Any]]:
         """Get session status for all tracked devices"""
         return {device_id: self.get_session_status(device_id) for device_id in self.device_temp_buffers.keys()}
 
-    def simulate_temperature_data(self, device_id: str, user_id: int, session_profile: str = "grilling"):
+    def simulate_temperature_data(self, device_id: str, user_id: int, session_profile: str = "grilling") -> None:
         """
         Simulate temperature data for testing session detection
 
@@ -433,7 +433,7 @@ class SessionTracker:
 
         logger.info(f"Temperature simulation completed for {device_id}")
 
-    def health_check(self) -> Dict:
+    def health_check(self) -> Dict[str, Any]:
         """Return health status of the session tracker"""
         return {
             "status": "healthy",

@@ -135,7 +135,7 @@ class TemperatureAlertModel(Base):
 class TemperatureAlertManager:
     """Manager class for temperature alert operations."""
 
-    def __init__(self, db_instance=None):
+    def __init__(self, db_instance=None) -> None:
         """Initialize temperature alert manager with database instance."""
         self.db = db_instance or db
 
@@ -159,14 +159,16 @@ class TemperatureAlertManager:
         query = TemperatureAlertModel.query.filter_by(user_id=user_id)
         if active_only:
             query = query.filter_by(is_active=True)
-        return query.all()
+        alerts = query.all()
+        return alerts
 
     def get_alert_by_id(self, alert_id: int, user_id: Optional[int] = None) -> Optional[TemperatureAlertModel]:
         """Get a specific alert by ID."""
         query = TemperatureAlertModel.query.filter_by(id=alert_id)
         if user_id:
             query = query.filter_by(user_id=user_id)
-        return query.first()
+        alert = query.first()
+        return alert
 
     def get_alerts_for_device_probe(
         self, device_id: str, probe_id: str, active_only: bool = True
@@ -175,11 +177,13 @@ class TemperatureAlertManager:
         query = TemperatureAlertModel.query.filter_by(device_id=device_id, probe_id=probe_id)
         if active_only:
             query = query.filter_by(is_active=True)
-        return query.all()
+        alerts = query.all()
+        return alerts
 
     def get_active_alerts(self) -> List[TemperatureAlertModel]:
         """Get all active alerts for monitoring."""
-        return TemperatureAlertModel.query.filter_by(is_active=True).all()
+        alerts = TemperatureAlertModel.query.filter_by(is_active=True).all()
+        return alerts
 
     def update_alert(self, alert_id: int, user_id: int, **kwargs: Any) -> Optional[TemperatureAlertModel]:
         """Update an existing alert."""

@@ -16,7 +16,7 @@ class LoginForm(FlaskForm):
     password = PasswordField("Password", validators=[DataRequired(message="Password cannot be empty")])
     submit = SubmitField("Log In")
 
-    def validate(self, extra_validators=None):
+    def validate(self, extra_validators=None) -> bool:
         """Custom validation to handle empty fields case"""
         if not super(LoginForm, self).validate():
             # If either field is empty, generate a custom error message

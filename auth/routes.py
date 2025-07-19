@@ -1,3 +1,4 @@
+from typing import Any
 from flask import Blueprint, flash, redirect, render_template, request, url_for
 from flask_login import current_user, login_required, login_user, logout_user
 from werkzeug.urls import url_parse
@@ -6,22 +7,23 @@ from auth.utils import check_password
 from forms.auth_forms import LoginForm
 
 
-def init_auth_routes(app, login_manager, user_manager, bcrypt):
+def init_auth_routes(app, login_manager, user_manager, bcrypt) -> Blueprint:
     """Initialize authentication routes"""
 
     auth_bp = Blueprint("auth", __name__)
 
     @login_manager.user_loader
-    def load_user(user_id):
+    def load_user(user_id) -> Any:
+
         return user_manager.get_user_by_id(user_id)
 
     @login_manager.unauthorized_handler
-    def unauthorized():
+    def unauthorized() -> str:
         flash("Please log in to access this page.", "warning")
         return redirect(url_for("login", next=request.url))
 
     @app.route("/login", methods=["GET", "POST"])
-    def login():
+    def login() -> str:
         # Redirect if user is already logged in
         if current_user.is_authenticated:
             return redirect(url_for("dashboard"))
@@ -64,14 +66,14 @@ def init_auth_routes(app, login_manager, user_manager, bcrypt):
 
     @app.route("/logout")
     @login_required
-    def logout():
+    def logout() -> str:
         logout_user()
         flash("You have been logged out.", "info")
         return redirect(url_for("login"))
 
     @app.route("/dashboard")
     @login_required
-    def dashboard():
+    def dashboard() -> str:
         return render_template("dashboard.html")
 
     return auth_bp

@@ -91,4 +91,5 @@ class User(UserMixin):
 
     def check_if_locked(self, user: Optional[Any]) -> bool:
         """Check if user account is locked"""
-        return user.is_locked if user else False
+        result = user.is_locked if user else False
+        return result

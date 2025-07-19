@@ -48,7 +48,7 @@ class UserModel(Base, UserMixin):
 class UserManager:
     """Manager class for user operations."""
 
-    def __init__(self, db_instance=None):
+    def __init__(self, db_instance=None) -> None:
         """Initialize user manager with database instance."""
         self.db = db_instance or db
 
@@ -61,11 +61,13 @@ class UserManager:
 
     def get_user_by_email(self, email: str) -> Optional[UserModel]:
         """Get a user by email."""
-        return UserModel.query.filter_by(email=email).first()
+        user = UserModel.query.filter_by(email=email).first()
+        return user
 
     def get_user_by_id(self, user_id: str) -> Optional[UserModel]:
         """Get a user by ID."""
-        return UserModel.query.get(int(user_id))
+        user = UserModel.query.get(int(user_id))
+        return user
 
     def increment_failed_login(self, user: UserModel) -> None:
         """Increment failed login attempts."""
@@ -83,4 +85,5 @@ class UserManager:
 
     def check_if_locked(self, user: Optional[UserModel]) -> bool:
         """Check if user account is locked."""
-        return user.is_locked if user else False
+        result = user.is_locked if user else False
+        return result
