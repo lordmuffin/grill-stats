@@ -343,13 +343,107 @@ Response:
 ## 🚢 Deployment
 
 ### Local Development
+
+#### Prerequisites
+- Python 3.11 or higher
+- Docker and Docker Compose
+- Git
+
+#### Option 1: Python Virtual Environment (Recommended for Development)
+
 ```bash
-# Run services locally with Docker Compose
+# Clone repository
+git clone https://github.com/lordmuffin/grill-stats.git
+cd grill-stats
+
+# Setup Python virtual environment (using provided script)
+./setup-venv.sh
+
+# Activate the virtual environment
+source venv/bin/activate
+
+# Setup environment variables
+cp .env.example .env
+# Edit .env with your credentials
+
+# Run the application
+python app.py
+```
+
+#### Option 2: Docker Compose (Recommended for Full Stack Testing)
+
+```bash
+# Clone repository
+git clone https://github.com/lordmuffin/grill-stats.git
+cd grill-stats
+
+# Setup environment variables
+cp .env.example .env
+# Edit .env with your credentials
+
+# Run the monolithic application with all dependencies
 docker-compose up --build
 
-# Individual service development
+# To run microservices version instead
+docker-compose --profile microservices up --build
+```
+
+#### Environment Configuration
+
+You need to configure the following environment variables in your `.env` file:
+
+```
+# ThermoWorks API
+THERMOWORKS_API_KEY=your_api_key
+THERMOWORKS_CLIENT_ID=your-client-id
+THERMOWORKS_CLIENT_SECRET=your-client-secret
+THERMOWORKS_REDIRECT_URI=http://localhost:8080/api/auth/thermoworks/callback
+
+# Home Assistant
+HOMEASSISTANT_URL=http://your-ha-instance:8123
+HOMEASSISTANT_TOKEN=your-long-lived-token
+```
+
+#### Development Tools
+
+The project is configured with several development tools:
+
+- **flake8**: Code linting and style checking
+- **black**: Code formatting
+- **isort**: Import sorting
+- **mypy**: Static type checking
+
+You can run these tools with the following commands:
+
+```bash
+# Lint code
+flake8 .
+
+# Format code
+black .
+
+# Sort imports
+isort .
+
+# Type checking
+mypy .
+```
+
+#### Working with Individual Services
+
+```bash
+# Device Service
 cd services/device-service
 python main.py
+
+# Temperature Service
+cd services/temperature-service
+python main.py
+
+# Web UI
+cd services/web-ui
+npm install
+npm start
 ```
 
 ### Kubernetes Deployment

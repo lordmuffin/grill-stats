@@ -1,18 +1,244 @@
 version: '3.8'
 
 services:
+  # PostgreSQL for device management
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: grill_stats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d grill_stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grill-stats-network
+
+  # InfluxDB for time-series data
+  influxdb:
+    image: influxdb:1.8
+    environment:
+      INFLUXDB_DB: grill_stats
+      INFLUXDB_USER: admin
+      INFLUXDB_USER_PASSWORD: influx-password
+      INFLUXDB_ADMIN_USER: admin
+      INFLUXDB_ADMIN_PASSWORD: influx-password
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb_data:/var/lib/influxdb
+      - ./database-init/influxdb-init.sh:/docker-entrypoint-initdb.d/init.sh
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grill-stats-network
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - grill-stats-network
+
+  # Main Grill Stats Service
   grill-stats:
     build: .
     ports:
       - "5000:5000"
     environment:
+      # ThermoWorks API
       - THERMOWORKS_API_KEY=${THERMOWORKS_API_KEY}
+      - THERMOWORKS_CLIENT_ID=${THERMOWORKS_CLIENT_ID}
+      - THERMOWORKS_CLIENT_SECRET=${THERMOWORKS_CLIENT_SECRET}
+      - THERMOWORKS_REDIRECT_URI=${THERMOWORKS_REDIRECT_URI:-http://localhost:8080/api/auth/thermoworks/callback}
+      - THERMOWORKS_BASE_URL=${THERMOWORKS_BASE_URL:-https://api.thermoworks.com/v1}
+      - THERMOWORKS_AUTH_URL=${THERMOWORKS_AUTH_URL:-https://auth.thermoworks.com}
+
+      # Home Assistant
       - HOMEASSISTANT_URL=${HOMEASSISTANT_URL}
       - HOMEASSISTANT_TOKEN=${HOMEASSISTANT_TOKEN}
+
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+
+      # InfluxDB
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - INFLUXDB_DATABASE=grill_stats
+      - INFLUXDB_USERNAME=admin
+      - INFLUXDB_PASSWORD=influx-password
+
+      # Application
       - SECRET_KEY=${SECRET_KEY:-default-dev-secret-key}
-      - DATABASE_URL=${DATABASE_URL:-sqlite:///grill_stats.db}
+      - JWT_SECRET=${JWT_SECRET:-default-dev-jwt-secret}
+      - LOG_LEVEL=INFO
       - FLASK_ENV=${FLASK_ENV:-development}
+      - DEBUG=${DEBUG:-true}
+      - PYTHONUNBUFFERED=1
     volumes:
-      - ./config:/app/config
-      - ./instance:/app/instance
+      - ./:/app
+      - /app/venv
+      - /app/__pycache__
+      - /app/.git
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
     restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 45s
+    networks:
+      - grill-stats-network
+
+  # Microservices (optional components, can be enabled/disabled as needed)
+
+  # Auth Service
+  auth-service:
+    build:
+      context: ./services/auth-service
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-default-dev-jwt-secret}
+      - SECRET_KEY=${SECRET_KEY:-default-dev-secret-key}
+    ports:
+      - "8082:8082"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - microservices
+    networks:
+      - grill-stats-network
+
+  # Device Service
+  device-service:
+    build:
+      context: ./services/device-service
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-default-dev-jwt-secret}
+      - THERMOWORKS_CLIENT_ID=${THERMOWORKS_CLIENT_ID}
+      - THERMOWORKS_CLIENT_SECRET=${THERMOWORKS_CLIENT_SECRET}
+      - THERMOWORKS_REDIRECT_URI=${THERMOWORKS_REDIRECT_URI:-http://localhost:8080/api/auth/thermoworks/callback}
+      - THERMOWORKS_BASE_URL=${THERMOWORKS_BASE_URL:-https://api.thermoworks.com/v1}
+      - THERMOWORKS_AUTH_URL=${THERMOWORKS_AUTH_URL:-https://auth.thermoworks.com}
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - microservices
+    networks:
+      - grill-stats-network
+
+  # Temperature Service
+  temperature-service:
+    build:
+      context: ./services/temperature-service
+      dockerfile: Dockerfile
+    environment:
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - INFLUXDB_DATABASE=grill_stats
+      - INFLUXDB_USERNAME=admin
+      - INFLUXDB_PASSWORD=influx-password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - THERMOWORKS_API_KEY=${THERMOWORKS_API_KEY}
+    ports:
+      - "8081:8080"
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    profiles:
+      - microservices
+    networks:
+      - grill-stats-network
+
+  # Web UI
+  web-ui:
+    build:
+      context: ./services/web-ui
+      dockerfile: Dockerfile
+    environment:
+      - REACT_APP_AUTH_SERVICE_URL=http://localhost:8082
+      - REACT_APP_DEVICE_SERVICE_URL=http://localhost:8080
+      - REACT_APP_TEMPERATURE_SERVICE_URL=http://localhost:8081
+    ports:
+      - "3000:3000"
+    depends_on:
+      - auth-service
+      - device-service
+    profiles:
+      - microservices
+    networks:
+      - grill-stats-network
+
+volumes:
+  postgres_data:
+  influxdb_data:
+  redis_data:
+
+networks:
+  grill-stats-network:
+    driver: bridge
