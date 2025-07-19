@@ -1,600 +1,528 @@
-# PLANNING.md
+# PLANNING.md - Grill Monitoring Platform
 
-## Project Vision & Mission
+## Table of Contents
 
-### Vision Statement
-To create the most comprehensive, scalable, and user-friendly grill monitoring platform that bridges the gap between professional-grade thermometer hardware and smart home automation, enabling both casual grillers and barbecue enthusiasts to achieve perfect results every time.
+- [Vision Statement](#vision-statement)
+- [Project Goals](#project-goals)
+- [Architecture Overview](#architecture-overview)
+- [Technology Stack](#technology-stack)
+- [Required Tools](#required-tools)
+- [Development Environment](#development-environment)
+- [Infrastructure Requirements](#infrastructure-requirements)
+- [External Dependencies](#external-dependencies)
+- [Security Considerations](#security-considerations)
+- [Deployment Strategy](#deployment-strategy)
 
-### Mission
-Transform grill monitoring from a manual, error-prone process into an intelligent, automated system that provides real-time insights, predictive analytics, and seamless integration with modern smart home ecosystems.
+## Vision Statement
+
+The Grill Monitoring Platform transforms the traditional barbecue experience by providing real-time, cloud-native temperature monitoring for ThermoWorks wireless thermometers. By integrating with Home Assistant and leveraging microservices architecture, we enable pitmasters to monitor their cooks from anywhere, receive intelligent alerts, and achieve perfect results every time.
 
 ### Core Value Propositions
 
-1. **Precision Monitoring**: Sub-second temperature accuracy with multi-probe support
-2. **Smart Integration**: Seamless Home Assistant and smart home ecosystem integration
-3. **Predictive Intelligence**: AI-powered cooking recommendations and timing predictions
-4. **Enterprise Scalability**: Cloud-native architecture supporting unlimited devices
-5. **Community Driven**: Open-source platform fostering grilling community innovation
+1. **Real-Time Monitoring**: Never miss a temperature change with sub-minute polling and live updates
+2. **Smart Home Integration**: Seamlessly integrate with existing Home Assistant automations
+3. **Historical Analysis**: Learn from past cooks with comprehensive data retention and analytics
+4. **Multi-Device Support**: Monitor multiple grills and probes simultaneously
+5. **Cloud-Native Reliability**: Enterprise-grade availability and scalability
 
-## Strategic Goals
+## Project Goals
 
-### Short-term (3-6 months)
-- ✅ Complete core microservices architecture migration
-- ✅ Implement robust user authentication and security
-- ✅ Deploy production-ready Kubernetes infrastructure
-- 🔄 Launch Home Assistant integration service
-- 🔄 Develop mobile-responsive web interface
+### Primary Objectives
 
-### Medium-term (6-12 months)
-- ⏳ Mobile application development (iOS/Android)
-- ⏳ Advanced analytics and cooking insights
-- ⏳ Multi-tenant SaaS platform capabilities
-- ⏳ Third-party thermometer brand integrations
-- ⏳ Community marketplace for cooking profiles
+1. **Modernize Legacy System**: Transform monolithic Flask application into scalable microservices
+2. **Enhance User Experience**: Provide intuitive web and mobile interfaces with real-time updates
+3. **Ensure Reliability**: Achieve 99.9% uptime with automatic failover and recovery
+4. **Enable Analytics**: Collect and analyze temperature data for cooking insights
+5. **Simplify Integration**: Make Home Assistant integration plug-and-play
 
-### Long-term (12+ months)
-- ⏳ AI-powered cooking assistant with machine learning
-- ⏳ IoT gateway for direct hardware connectivity
-- ⏳ Professional restaurant and commercial applications
-- ⏳ International expansion and localization
-- ⏳ Hardware partnerships and white-label solutions
+### Success Metrics
+
+- **Performance**: < 100ms API response time (p95)
+- **Availability**: 99.9% uptime SLA
+- **Scalability**: Support 10,000+ concurrent users
+- **Data Freshness**: < 1 minute temperature data latency
+- **User Satisfaction**: 4.5+ star rating
 
 ## Architecture Overview
 
-### System Architecture Philosophy
+### System Architecture
 
-**Cloud-Native Microservices**: Distributed, scalable, and resilient architecture built on Kubernetes with clear service boundaries and data ownership.
-
-**Event-Driven Design**: Asynchronous communication through message queues with eventual consistency and fault tolerance.
-
-**Zero-Trust Security**: Security-first approach with end-to-end encryption, service mesh authentication, and principle of least privilege.
-
-**Observability-First**: Comprehensive monitoring, tracing, and logging built into every service from day one.
-
-### High-Level Architecture Diagram
-
-```mermaid
-graph TB
-    subgraph "External Services"
-        TW[ThermoWorks Cloud API]
-        HA[Home Assistant]
-        Mobile[Mobile Apps]
-        Web[Web Browser]
-    end
-    
-    subgraph "API Gateway Layer"
-        Kong[Kong API Gateway]
-        Auth[OAuth2/JWT Auth]
-    end
-    
-    subgraph "Core Services"
-        DS[Device Service]
-        TS[Temperature Service]
-        HAS[Home Assistant Service]
-        NS[Notification Service]
-        DPS[Data Processing Service]
-        US[User Service]
-    end
-    
-    subgraph "Data Layer"
-        PG[(PostgreSQL)]
-        Influx[(InfluxDB)]
-        Redis[(Redis)]
-        Kafka[Apache Kafka]
-    end
-    
-    subgraph "Infrastructure"
-        K8s[Kubernetes Cluster]
-        Istio[Service Mesh]
-        Prometheus[Monitoring Stack]
-    end
-    
-    Web --> Kong
-    Mobile --> Kong
-    Kong --> Auth
-    Auth --> DS
-    Auth --> TS
-    Auth --> HAS
-    Auth --> NS
-    Auth --> DPS
-    Auth --> US
-    
-    DS --> PG
-    TS --> Influx
-    TS --> Redis
-    HAS --> HA
-    
-    DS --> Kafka
-    TS --> Kafka
-    HAS --> Kafka
-    NS --> Kafka
-    DPS --> Kafka
-    
-    DS --> TW
-    
-    K8s --> Istio
-    K8s --> Prometheus
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                              User Layer                                  │
+├─────────────────┬─────────────────┬─────────────────┬─────────────────┤
+│    Web UI       │   Mobile App    │  Home Assistant │   External API  │
+│   (React)       │    (Future)     │   Integration   │    Consumers    │
+└────────┬────────┴────────┬────────┴────────┬────────┴────────┬────────┘
+         │                 │                  │                  │
+         └─────────────────┴──────────────────┴──────────────────┘
+                                    │
+┌───────────────────────────────────┴─────────────────────────────────────┐
+│                           API Gateway Layer                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│  Traefik │ Rate Limiting │ Authentication │ Load Balancing │ TLS/SSL    │
+└───────────────┬─────────────────────────────────────────────────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────────────┐
+│                         Microservices Layer                              │
+├──────────────┬──────────────┬──────────────┬──────────────┬────────────┤
+│   Device     │ Temperature  │    Home      │ Notification │   Data     │
+│   Service    │   Service    │  Assistant   │   Service    │ Processing │
+│              │              │   Service    │              │  Service   │
+└──────┬───────┴──────┬───────┴──────┬───────┴──────┬───────┴────┬───────┘
+       │              │              │              │              │
+┌──────┴───────┬──────┴───────┬──────┴───────┬──────┴───────┬────┴───────┐
+│                           Data Layer                                     │
+├──────────────┬──────────────┬──────────────┬──────────────┬────────────┤
+│ PostgreSQL   │  InfluxDB    │    Redis     │    Kafka     │    S3      │
+│  (Devices)   │(Time-series) │  (Cache)     │ (Messaging)  │ (Storage)  │
+└──────────────┴──────────────┴──────────────┴──────────────┴────────────┘
+                │
+┌───────────────┴─────────────────────────────────────────────────────────┐
+│                        Infrastructure Layer                              │
+├─────────────────────────────────────────────────────────────────────────┤
+│        Kubernetes        │        Operators        │    Monitoring      │
+│   Deployments, Services  │  Database, Messaging    │  Prometheus, OTEL  │
+└─────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Service Architecture Patterns
+### Service Boundaries
 
-#### Microservices Design Principles
-- **Single Responsibility**: Each service owns a specific business capability
-- **Database Per Service**: Data sovereignty with service-specific databases
-- **API-First Design**: Well-defined contracts with OpenAPI specifications
-- **Failure Resilience**: Circuit breakers, retries, and graceful degradation
-- **Autonomous Teams**: Services can be developed and deployed independently
+#### Core Services
 
-#### Communication Patterns
-- **Synchronous**: REST APIs for real-time queries and commands
-- **Asynchronous**: Event streaming for data synchronization and notifications
-- **Request/Reply**: RPC-style communication for service-to-service calls
-- **Publish/Subscribe**: Event broadcasting for system-wide notifications
+1. **Device Management Service**
+   - ThermoWorks OAuth2 integration
+   - Device discovery and registration
+   - Configuration management
+   - Health monitoring
 
-### Data Architecture
+2. **Temperature Data Service**
+   - Real-time data collection
+   - Time-series storage
+   - Data aggregation
+   - Streaming endpoints
 
-#### Data Flow Strategy
-1. **Ingestion**: Real-time temperature data collection from ThermoWorks API
-2. **Processing**: Stream processing for real-time analytics and alerting
-3. **Storage**: Time-series optimization with tiered retention policies
-4. **Serving**: High-performance queries with Redis caching layer
-5. **Analytics**: Batch processing for historical insights and ML training
+3. **Home Assistant Service**
+   - Entity management
+   - State synchronization
+   - Event handling
+   - Service discovery
 
-#### Database Selection Rationale
-- **PostgreSQL**: ACID compliance for device management and user data
-- **InfluxDB**: Time-series optimization for temperature data
-- **Redis**: Sub-millisecond caching and real-time streaming
-- **Apache Kafka**: Reliable event streaming and message durability
+4. **Notification Service**
+   - Multi-channel alerts (Email, SMS, Push)
+   - Alert rules engine
+   - Escalation policies
+   - Delivery tracking
+
+5. **Data Processing Service**
+   - Analytics and insights
+   - Anomaly detection
+   - Predictive modeling
+   - Report generation
+
+### Data Flow
+
+```
+ThermoWorks API → Device Service → Kafka → Temperature Service → InfluxDB
+                                     ↓
+                            Home Assistant Service
+                                     ↓
+                            Home Assistant Instance
+```
 
 ## Technology Stack
 
-### Core Technologies
+### Backend Services
 
-#### Backend Services
-- **Language**: Python 3.11+ (FastAPI/Flask)
-  - Type hints with Pydantic for data validation
-  - Async/await for high-concurrency operations
-  - Rich ecosystem for scientific computing and ML
-  
-- **API Framework**: FastAPI
-  - Automatic OpenAPI/Swagger documentation
-  - Built-in request validation and serialization
-  - High performance with async support
-  - OAuth2 and JWT authentication
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Runtime | Python | 3.11+ | Service implementation |
+| Web Framework | Flask | 2.3.3 | REST API endpoints |
+| Async Framework | FastAPI | 0.104+ | High-performance APIs |
+| ORM | SQLAlchemy | 2.0+ | Database abstraction |
+| Task Scheduler | APScheduler | 3.10.4 | Background jobs |
+| HTTP Client | Requests/HTTPX | 2.31.0 | API communication |
 
-#### Frontend Technologies
-- **Web Application**: React 18+
-  - TypeScript for type safety and developer experience
-  - Material-UI or Tailwind CSS for consistent design
-  - React Query for server state management
-  - Chart.js/D3.js for real-time data visualization
+### Frontend
 
-- **Mobile Application**: React Native
-  - Cross-platform development efficiency
-  - Native performance with bridge optimization
-  - Shared business logic with web application
-  - Push notifications and background processing
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Framework | React | 18.2+ | UI components |
+| State Management | Redux Toolkit | 1.9+ | Application state |
+| UI Components | Material-UI | 5.14+ | Design system |
+| Charts | Chart.js | 4.4+ | Temperature visualization |
+| Real-time | Socket.io | 4.6+ | Live updates |
+| Build Tool | Vite | 4.5+ | Fast development |
 
-#### Database Technologies
-- **PostgreSQL 15+**: Primary relational database
-  - JSONB support for flexible schema evolution
-  - Full-text search capabilities
-  - Horizontal scaling with read replicas
-  - Built-in backup and point-in-time recovery
+### Data Storage
 
-- **InfluxDB 2.0+**: Time-series database
-  - Optimized for high-write throughput
-  - Built-in data retention and downsampling
-  - Flux query language for complex analytics
-  - Clustering and high availability
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Relational DB | PostgreSQL | 15+ | Device metadata |
+| Time-series DB | InfluxDB | 1.8+ | Temperature data |
+| Cache | Redis | 7.0+ | Session & data cache |
+| Message Queue | Kafka | 3.5+ | Event streaming |
+| Object Storage | MinIO/S3 | Latest | File storage |
 
-- **Redis 7.0+**: In-memory data store
-  - Pub/Sub for real-time notifications
-  - Distributed caching with clustering
-  - Session storage and rate limiting
-  - Message queuing with Redis Streams
+### Infrastructure
 
-#### Message Streaming
-- **Apache Kafka**: Event streaming platform
-  - Horizontal scalability and fault tolerance
-  - Exactly-once delivery semantics
-  - Stream processing with Kafka Streams
-  - Schema registry for data evolution
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Container Runtime | Docker | 24+ | Containerization |
+| Orchestration | Kubernetes | 1.28+ | Container orchestration |
+| Service Mesh | Istio/Linkerd | Latest | Service communication |
+| API Gateway | Traefik | 3.0+ | Ingress controller |
+| CI/CD | Gitea Actions | Latest | Pipeline automation |
 
-### Infrastructure & DevOps
+### Monitoring & Observability
 
-#### Container Orchestration
-- **Kubernetes 1.28+**: Container orchestration
-  - Declarative deployment and scaling
-  - Service discovery and load balancing
-  - Rolling updates and canary deployments
-  - Resource quotas and auto-scaling
+| Component | Technology | Version | Purpose |
+|-----------|------------|---------|---------|
+| Metrics | Prometheus | 2.45+ | Metrics collection |
+| Visualization | Grafana | 10+ | Dashboards |
+| Tracing | OpenTelemetry | Latest | Distributed tracing |
+| Logging | Fluentd/Loki | Latest | Log aggregation |
+| APM | Jaeger | 1.48+ | Performance monitoring |
 
-- **Helm 3.0+**: Package management
-  - Templated Kubernetes manifests
-  - Environment-specific configurations
-  - Dependency management and versioning
-  - Release management and rollbacks
-
-#### Service Mesh & Networking
-- **Istio 1.19+**: Service mesh
-  - mTLS for service-to-service encryption
-  - Traffic management and load balancing
-  - Observability with distributed tracing
-  - Security policies and access control
-
-- **Cilium**: Container networking
-  - eBPF-based high-performance networking
-  - Network policies for zero-trust security
-  - Load balancing and service mesh
-  - Observability and troubleshooting
-
-#### CI/CD Pipeline
-- **Gitea Actions**: Source code management and CI/CD
-  - Git-based workflow with branch protection
-  - Automated testing and security scanning
-  - Container image building and scanning
-  - Deployment automation with GitOps
-
-- **ArgoCD**: GitOps deployment
-  - Declarative application delivery
-  - Multi-environment promotion
-  - Rollback and drift detection
-  - RBAC and audit logging
-
-#### Monitoring & Observability
-- **Prometheus**: Metrics collection and alerting
-  - Multi-dimensional time-series data
-  - Powerful query language (PromQL)
-  - Alertmanager for notification routing
-  - Federation for multi-cluster monitoring
-
-- **Grafana**: Visualization and dashboards
-  - Rich visualization library
-  - Dashboard templating and variables
-  - Alerting with notification channels
-  - User management and RBAC
-
-- **Jaeger**: Distributed tracing
-  - Request flow visualization
-  - Performance bottleneck identification
-  - Service dependency mapping
-  - Trace sampling and storage
-
-- **OpenTelemetry**: Instrumentation framework
-  - Vendor-neutral observability
-  - Automatic instrumentation for common libraries
-  - Custom metrics and tracing
-  - Export to multiple backends
-
-#### Security & Compliance
-- **OAuth2/OIDC**: Authentication and authorization
-  - Industry-standard security protocols
-  - Single sign-on (SSO) integration
-  - Multi-factor authentication (MFA)
-  - Token refresh and revocation
-
-- **Vault**: Secret management
-  - Encrypted secret storage
-  - Dynamic secret generation
-  - Access policies and audit logging
-  - Integration with Kubernetes
+## Required Tools
 
 ### Development Tools
 
-#### Code Quality & Testing
-- **Pre-commit Hooks**: Code quality enforcement
-  - Linting with flake8/pylint
-  - Formatting with black/prettier
-  - Security scanning with bandit
-  - Dependency vulnerability checks
+1. **Version Control**
+   - Git (2.40+)
+   - Gitea (self-hosted)
 
-- **Testing Frameworks**:
-  - pytest for Python unit and integration tests
-  - Jest/React Testing Library for frontend
-  - Testcontainers for integration testing
-  - Artillery for load testing
+2. **Code Editors**
+   - VS Code with Python/React extensions
+   - PyCharm Professional (optional)
 
-#### Development Environment
-- **Docker Compose**: Local development
-  - Multi-service development environment
-  - Hot reload and debugging support
-  - Database seeding and test data
-  - Environment variable management
+3. **API Development**
+   - Postman/Insomnia
+   - curl/httpie
+   - Swagger UI
 
-- **Skaffold**: Cloud-native development
-  - Kubernetes development workflow
-  - Hot reload for containerized applications
-  - Multi-environment configuration
-  - CI/CD pipeline integration
+4. **Database Tools**
+   - pgAdmin 4
+   - InfluxDB CLI
+   - Redis CLI
+   - DBeaver (universal)
 
-## Required Tools & Dependencies
+### Container & Kubernetes Tools
 
-### Development Environment Setup
+1. **Container Tools**
+   - Docker Desktop (local development)
+   - Docker Compose
+   - Buildah/Podman (alternative)
 
-#### Essential Tools
+2. **Kubernetes Tools**
+   - kubectl (1.28+)
+   - Helm (3.12+)
+   - k9s (terminal UI)
+   - Lens (GUI)
+   - Kustomize
+
+3. **GitOps Tools**
+   - ArgoCD
+   - Flux (alternative)
+
+### Python Development
+
+1. **Package Management**
+   - pip (latest)
+   - Poetry (1.6+)
+   - virtualenv/venv
+
+2. **Linting & Formatting**
+   - flake8
+   - black
+   - isort
+   - mypy
+
+3. **Testing**
+   - pytest
+   - pytest-cov
+   - pytest-asyncio
+   - tox
+
+### Frontend Development
+
+1. **Node.js Tools**
+   - Node.js (18 LTS)
+   - npm/yarn/pnpm
+   - nvm (version management)
+
+2. **Development Tools**
+   - React DevTools
+   - Redux DevTools
+   - ESLint
+   - Prettier
+
+### Monitoring Tools
+
+1. **Local Monitoring**
+   - Prometheus (local instance)
+   - Grafana (local instance)
+   - Jaeger (local instance)
+
+2. **Performance Testing**
+   - Apache JMeter
+   - k6
+   - Artillery
+
+## Development Environment
+
+### Local Development Setup
+
 ```bash
-# Container and Kubernetes tools
-docker >= 20.10
-kubectl >= 1.28
-helm >= 3.0
-skaffold >= 2.0
+# Clone repository
+git clone https://github.com/lordmuffin/grill-stats.git
+cd grill-stats
 
-# Development tools
-git >= 2.30
-python >= 3.11
-node >= 18.0
-npm >= 9.0
+# Python environment
+python -m venv venv
+source venv/bin/activate  # Linux/Mac
+# or
+venv\Scripts\activate  # Windows
 
-# Code quality tools
-pre-commit
-black
-flake8
-pytest
+# Install dependencies
+pip install -r requirements.txt
+pip install -r requirements-dev.txt
+
+# Environment variables
+cp .env.example .env
+# Edit .env with your credentials
+
+# Run locally
+python app.py
+
+# Run with Docker Compose
+docker-compose up --build
 ```
 
-#### Development Dependencies
-```bash
-# Python backend requirements
-pip install fastapi uvicorn sqlalchemy alembic
-pip install psycopg2-binary redis influxdb-client
-pip install pydantic python-jose cryptography
-pip install pytest pytest-asyncio httpx
-pip install opentelemetry-api opentelemetry-sdk
+### Required Environment Variables
 
-# Node.js frontend requirements
-npm install react react-dom typescript
-npm install @mui/material @emotion/react @emotion/styled
-npm install @tanstack/react-query axios
-npm install chart.js react-chartjs-2
-npm install @testing-library/react jest
+```bash
+# ThermoWorks API
+THERMOWORKS_CLIENT_ID=your-client-id
+THERMOWORKS_CLIENT_SECRET=your-client-secret
+THERMOWORKS_REDIRECT_URI=http://localhost:8080/api/auth/thermoworks/callback
+
+# Home Assistant
+HOMEASSISTANT_URL=http://your-ha-instance:8123
+HOMEASSISTANT_TOKEN=your-long-lived-token
+
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=grill_monitor
+DB_PASSWORD=secure-password
+DB_NAME=grill_stats
+
+# Redis
+REDIS_HOST=localhost
+REDIS_PORT=6379
+REDIS_PASSWORD=redis-password
+
+# InfluxDB
+INFLUXDB_HOST=localhost
+INFLUXDB_PORT=8086
+INFLUXDB_DATABASE=grill_stats
+INFLUXDB_USERNAME=admin
+INFLUXDB_PASSWORD=influx-password
+
+# Application
+SECRET_KEY=your-secret-key
+LOG_LEVEL=INFO
+ENVIRONMENT=development
 ```
 
-### Infrastructure Requirements
+## Infrastructure Requirements
 
-#### Kubernetes Cluster
-- **Minimum Specs**: 3 nodes, 4 CPU, 8GB RAM each
-- **Recommended**: 5 nodes, 8 CPU, 16GB RAM each
+### Minimum Requirements (Development)
+
+- **CPU**: 2 cores
+- **Memory**: 4GB RAM
+- **Storage**: 20GB SSD
+- **Network**: Stable internet connection
+
+### Recommended Requirements (Production)
+
+- **Kubernetes Cluster**: 3+ nodes
+- **Per Node**: 4 cores, 8GB RAM
 - **Storage**: 100GB SSD per node
-- **Network**: 1Gbps between nodes
+- **Network**: 1Gbps connectivity
 
-#### Database Resources
-- **PostgreSQL**: 2 CPU, 4GB RAM, 50GB storage
-- **InfluxDB**: 4 CPU, 8GB RAM, 200GB storage
-- **Redis**: 1 CPU, 2GB RAM, 10GB storage
+### Database Requirements
 
-#### External Service Dependencies
-- **ThermoWorks Cloud API**: OAuth2 application registration
-- **Home Assistant**: Long-lived access token
-- **Email Service**: SMTP configuration for notifications
-- **Push Notification**: Firebase Cloud Messaging setup
+1. **PostgreSQL**
+   - Storage: 10GB initial
+   - Memory: 2GB
+   - Connections: 100
 
-### Deployment Environments
+2. **InfluxDB**
+   - Storage: 50GB initial
+   - Memory: 4GB
+   - Retention: 1 year
 
-#### Development Environment
+3. **Redis**
+   - Memory: 1GB
+   - Persistence: Optional
+
+## External Dependencies
+
+### Required Services
+
+1. **ThermoWorks Cloud API**
+   - OAuth2 client credentials
+   - API rate limits: 1000 req/hour
+   - Webhook support (optional)
+
+2. **Home Assistant**
+   - Version: 2023.12+
+   - REST API enabled
+   - Long-lived access token
+
+### Optional Services
+
+1. **Email Service**
+   - SendGrid/AWS SES
+   - SMTP credentials
+
+2. **SMS Service**
+   - Twilio
+   - API credentials
+
+3. **Push Notifications**
+   - Firebase Cloud Messaging
+   - APNs (iOS)
+
+## Security Considerations
+
+### Authentication & Authorization
+
+1. **Service-to-Service**
+   - mTLS between services
+   - Service accounts
+   - RBAC policies
+
+2. **User Authentication**
+   - OAuth2/OIDC
+   - Session management
+   - MFA support
+
+### Data Security
+
+1. **Encryption**
+   - TLS 1.3 for transit
+   - AES-256 for storage
+   - Secret rotation
+
+2. **Network Security**
+   - Zero-trust architecture
+   - Network policies
+   - WAF rules
+
+### Compliance
+
+1. **Data Privacy**
+   - GDPR compliance
+   - Data retention policies
+   - User consent
+
+2. **Audit & Logging**
+   - Audit trails
+   - Access logs
+   - Compliance reports
+
+## Deployment Strategy
+
+### Environments
+
+1. **Development**
+   - Local Docker Compose
+   - Feature branches
+   - Mock external services
+
+2. **Staging**
+   - Kubernetes cluster
+   - Production-like data
+   - Integration testing
+
+3. **Production**
+   - Multi-region deployment
+   - Auto-scaling
+   - Disaster recovery
+
+### CI/CD Pipeline
+
 ```yaml
-# Resource allocation (minimal)
-replicas: 1
-cpu_request: 100m
-memory_request: 128Mi
-storage: 10Gi
+Pipeline Stages:
+1. Code Quality
+   - Linting (flake8, ESLint)
+   - Security scanning
+   - Unit tests
 
-# Features enabled
-debug_logging: true
-hot_reload: true
-mock_external_apis: true
-test_data_seeding: true
+2. Build
+   - Docker image creation
+   - Vulnerability scanning
+   - Artifact storage
+
+3. Test
+   - Integration tests
+   - Performance tests
+   - Smoke tests
+
+4. Deploy
+   - Staging deployment
+   - Production approval
+   - Rolling updates
+
+5. Monitor
+   - Health checks
+   - Performance metrics
+   - Error tracking
 ```
 
-#### Staging Environment
-```yaml
-# Resource allocation (production-like)
-replicas: 2
-cpu_request: 500m
-memory_request: 512Mi
-storage: 50Gi
+### Rollout Strategy
 
-# Features enabled
-performance_testing: true
-security_scanning: true
-integration_testing: true
-load_testing: true
-```
+1. **Blue-Green Deployment**
+   - Zero-downtime updates
+   - Quick rollback
+   - A/B testing
 
-#### Production Environment
-```yaml
-# Resource allocation (high availability)
-replicas: 3
-cpu_request: 1000m
-memory_request: 1Gi
-storage: 100Gi
+2. **Canary Releases**
+   - Gradual rollout
+   - Metrics-based promotion
+   - Automatic rollback
 
-# Features enabled
-high_availability: true
-auto_scaling: true
-backup_strategy: true
-monitoring_alerts: true
-security_hardening: true
-```
+### Backup & Recovery
 
-## Implementation Roadmap
+1. **Data Backup**
+   - Daily automated backups
+   - Point-in-time recovery
+   - Cross-region replication
 
-### Phase 1: Foundation (Months 1-2)
-**Objective**: Establish core infrastructure and basic functionality
-
-#### Infrastructure Setup
-- [ ] Kubernetes cluster provisioning and configuration
-- [ ] Database deployment (PostgreSQL, InfluxDB, Redis)
-- [ ] CI/CD pipeline setup with Gitea Actions
-- [ ] Basic monitoring and logging infrastructure
-- [ ] Development environment with Docker Compose
-
-#### Core Services
-- [ ] User authentication service with JWT tokens
-- [ ] Device management service with ThermoWorks integration
-- [ ] Temperature data service with real-time collection
-- [ ] Basic web UI with temperature visualization
-- [ ] API gateway with rate limiting and authentication
-
-#### Success Criteria
-- All services deployable to Kubernetes
-- User can register, login, and view temperature data
-- Real-time temperature updates working
-- Basic monitoring and alerting functional
-
-### Phase 2: Integration (Months 2-3)
-**Objective**: Complete Home Assistant integration and enhance user experience
-
-#### Home Assistant Integration
-- [ ] Home Assistant service with entity management
-- [ ] Automatic sensor creation and state synchronization
-- [ ] Device health monitoring and alerting
-- [ ] Integration testing with Home Assistant instances
-
-#### User Experience Enhancement
-- [ ] Responsive web UI with mobile optimization
-- [ ] Real-time charts with multiple probe support
-- [ ] Device configuration and management interface
-- [ ] Historical data visualization and export
-
-#### Success Criteria
-- Home Assistant sensors automatically created
-- Mobile-friendly web interface
-- Users can configure devices and view history
-- Integration tests passing for all major flows
-
-### Phase 3: Intelligence (Months 3-4)
-**Objective**: Add advanced analytics and notification capabilities
-
-#### Analytics & Insights
-- [ ] Data processing service with cooking analytics
-- [ ] Temperature trend analysis and predictions
-- [ ] Cooking time estimates and recommendations
-- [ ] Performance metrics and cooking insights
-
-#### Notification System
-- [ ] Multi-channel notification service (email, SMS, push)
-- [ ] Configurable alerts and thresholds
-- [ ] Escalation policies and notification routing
-- [ ] Integration with Home Assistant automations
-
-#### Success Criteria
-- Users receive intelligent cooking recommendations
-- Reliable alert system with multiple channels
-- Analytics dashboard showing cooking insights
-- Performance metrics meeting SLA targets
-
-### Phase 4: Scale (Months 4-6)
-**Objective**: Optimize for production scale and add mobile capabilities
-
-#### Mobile Application
-- [ ] React Native mobile app development
-- [ ] Push notification integration
-- [ ] Offline capability with data synchronization
-- [ ] Mobile-specific features (camera, location)
-
-#### Performance & Scalability
-- [ ] Horizontal pod autoscaling configuration
-- [ ] Database optimization and read replicas
-- [ ] CDN integration for static assets
-- [ ] Load testing and performance tuning
-
-#### Success Criteria
-- Mobile app published to app stores
-- System handles 1000+ concurrent users
-- 99.9% uptime with auto-scaling
-- Sub-second response times for all APIs
-
-## Risk Assessment & Mitigation
-
-### Technical Risks
-
-#### High Priority
-1. **ThermoWorks API Rate Limits**
-   - *Risk*: API throttling affecting data collection
-   - *Mitigation*: Implement exponential backoff, caching, and batch requests
-
-2. **Database Performance at Scale**
-   - *Risk*: Query performance degradation with large datasets
-   - *Mitigation*: Proper indexing, read replicas, and data archiving strategies
-
-3. **Real-time Data Streaming Reliability**
-   - *Risk*: WebSocket connections dropping or message loss
-   - *Mitigation*: Message queuing, connection retry logic, and event sourcing
-
-#### Medium Priority
-1. **Kubernetes Complexity**
-   - *Risk*: Operational overhead and debugging complexity
-   - *Mitigation*: Comprehensive monitoring, documentation, and training
-
-2. **Service Dependencies**
-   - *Risk*: Cascading failures from external service outages
-   - *Mitigation*: Circuit breakers, graceful degradation, and fallback mechanisms
-
-### Business Risks
-
-#### High Priority
-1. **User Adoption**
-   - *Risk*: Low user engagement and retention
-   - *Mitigation*: User research, iterative design, and community building
-
-2. **Competition**
-   - *Risk*: Established players or new entrants
-   - *Mitigation*: Unique features, open-source advantage, and rapid innovation
-
-#### Medium Priority
-1. **Regulatory Compliance**
-   - *Risk*: Data privacy regulations (GDPR, CCPA)
-   - *Mitigation*: Privacy-by-design, compliance audits, and legal review
-
-2. **Intellectual Property**
-   - *Risk*: Patent infringement or trade secret issues
-   - *Mitigation*: IP research, open-source licensing, and legal consultation
-
-## Success Metrics & KPIs
-
-### Technical Metrics
-- **Availability**: 99.9% uptime (8.77 hours downtime/year)
-- **Performance**: P95 response time < 100ms for temperature queries
-- **Scalability**: Support 10,000+ concurrent users
-- **Data Accuracy**: <0.1% data loss rate
-- **Security**: Zero critical security vulnerabilities
-
-### Business Metrics
-- **User Growth**: 1,000+ active users within 6 months
-- **Engagement**: 70%+ monthly active user retention
-- **Integration Success**: 80%+ Home Assistant connection success rate
-- **Community Growth**: 100+ GitHub stars and 10+ contributors
-- **Support Quality**: <24 hour response time for issues
-
-### Operational Metrics
-- **Deployment Frequency**: Daily deployments to development
-- **Lead Time**: <2 hours from commit to production
-- **Change Failure Rate**: <5% of deployments require rollback
-- **Mean Time to Recovery**: <30 minutes for service restoration
-
-## Quality Assurance Strategy
-
-### Testing Strategy
-- **Unit Tests**: 80%+ code coverage for all services
-- **Integration Tests**: End-to-end API testing
-- **Performance Tests**: Load testing for 10x expected traffic
-- **Security Tests**: Automated vulnerability scanning
-- **User Acceptance Tests**: Manual testing of critical user journeys
-
-### Code Quality Standards
-- **Linting**: Automated code style enforcement
-- **Type Safety**: TypeScript for frontend, type hints for Python
-- **Documentation**: OpenAPI specs, README files, code comments
-- **Security**: Static analysis, dependency scanning, secrets detection
-
-### Deployment Quality Gates
-- **Automated Testing**: All tests must pass before deployment
-- **Security Scanning**: No critical vulnerabilities allowed
-- **Performance Benchmarks**: Response time regression testing
-- **Database Migrations**: Automated schema migration testing
-- **Rollback Procedures**: Tested rollback mechanisms for all services
+2. **Disaster Recovery**
+   - RTO: < 1 hour
+   - RPO: < 15 minutes
+   - Automated failover
 
 ---
 
-*This planning document serves as the strategic foundation for the grill monitoring platform. It should be reviewed and updated quarterly to reflect changing requirements, technology advances, and market conditions.*
+## Next Steps
+
+1. Review and approve architecture design
+2. Set up development environment
+3. Configure CI/CD pipeline
+4. Implement core services
+5. Deploy to staging environment
+6. Conduct security audit
+7. Plan production rollout
+
+## References
+
+- [Kubernetes Documentation](https://kubernetes.io/docs/)
+- [ThermoWorks API Documentation](https://api.thermoworks.com/docs)
+- [Home Assistant REST API](https://developers.home-assistant.io/docs/api/rest)
+- [12 Factor App Methodology](https://12factor.net/)
+- [Cloud Native Computing Foundation](https://www.cncf.io/)
