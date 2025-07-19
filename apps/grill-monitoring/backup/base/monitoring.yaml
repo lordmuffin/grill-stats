@@ -42,7 +42,7 @@ spec:
         summary: "Backup job failed"
         description: "Backup job {{ $labels.job_name }} has failed in namespace {{ $labels.namespace }}"
         runbook_url: "https://runbooks.example.com/backup-job-failed"
-    
+
     - alert: BackupJobNotRunning
       expr: |
         (time() - kube_job_status_start_time{job_name=~".*backup.*", namespace="grill-stats"}) > 86400
@@ -54,7 +54,7 @@ spec:
         summary: "Backup job hasn't run in 24 hours"
         description: "Backup job {{ $labels.job_name }} hasn't run in the last 24 hours"
         runbook_url: "https://runbooks.example.com/backup-job-not-running"
-    
+
     - alert: BackupStorageFull
       expr: |
         (1 - (node_filesystem_avail_bytes{mountpoint="/backup"} / node_filesystem_size_bytes{mountpoint="/backup"})) * 100 > 90
@@ -66,7 +66,7 @@ spec:
         summary: "Backup storage is nearly full"
         description: "Backup storage usage is at {{ $value }}% on {{ $labels.instance }}"
         runbook_url: "https://runbooks.example.com/backup-storage-full"
-    
+
     - alert: BackupStorageWarning
       expr: |
         (1 - (node_filesystem_avail_bytes{mountpoint="/backup"} / node_filesystem_size_bytes{mountpoint="/backup"})) * 100 > 80
@@ -78,7 +78,7 @@ spec:
         summary: "Backup storage usage is high"
         description: "Backup storage usage is at {{ $value }}% on {{ $labels.instance }}"
         runbook_url: "https://runbooks.example.com/backup-storage-warning"
-    
+
     - alert: BackupVerificationFailed
       expr: |
         increase(kube_job_failed_total{job_name="backup-verification", namespace="grill-stats"}[1h]) > 0
@@ -277,132 +277,132 @@ metadata:
 data:
   runbook.md: |
     # Grill Stats Backup Runbook
-    
+
     ## Overview
-    
+
     This runbook provides procedures for managing backups and disaster recovery for the Grill Stats platform.
-    
+
     ## Backup Schedule
-    
+
     - **PostgreSQL**: Daily at 2:00 AM UTC
     - **InfluxDB**: Daily at 3:00 AM UTC
     - **Redis**: Daily at 4:00 AM UTC
     - **Verification**: Daily at 6:00 AM UTC
-    
+
     ## Recovery Time Objectives (RTO)
-    
+
     - **PostgreSQL**: 1 hour
     - **InfluxDB**: 2 hours
     - **Redis**: 30 minutes
     - **Full Platform**: 4 hours
-    
+
     ## Recovery Point Objectives (RPO)
-    
+
     - **PostgreSQL**: 24 hours (daily backup)
     - **InfluxDB**: 24 hours (daily backup)
     - **Redis**: 24 hours (acceptable data loss for cache)
-    
+
     ## Common Procedures
-    
+
     ### 1. Check Backup Status
-    
+
     ```bash
     # Check recent backup jobs
     kubectl get jobs -n grill-stats -l app.kubernetes.io/component=backup
-    
+
     # Check backup verification results
     kubectl logs -n grill-stats -l app.kubernetes.io/name=backup-verification
-    
+
     # Check backup storage usage
     kubectl exec -n grill-stats deployment/monitoring -- df -h /backup
     ```
-    
+
     ### 2. Manual Backup
-    
+
     ```bash
     # Create manual PostgreSQL backup
     kubectl create job --from=cronjob/postgresql-backup manual-pg-backup-$(date +%Y%m%d-%H%M%S) -n grill-stats
-    
+
     # Create manual InfluxDB backup
     kubectl create job --from=cronjob/influxdb-backup manual-influx-backup-$(date +%Y%m%d-%H%M%S) -n grill-stats
-    
+
     # Create manual Redis backup
     kubectl create job --from=cronjob/redis-backup manual-redis-backup-$(date +%Y%m%d-%H%M%S) -n grill-stats
     ```
-    
+
     ### 3. Test Restore
-    
+
     ```bash
     # Start restore job pod
     kubectl apply -f backup-restore-job.yaml
-    
+
     # Test PostgreSQL restore
     kubectl exec -it backup-restore-job -- /scripts/postgresql-restore.sh --test --dry-run /backup/postgresql/latest_backup.tar.gz.enc
-    
+
     # Test InfluxDB restore
     kubectl exec -it backup-restore-job -- /scripts/influxdb-restore.sh --test --dry-run /backup/influxdb/latest_backup.tar.gz.enc
-    
+
     # Test Redis restore
     kubectl exec -it backup-restore-job -- /scripts/redis-restore.sh --test --dry-run /backup/redis/latest_backup.tar.gz.enc
     ```
-    
+
     ### 4. Emergency Restore
-    
+
     ```bash
     # Full platform restore (DANGEROUS - USE WITH CAUTION)
     kubectl exec -it backup-restore-job -- /scripts/full-restore.sh --dry-run
-    
+
     # If dry run looks good, run actual restore
     kubectl exec -it backup-restore-job -- /scripts/full-restore.sh --force
     ```
-    
+
     ### 5. Backup Troubleshooting
-    
+
     ```bash
     # Check backup job logs
     kubectl logs -n grill-stats job/postgresql-backup
     kubectl logs -n grill-stats job/influxdb-backup
     kubectl logs -n grill-stats job/redis-backup
-    
+
     # Check backup storage
     kubectl exec -n grill-stats -it backup-restore-job -- ls -la /backup/
-    
+
     # Check backup file integrity
     kubectl exec -n grill-stats -it backup-restore-job -- /scripts/verify-backups.sh
     ```
-    
+
     ## Alert Response
-    
+
     ### BackupJobFailed
-    
+
     1. Check job logs for error details
     2. Verify database connectivity
     3. Check storage availability
     4. Retry backup if issue resolved
     5. Escalate if persistent failures
-    
+
     ### BackupStorageFull
-    
+
     1. Check backup retention settings
     2. Clean up old backups manually if needed
     3. Consider increasing storage allocation
     4. Verify backup rotation is working
-    
+
     ### BackupVerificationFailed
-    
+
     1. Check verification job logs
     2. Verify backup file integrity
     3. Test backup restoration
     4. Investigate backup process issues
-    
+
     ## Emergency Contacts
-    
+
     - **Primary**: DevOps Team
     - **Secondary**: Platform Team
     - **Escalation**: Engineering Manager
-    
+
     ## Additional Resources
-    
+
     - [Backup Architecture Documentation](./backup-architecture.md)
     - [Disaster Recovery Plan](./disaster-recovery.md)
     - [Monitoring Dashboard](http://grafana.example.com/d/backup-monitoring)

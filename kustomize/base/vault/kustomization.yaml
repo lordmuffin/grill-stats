@@ -32,22 +32,22 @@ patchesStrategicMerge:
       setup-transit.sh: |
         #!/bin/bash
         set -e
-        
+
         echo "Setting up Vault Transit Secrets Engine for ${ENVIRONMENT:-prod}..."
-        
+
         # Wait for Vault to be ready
         until vault status > /dev/null 2>&1; do
           echo "Waiting for Vault to be ready..."
           sleep 5
         done
-        
+
         # Enable transit secrets engine
         echo "Enabling transit secrets engine..."
         vault secrets enable -path=transit transit || echo "Transit engine already enabled"
-        
+
         # Create encryption keys for current environment
         echo "Creating encryption keys for ${ENVIRONMENT:-prod}..."
-        
+
         # Environment-specific key creation
         vault write -f transit/keys/thermoworks-user-credentials-${ENVIRONMENT:-prod} \
           type=aes256-gcm96 \
@@ -55,24 +55,24 @@ patchesStrategicMerge:
           deletion_allowed=false \
           derived=false \
           exportable=false || echo "User credentials key already exists"
-        
+
         vault write -f transit/keys/thermoworks-api-tokens-${ENVIRONMENT:-prod} \
           type=aes256-gcm96 \
           allow_plaintext_backup=false \
           deletion_allowed=false \
           derived=false \
           exportable=false || echo "API tokens key already exists"
-        
+
         vault write -f transit/keys/thermoworks-device-credentials-${ENVIRONMENT:-prod} \
           type=aes256-gcm96 \
           allow_plaintext_backup=false \
           deletion_allowed=false \
           derived=false \
           exportable=false || echo "Device credentials key already exists"
-        
+
         # Configure key rotation policies based on environment
         echo "Configuring key rotation policies for ${ENVIRONMENT:-prod}..."
-        
+
         if [ "${ENVIRONMENT:-prod}" = "prod" ]; then
           ROTATION_PERIOD="2160h"  # 90 days
         elif [ "${ENVIRONMENT:-prod}" = "staging" ]; then
@@ -80,7 +80,7 @@ patchesStrategicMerge:
         else
           ROTATION_PERIOD="720h"   # 30 days for dev
         fi
-        
+
         vault write transit/keys/thermoworks-user-credentials-${ENVIRONMENT:-prod}/config \
           min_decryption_version=1 \
           min_encryption_version=0 \
@@ -88,7 +88,7 @@ patchesStrategicMerge:
           exportable=false \
           allow_plaintext_backup=false \
           auto_rotate_period=$ROTATION_PERIOD
-        
+
         vault write transit/keys/thermoworks-api-tokens-${ENVIRONMENT:-prod}/config \
           min_decryption_version=1 \
           min_encryption_version=0 \
@@ -96,7 +96,7 @@ patchesStrategicMerge:
           exportable=false \
           allow_plaintext_backup=false \
           auto_rotate_period=$ROTATION_PERIOD
-        
+
         vault write transit/keys/thermoworks-device-credentials-${ENVIRONMENT:-prod}/config \
           min_decryption_version=1 \
           min_encryption_version=0 \
@@ -104,12 +104,12 @@ patchesStrategicMerge:
           exportable=false \
           allow_plaintext_backup=false \
           auto_rotate_period=$ROTATION_PERIOD
-        
+
         # Configure audit logging
         echo "Configuring audit logging for ${ENVIRONMENT:-prod}..."
         vault audit enable -path=grill-stats-audit-${ENVIRONMENT:-prod} file \
           file_path=/vault/audit/grill-stats-audit-${ENVIRONMENT:-prod}.log || echo "Audit logging already enabled"
-        
+
         echo "Vault Transit setup completed successfully for ${ENVIRONMENT:-prod}!"
 
 configMapGenerator:

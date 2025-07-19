@@ -59,10 +59,10 @@ spec:
             - |
               # Install required packages
               apk add --no-cache bash jq curl openssl
-              
+
               # Make scripts executable
               chmod +x /scripts/*.sh
-              
+
               # Run verification script
               /scripts/verify-backups.sh
             volumeMounts:

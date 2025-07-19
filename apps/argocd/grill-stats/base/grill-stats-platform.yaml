@@ -13,16 +13,16 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: main
     path: apps/argocd/grill-stats/base
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
-    
+
   syncPolicy:
     automated:
       prune: true
@@ -39,9 +39,9 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-        
+
   revisionHistoryLimit: 10
-  
+
   info:
   - name: Description
     value: App-of-Apps for complete grill-stats platform deployment
@@ -51,7 +51,7 @@ spec:
     value: https://github.com/lordmuffin/grill-stats.git
   - name: Documentation
     value: https://github.com/lordmuffin/grill-stats/blob/main/kustomize/README.md
-    
+
   # Health check configuration
   ignoreDifferences:
   - group: argoproj.io
@@ -59,7 +59,7 @@ spec:
     jsonPointers:
     - /status
     - /metadata/generation
-    
+
   # Notification configuration
   operation:
     initiatedBy:
@@ -67,7 +67,7 @@ spec:
     info:
     - name: Reason
       value: Automated sync by ArgoCD
-      
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -85,16 +85,16 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: develop  # Use develop branch for dev environment
     path: apps/argocd/grill-stats/overlays/dev-lab
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: argocd
-    
+
   syncPolicy:
     automated:
       prune: true
@@ -111,9 +111,9 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-        
+
   revisionHistoryLimit: 5  # Keep fewer revisions for dev
-  
+
   info:
   - name: Description
     value: Development environment app-of-apps for grill-stats platform
@@ -123,7 +123,7 @@ spec:
     value: https://github.com/lordmuffin/grill-stats.git
   - name: Branch
     value: develop
-    
+
   # Health check configuration
   ignoreDifferences:
   - group: argoproj.io

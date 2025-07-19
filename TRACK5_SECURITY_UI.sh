@@ -1,7 +1,7 @@
 #!/bin/bash
 # =======================================================================
 # Security, Deployment & UI Test Script
-# 
+#
 # Purpose: Verify security measures, deployment configuration,
 #          and UI functionality
 # Environment: Production - grill-stats.lab.apj.dev
@@ -37,14 +37,14 @@ check_status() {
 
 login() {
   log "Attempting login with $TEST_EMAIL..."
-  
+
   LOGIN_RESPONSE=$(curl -s -X POST "$API_BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
-  
+
   # Extract token from response
   AUTH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
-  
+
   if [[ "$AUTH_TOKEN" == "null" || -z "$AUTH_TOKEN" ]]; then
     log "❌ Login failed. Response: $LOGIN_RESPONSE"
     return 1
@@ -57,38 +57,38 @@ login() {
 # Check for tools required for testing
 check_required_tools() {
   local missing_tools=()
-  
+
   # Check for curl
   if ! command -v curl &> /dev/null; then
     missing_tools+=("curl")
   fi
-  
+
   # Check for jq
   if ! command -v jq &> /dev/null; then
     missing_tools+=("jq")
   fi
-  
+
   # Check for screenshot tools (optional)
   if ! command -v firefox &> /dev/null && ! command -v chromium-browser &> /dev/null && ! command -v chrome &> /dev/null; then
     log "⚠️ No browser found for UI screenshots (firefox, chromium-browser, or chrome)"
   fi
-  
+
   # Check for SSL/TLS testing tools (optional)
   if ! command -v openssl &> /dev/null; then
     log "⚠️ OpenSSL not found - TLS tests will be limited"
   fi
-  
+
   if ! command -v nmap &> /dev/null; then
     log "⚠️ Nmap not found - port scanning tests will be skipped"
   fi
-  
+
   # Report missing required tools
   if [[ ${#missing_tools[@]} -gt 0 ]]; then
     log "❌ Missing required tools: ${missing_tools[*]}"
     log "Please install these tools before running this script"
     return 1
   fi
-  
+
   return 0
 }
 
@@ -96,9 +96,9 @@ check_required_tools() {
 take_screenshot() {
   local url=$1
   local filename=$2
-  
+
   mkdir -p $SCREENSHOTS_DIR
-  
+
   if command -v firefox &> /dev/null; then
     firefox --headless --screenshot "${SCREENSHOTS_DIR}/${filename}.png" "$url"
     return $?
@@ -147,43 +147,43 @@ fi
 # 1.2 Check TLS version and cipher
 if command -v openssl &> /dev/null; then
   log "Checking TLS configuration..."
-  
+
   # Extract domain from URL
   DOMAIN=$(echo $API_BASE_URL | sed -E 's/https?:\/\///' | sed -E 's/\/.*//')
-  
+
   # Get TLS information
   TLS_INFO=$(openssl s_client -connect ${DOMAIN}:443 -tls1_2 < /dev/null 2>&1)
-  
+
   # Extract protocol version
   PROTOCOL=$(echo "$TLS_INFO" | grep "Protocol" | awk '{print $2}')
   CIPHER=$(echo "$TLS_INFO" | grep "Cipher" | awk '{print $3}')
-  
+
   log "TLS Protocol: $PROTOCOL"
   log "Cipher: $CIPHER"
-  
+
   # Check if using at least TLS 1.2
   if [[ "$PROTOCOL" == "TLSv1.2" || "$PROTOCOL" == "TLSv1.3" ]]; then
     log "✅ Using secure TLS version ($PROTOCOL)"
   else
     log "❌ Using potentially insecure TLS version ($PROTOCOL)"
   fi
-  
+
   # Check for secure headers
   log "Checking security headers..."
   HEADERS=$(curl -s -I $API_BASE_URL)
-  
+
   if echo "$HEADERS" | grep -i "Strict-Transport-Security" > /dev/null; then
     log "✅ HSTS header is set"
   else
     log "⚠️ HSTS header not found"
   fi
-  
+
   if echo "$HEADERS" | grep -i "X-Content-Type-Options" > /dev/null; then
     log "✅ X-Content-Type-Options header is set"
   else
     log "⚠️ X-Content-Type-Options header not found"
   fi
-  
+
   if echo "$HEADERS" | grep -i "X-Frame-Options" > /dev/null; then
     log "✅ X-Frame-Options header is set"
   else
@@ -198,7 +198,7 @@ log "\n--- Test 2: Authentication Security ---"
 log "Testing login functionality..."
 if login; then
   log "✅ Login system works correctly"
-  
+
   # Check token format (should be JWT or other structured token)
   if [[ "$AUTH_TOKEN" =~ ^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$ ]]; then
     log "✅ Token appears to be in JWT format"
@@ -253,13 +253,13 @@ log "Testing external port exposure..."
 if command -v nmap &> /dev/null; then
   # Extract domain from URL
   DOMAIN=$(echo $API_BASE_URL | sed -E 's/https?:\/\///' | sed -E 's/\/.*//')
-  
+
   # Scan common ports
   PORTS_SCAN=$(nmap -Pn -p 80,443,5000,8080,8443 $DOMAIN)
-  
+
   log "Port scan results:"
   echo "$PORTS_SCAN" | grep "open\|closed\|filtered" | tee -a $LOG_FILE
-  
+
   # Check for unexpected open ports
   UNEXPECTED=$(echo "$PORTS_SCAN" | grep -v "443/tcp" | grep "open")
   if [[ -n "$UNEXPECTED" ]]; then
@@ -289,13 +289,13 @@ DASHBOARD_RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/dashboard.html \
 
 if [[ "$DASHBOARD_RESPONSE" == "200" ]]; then
   log "✅ Dashboard accessible"
-  
+
   # Take screenshot if browser available
   take_screenshot "$API_BASE_URL/monitoring" "dashboard"
   if [[ $? -eq 0 ]]; then
     log "  Screenshot saved to ${SCREENSHOTS_DIR}/dashboard.png"
   fi
-  
+
   # Check for expected dashboard elements
   if grep -i "temperature\|probe\|device\|monitor" /tmp/dashboard.html > /dev/null; then
     log "✅ Dashboard contains expected elements"
@@ -315,7 +315,7 @@ DEVICES_PAGE=$(curl -s -w "%{http_code}" -o /tmp/devices.html \
 
 if [[ "$DEVICES_PAGE" == "200" ]]; then
   log "✅ Device management page accessible"
-  
+
   # Take screenshot if browser available
   take_screenshot "$API_BASE_URL/devices" "devices"
   if [[ $? -eq 0 ]]; then
@@ -333,13 +333,13 @@ if [[ $(echo "$REALTIME_DATA" | jq -r '.status') == "success" ]]; then
   log "✅ Real-time data API working"
   PROBE_COUNT=$(echo "$REALTIME_DATA" | jq -r '.data.count')
   log "  Found $PROBE_COUNT temperature probes"
-  
+
   # Check data freshness
   TIMESTAMP=$(echo "$REALTIME_DATA" | jq -r '.data.timestamp')
   TS_SECONDS=$(date -d "$TIMESTAMP" +%s)
   NOW_SECONDS=$(date +%s)
   DIFF_MINUTES=$(( (NOW_SECONDS - TS_SECONDS) / 60 ))
-  
+
   if [[ $DIFF_MINUTES -lt 10 ]]; then
     log "✅ Data is recent (updated $DIFF_MINUTES minutes ago)"
   else
@@ -383,7 +383,7 @@ MOBILE_RESPONSE=$(curl -s -A "$MOBILE_UA" -o /dev/null -w "%{http_code}" \
 
 if [[ "$MOBILE_RESPONSE" == "200" ]]; then
   log "✅ Mobile view accessible"
-  
+
   # Take mobile screenshot if possible
   if command -v firefox &> /dev/null; then
     firefox --headless --screenshot "${SCREENSHOTS_DIR}/dashboard_mobile.png" \
@@ -414,12 +414,12 @@ fi
 DEVICES_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices")
 if [[ $(echo $DEVICES_RESPONSE | jq 'type') == "array" ]]; then
   DEVICE_COUNT=$(echo $DEVICES_RESPONSE | jq '. | length')
-  
+
   if [[ $DEVICE_COUNT -gt 0 ]]; then
     TEST_DEVICE_ID=$(echo $DEVICES_RESPONSE | jq -r '.[0].id')
-    
+
     log "Testing alert creation..."
-    
+
     CREATE_ALERT=$(curl -s -X POST "$API_BASE_URL/api/alerts" \
       -H "Authorization: Bearer $AUTH_TOKEN" \
       -H "Content-Type: application/json" \
@@ -431,17 +431,17 @@ if [[ $(echo $DEVICES_RESPONSE | jq 'type') == "array" ]]; then
         \"target_temperature\": 200,
         \"temperature_unit\": \"F\"
       }")
-    
+
     if [[ $(echo "$CREATE_ALERT" | jq -r '.success') == "true" ]]; then
       log "✅ Alert creation working"
       ALERT_ID=$(echo "$CREATE_ALERT" | jq -r '.data.id')
       log "  Created alert ID: $ALERT_ID"
-      
+
       # Clean up by deleting the test alert
       if [[ -n "$ALERT_ID" ]]; then
         DELETE_ALERT=$(curl -s -X DELETE "$API_BASE_URL/api/alerts/$ALERT_ID" \
           -H "Authorization: Bearer $AUTH_TOKEN")
-        
+
         if [[ $(echo "$DELETE_ALERT" | jq -r '.success') == "true" ]]; then
           log "  ✅ Test alert successfully deleted"
         else

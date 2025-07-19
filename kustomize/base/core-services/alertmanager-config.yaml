@@ -17,10 +17,10 @@ data:
       smtp_auth_username: 'grill-stats-alerts@homelab.local'
       smtp_auth_password: 'alert-smtp-password'
       smtp_require_tls: true
-    
+
     templates:
     - '/etc/alertmanager/templates/*.tmpl'
-    
+
     route:
       group_by: ['alertname', 'cluster', 'service', 'severity']
       group_wait: 10s
@@ -36,7 +36,7 @@ data:
         group_wait: 0s
         repeat_interval: 5m
         continue: true
-      
+
       # Business alerts - specific routing
       - match:
           service: grill-stats
@@ -45,7 +45,7 @@ data:
         group_wait: 30s
         repeat_interval: 30m
         continue: true
-      
+
       # SLO violations - escalation
       - match:
           service: grill-stats
@@ -54,7 +54,7 @@ data:
         group_wait: 0s
         repeat_interval: 15m
         continue: true
-      
+
       # Database alerts
       - match:
           service: grill-stats
@@ -63,7 +63,7 @@ data:
         group_wait: 60s
         repeat_interval: 1h
         continue: true
-      
+
       # Security alerts
       - match:
           service: grill-stats
@@ -72,7 +72,7 @@ data:
         group_wait: 0s
         repeat_interval: 10m
         continue: true
-      
+
       # Temperature alerts - high priority
       - match_re:
           alertname: '(HighTemperatureAlert|UnusualTemperatureSpike)'
@@ -80,7 +80,7 @@ data:
         group_wait: 0s
         repeat_interval: 2m
         continue: true
-      
+
       # Warning alerts
       - match:
           service: grill-stats
@@ -88,7 +88,7 @@ data:
         receiver: 'grill-stats-warning'
         group_wait: 5m
         repeat_interval: 2h
-    
+
     inhibit_rules:
     # Inhibit warning alerts when critical alerts are firing
     - source_match:
@@ -96,14 +96,14 @@ data:
       target_match:
         severity: 'warning'
       equal: ['alertname', 'service', 'instance']
-    
+
     # Inhibit specific alerts when service is down
     - source_match:
         alertname: 'GrillStatsServiceDown'
       target_match_re:
         alertname: '(GrillStatsHighErrorRate|GrillStatsHighLatency|TemperatureReadingMissing)'
       equal: ['service', 'job']
-    
+
     receivers:
     - name: 'grill-stats-default'
       email_configs:
@@ -118,7 +118,7 @@ data:
           {{ end }}
         headers:
           Priority: 'normal'
-    
+
     - name: 'grill-stats-critical'
       email_configs:
       - to: 'admin@homelab.local, oncall@homelab.local'
@@ -126,20 +126,20 @@ data:
         subject: '[CRITICAL] Grill Stats: {{ .GroupLabels.alertname }}'
         body: |
           CRITICAL ALERT - Immediate Action Required
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
           Severity: {{ .Labels.severity }}
           Service: {{ .Labels.service }}
           Runbook: {{ .Annotations.runbook_url }}
-          
+
           Labels: {{ range .Labels.SortedPairs }}{{ .Name }}: {{ .Value }}{{ end }}
           {{ end }}
         headers:
           Priority: 'high'
           X-Priority: '1'
-      
+
       webhook_configs:
       - url: 'http://notification-service.grill-stats.svc.cluster.local:8080/webhook/critical'
         send_resolved: true
@@ -151,7 +151,7 @@ data:
           {{ .Annotations.summary }}
           {{ .Annotations.description }}
           {{ end }}
-      
+
       slack_configs:
       - api_url: 'https://hooks.slack.com/services/YOUR/SLACK/WEBHOOK'
         channel: '#grill-stats-alerts'
@@ -167,7 +167,7 @@ data:
           {{ end }}
         color: 'danger'
         send_resolved: true
-    
+
     - name: 'grill-stats-business'
       email_configs:
       - to: 'business-team@homelab.local'
@@ -175,18 +175,18 @@ data:
         subject: 'Grill Stats Business Alert: {{ .GroupLabels.alertname }}'
         body: |
           Business metrics alert for Grill Stats platform
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
           Category: {{ .Labels.category }}
-          
+
           This alert indicates a potential issue with business operations.
           Please review the dashboard and take appropriate action.
-          
+
           Runbook: {{ .Annotations.runbook_url }}
           {{ end }}
-    
+
     - name: 'grill-stats-slo'
       email_configs:
       - to: 'sre-team@homelab.local'
@@ -194,24 +194,24 @@ data:
         subject: 'SLO Violation: {{ .GroupLabels.alertname }}'
         body: |
           SLO VIOLATION DETECTED
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
           SLO: {{ .Labels.slo_name }}
-          
+
           This indicates we are not meeting our service level objectives.
           Please investigate immediately to prevent customer impact.
-          
+
           Runbook: {{ .Annotations.runbook_url }}
           {{ end }}
         headers:
           Priority: 'high'
-      
+
       webhook_configs:
       - url: 'http://notification-service.grill-stats.svc.cluster.local:8080/webhook/slo'
         send_resolved: true
-    
+
     - name: 'grill-stats-database'
       email_configs:
       - to: 'database-team@homelab.local'
@@ -219,17 +219,17 @@ data:
         subject: 'Database Alert: {{ .GroupLabels.alertname }}'
         body: |
           Database-related alert for Grill Stats
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
           Database: {{ .Labels.database }}
-          
+
           Please check database health and performance.
-          
+
           Runbook: {{ .Annotations.runbook_url }}
           {{ end }}
-    
+
     - name: 'grill-stats-security'
       email_configs:
       - to: 'security-team@homelab.local'
@@ -237,24 +237,24 @@ data:
         subject: '[SECURITY] Grill Stats: {{ .GroupLabels.alertname }}'
         body: |
           SECURITY ALERT - Immediate Investigation Required
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
-          
+
           This may indicate a security incident or attack.
           Please investigate immediately.
-          
+
           Runbook: {{ .Annotations.runbook_url }}
           {{ end }}
         headers:
           Priority: 'high'
           X-Priority: '1'
-      
+
       webhook_configs:
       - url: 'http://security-service.grill-stats.svc.cluster.local:8080/webhook/security'
         send_resolved: true
-    
+
     - name: 'grill-stats-temperature'
       email_configs:
       - to: 'operations@homelab.local'
@@ -262,26 +262,26 @@ data:
         subject: 'Temperature Alert: {{ .GroupLabels.alertname }}'
         body: |
           Temperature-related alert for Grill Stats
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
           Device: {{ .Labels.device_id }}
-          
+
           Please check device status and temperature readings.
           This may require immediate attention for safety reasons.
-          
+
           Runbook: {{ .Annotations.runbook_url }}
           {{ end }}
         headers:
           Priority: 'high'
-      
+
       webhook_configs:
       - url: 'http://notification-service.grill-stats.svc.cluster.local:8080/webhook/temperature'
         send_resolved: true
         http_config:
           bearer_token: 'webhook-bearer-token'
-    
+
     - name: 'grill-stats-warning'
       email_configs:
       - to: 'operations@homelab.local'
@@ -289,34 +289,34 @@ data:
         subject: 'Grill Stats Warning: {{ .GroupLabels.alertname }}'
         body: |
           Warning alert for Grill Stats platform
-          
+
           {{ range .Alerts }}
           Alert: {{ .Annotations.summary }}
           Description: {{ .Annotations.description }}
-          
+
           This warning should be investigated but is not critical.
-          
+
           Runbook: {{ .Annotations.runbook_url }}
           {{ end }}
-  
+
   # Custom alert templates
   alert-templates.tmpl: |
     {{ define "grill-stats.title" }}
     [{{ .Status | toUpper }}{{ if eq .Status "firing" }}:{{ .Alerts.Firing | len }}{{ end }}] {{ .GroupLabels.SortedPairs.Values | join " " }}
     {{ end }}
-    
+
     {{ define "grill-stats.summary" }}
     {{ range .Alerts }}
     {{ .Annotations.summary }}
     {{ end }}
     {{ end }}
-    
+
     {{ define "grill-stats.description" }}
     {{ range .Alerts }}
     {{ .Annotations.description }}
     {{ end }}
     {{ end }}
-    
+
     {{ define "slack.grill-stats.text" }}
     {{ range .Alerts }}
     *Alert:* {{ .Annotations.summary }}
@@ -326,7 +326,7 @@ data:
     {{ if .Annotations.runbook_url }}*Runbook:* {{ .Annotations.runbook_url }}{{ end }}
     {{ end }}
     {{ end }}
-    
+
     {{ define "webhook.grill-stats.payload" }}
     {
       "alerts": [

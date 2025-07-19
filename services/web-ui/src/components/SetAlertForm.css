@@ -205,15 +205,15 @@
     padding: 16px;
     margin: 16px;
   }
-  
+
   .form-actions {
     flex-direction: column;
   }
-  
+
   .btn {
     width: 100%;
   }
-  
+
   .temperature-inputs {
     padding: 12px;
   }

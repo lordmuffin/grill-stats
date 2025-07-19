@@ -14,16 +14,16 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: main
     path: kustomize/base/databases
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: grill-stats
-    
+
   syncPolicy:
     automated:
       prune: false  # Never auto-prune databases for safety
@@ -40,9 +40,9 @@ spec:
         duration: 10s
         factor: 2
         maxDuration: 5m
-        
+
   revisionHistoryLimit: 10
-  
+
   info:
   - name: Description
     value: Database infrastructure (PostgreSQL, InfluxDB, Redis)
@@ -50,7 +50,7 @@ spec:
     value: prod-lab
   - name: Components
     value: PostgreSQL, InfluxDB, Redis, Backup Jobs
-    
+
   # Ignore differences in dynamic fields
   ignoreDifferences:
   - group: 'apps'
@@ -68,7 +68,7 @@ spec:
     jsonPointers:
     - /spec/clusterIP
     - /spec/clusterIPs
-    
+
   # Custom health checks for databases
   health:
     - group: 'apps'
@@ -87,7 +87,7 @@ spec:
         health_status.status = "Progressing"
         health_status.message = "StatefulSet is being updated"
         return health_status
-        
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -106,18 +106,18 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: develop
     path: kustomize/overlays/dev-lab
     directory:
       include: '{databases,namespace}/**'
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: grill-stats-dev
-    
+
   syncPolicy:
     automated:
       prune: false  # Never auto-prune databases
@@ -134,9 +134,9 @@ spec:
         duration: 10s
         factor: 2
         maxDuration: 5m
-        
+
   revisionHistoryLimit: 5
-  
+
   info:
   - name: Description
     value: Development database infrastructure
@@ -144,7 +144,7 @@ spec:
     value: dev-lab
   - name: Components
     value: PostgreSQL, InfluxDB, Redis (dev configuration)
-    
+
   # Ignore differences in dynamic fields
   ignoreDifferences:
   - group: 'apps'

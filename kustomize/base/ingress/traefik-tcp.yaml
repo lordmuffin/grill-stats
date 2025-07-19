@@ -178,7 +178,7 @@ data:
         address: ":8086"
       redis:
         address: ":6379"
-      
+
     certificatesResolvers:
       letsencrypt:
         acme:
@@ -191,12 +191,12 @@ data:
             resolvers:
               - "1.1.1.1:53"
               - "1.0.0.1:53"
-    
+
     api:
       dashboard: true
       debug: true
       insecure: false
-    
+
     metrics:
       prometheus:
         addEntryPointsLabels: true
@@ -207,7 +207,7 @@ data:
           - "0.3"
           - "1.2"
           - "5.0"
-    
+
     accessLog:
       format: json
       fields:
@@ -220,11 +220,11 @@ data:
             User-Agent: redact
             Authorization: drop
             Content-Type: keep
-    
+
     log:
       level: INFO
       format: json
-    
+
     providers:
       kubernetesCRD:
         namespaces:

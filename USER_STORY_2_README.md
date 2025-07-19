@@ -66,7 +66,7 @@ User Story 2 builds upon the authentication system and provides users with a cle
 
 ### Authentication Endpoints
 - `POST /api/auth/login` - User login
-- `POST /api/auth/register` - User registration  
+- `POST /api/auth/register` - User registration
 - `POST /api/auth/logout` - User logout
 - `GET /api/auth/status` - Check authentication status
 

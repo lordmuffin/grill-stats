@@ -40,50 +40,50 @@ data:
     port 6379
     protected-mode yes
     requirepass ${REDIS_PASSWORD}
-    
+
     # Persistence - less aggressive for dev
     save 900 1
     save 300 10
     save 60 1000
-    
+
     # Memory management - smaller limits for dev
     maxmemory 384mb
     maxmemory-policy allkeys-lru
-    
+
     # Logging - more verbose for dev
     loglevel verbose
     logfile ""
-    
+
     # Connection handling
     timeout 300
     tcp-keepalive 300
     tcp-backlog 511
-    
+
     # Database configuration
     databases 16
-    
+
     # Keyspace notifications
     notify-keyspace-events "Ex"
-    
+
     # RDB persistence
     rdbcompression yes
     rdbchecksum yes
     dbfilename dump.rdb
     dir /data
-    
+
     # AOF persistence - disabled for dev to improve performance
     appendonly no
-    
+
     # Performance tuning - relaxed for dev
     stop-writes-on-bgsave-error no
     lazyfree-lazy-eviction yes
     lazyfree-lazy-expire yes
     lazyfree-lazy-server-del yes
-    
+
     # Slow log - more sensitive for dev debugging
     slowlog-log-slower-than 1000
     slowlog-max-len 256
-    
+
     # Dev-specific settings
     hash-max-ziplist-entries 512
     hash-max-ziplist-value 64
@@ -92,13 +92,13 @@ data:
     zset-max-ziplist-value 64
     list-max-ziplist-size -2
     list-compress-depth 0
-    
+
     # Active rehashing
     activerehashing yes
-    
+
     # Jemalloc background thread
     jemalloc-bg-thread yes
-    
+
     # Lua script timeout
     lua-time-limit 5000
 ---

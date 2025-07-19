@@ -8,7 +8,7 @@ This document outlines the comprehensive testing plan for the Grill-Stats applic
 - [ ] Create dedicated testing environment with identical configuration to production
 - [ ] Configure all required environment variables:
   - THERMOWORKS_API_KEY
-  - HOMEASSISTANT_URL 
+  - HOMEASSISTANT_URL
   - HOMEASSISTANT_TOKEN
 - [ ] Verify connectivity to ThermoWorks API and Home Assistant instance
 

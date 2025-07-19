@@ -43,7 +43,7 @@ const COLORS = [
 
 /**
  * Real-time temperature chart component
- * 
+ *
  * @param {Object} props
  * @param {string} props.deviceId - Device ID to monitor
  * @param {number} props.refreshInterval - How often to refresh data in milliseconds (default: 10000)
@@ -63,23 +63,23 @@ const RealTimeChart = ({
     labels: [],
     datasets: []
   });
-  
+
   // Chart loading and error states
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Device and probe states
   const [probes, setProbes] = useState([]);
   const [deviceHealth, setDeviceHealth] = useState(null);
   const [lastUpdated, setLastUpdated] = useState(null);
-  
+
   // Track disconnected probes
   const [disconnectedProbes, setDisconnectedProbes] = useState({});
-  
+
   // Refs
   const timerRef = useRef(null);
   const chartRef = useRef(null);
-  
+
   // Chart options
   const chartOptions = {
     responsive: true,
@@ -152,16 +152,16 @@ const RealTimeChart = ({
   const loadHistoricalData = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       // Get recent temperature data for the device
       const historyData = await getRecentTemperatureData(deviceId, historyHours);
-      
+
       if (!historyData || historyData.length === 0) {
         setLoading(false);
         return; // No data yet
       }
-      
+
       // Group by probe ID
       const probeMap = historyData.reduce((acc, reading) => {
         const probeId = reading.probe_id;
@@ -174,15 +174,15 @@ const RealTimeChart = ({
         });
         return acc;
       }, {});
-      
+
       // Create a dataset for each probe
       const probeIds = Object.keys(probeMap);
       setProbes(probeIds);
-      
+
       const datasets = probeIds.map((probeId, index) => {
         const color = COLORS[index % COLORS.length];
         const points = probeMap[probeId].sort((a, b) => a.x - b.x);
-        
+
         return {
           label: `Probe ${probeId}`,
           data: points,
@@ -194,12 +194,12 @@ const RealTimeChart = ({
           tension: 0.1
         };
       });
-      
+
       // Update chart data
       setChartData({
         datasets
       });
-      
+
       setLoading(false);
       setLastUpdated(new Date());
     } catch (err) {
@@ -208,19 +208,19 @@ const RealTimeChart = ({
       setLoading(false);
     }
   };
-  
+
   // Function to update with latest data
   const updateLatestData = async () => {
     if (!deviceId) return;
-    
+
     try {
       // Get latest temperature readings
       const latestData = await getCurrentTemperature(deviceId, null, true);
-      
+
       if (!latestData || latestData.length === 0) {
         return; // No new data
       }
-      
+
       // Check for device health in parallel
       getDeviceHealth(deviceId)
         .then(health => {
@@ -229,48 +229,48 @@ const RealTimeChart = ({
         .catch(err => {
           console.error('Error fetching device health:', err);
         });
-      
+
       // Process the latest readings
       const now = new Date();
       const newDisconnectedProbes = { ...disconnectedProbes };
-      
+
       // Update each probe's data
       latestData.forEach(reading => {
         const probeId = reading.probe_id;
         const temperature = reading.temperature;
         const timestamp = new Date(reading.timestamp);
-        
+
         // Check if this is a new probe we haven't seen before
         if (!probes.includes(probeId)) {
           setProbes(prev => [...prev, probeId]);
         }
-        
+
         // Mark the probe as connected (remove from disconnected list)
         if (newDisconnectedProbes[probeId]) {
           delete newDisconnectedProbes[probeId];
         }
-        
+
         // Update the chart data
         setChartData(prevData => {
           // Find existing dataset for this probe
           const existingDatasetIndex = prevData.datasets.findIndex(
             dataset => dataset.label === `Probe ${probeId}`
           );
-          
+
           // Clone the datasets array
           const newDatasets = [...prevData.datasets];
-          
+
           if (existingDatasetIndex >= 0) {
             // Update existing dataset
             const dataset = { ...newDatasets[existingDatasetIndex] };
-            
+
             // Add new data point
             const newData = [...dataset.data, { x: timestamp, y: temperature }];
-            
+
             // Keep only recent data points based on historyHours
             const cutoffTime = new Date(now - historyHours * 60 * 60 * 1000);
             const filteredData = newData.filter(point => point.x > cutoffTime);
-            
+
             // Update the dataset
             dataset.data = filteredData;
             newDatasets[existingDatasetIndex] = dataset;
@@ -288,14 +288,14 @@ const RealTimeChart = ({
               tension: 0.1
             });
           }
-          
+
           return {
             ...prevData,
             datasets: newDatasets
           };
         });
       });
-      
+
       // Check for disconnected probes
       const activeProbeIds = latestData.map(reading => reading.probe_id);
       probes.forEach(probeId => {
@@ -308,7 +308,7 @@ const RealTimeChart = ({
           }
         }
       });
-      
+
       setDisconnectedProbes(newDisconnectedProbes);
       setLastUpdated(now);
     } catch (err) {
@@ -317,31 +317,31 @@ const RealTimeChart = ({
       // Just log the error and try again next interval
     }
   };
-  
+
   // Initial data loading effect
   useEffect(() => {
     if (deviceId) {
       loadHistoricalData();
     }
   }, [deviceId, historyHours]);
-  
+
   // Refresh interval effect
   useEffect(() => {
     // Clear existing timer
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    
+
     if (deviceId) {
       // Initial update
       updateLatestData();
-      
+
       // Set up timer for future updates
       timerRef.current = setInterval(() => {
         updateLatestData();
       }, refreshInterval);
     }
-    
+
     // Cleanup
     return () => {
       if (timerRef.current) {
@@ -349,7 +349,7 @@ const RealTimeChart = ({
       }
     };
   }, [deviceId, refreshInterval, probes]);
-  
+
   // Render states
   if (!deviceId) {
     return (
@@ -358,7 +358,7 @@ const RealTimeChart = ({
       </div>
     );
   }
-  
+
   if (error) {
     return (
       <div className="real-time-chart error-state">
@@ -368,7 +368,7 @@ const RealTimeChart = ({
       </div>
     );
   }
-  
+
   if (loading) {
     return (
       <div className="real-time-chart loading-state">
@@ -377,7 +377,7 @@ const RealTimeChart = ({
       </div>
     );
   }
-  
+
   // Check if we have no data
   const hasData = chartData.datasets.some(dataset => dataset.data.length > 0);
   if (!hasData) {
@@ -388,14 +388,14 @@ const RealTimeChart = ({
       </div>
     );
   }
-  
+
   // Render chart with data
   return (
     <div className="real-time-chart">
       <div className="chart-container" style={{ height }}>
         <Line ref={chartRef} data={chartData} options={chartOptions} />
       </div>
-      
+
       <div className="chart-info">
         {/* Last updated indicator */}
         <div className="last-updated">
@@ -404,7 +404,7 @@ const RealTimeChart = ({
             Refresh
           </button>
         </div>
-        
+
         {/* Device health indicator */}
         {deviceHealth && (
           <div className="device-health">
@@ -428,7 +428,7 @@ const RealTimeChart = ({
             </div>
           </div>
         )}
-        
+
         {/* Disconnected probes indicator */}
         {Object.keys(disconnectedProbes).length > 0 && (
           <div className="disconnected-probes">

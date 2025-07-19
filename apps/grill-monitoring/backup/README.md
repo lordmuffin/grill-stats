@@ -210,10 +210,10 @@ vim apps/grill-stats/backup/overlays/prod/backup-config.yaml
    ```bash
    # Check job logs
    kubectl logs -n grill-stats job/postgresql-backup
-   
+
    # Check service connectivity
    kubectl exec -n grill-stats -it backup-restore-job -- nc -zv postgresql 5432
-   
+
    # Check storage availability
    kubectl exec -n grill-stats -it backup-restore-job -- df -h /backup
    ```
@@ -222,10 +222,10 @@ vim apps/grill-stats/backup/overlays/prod/backup-config.yaml
    ```bash
    # Check storage usage
    kubectl exec -n grill-stats -it backup-restore-job -- df -h /backup
-   
+
    # Clean up old backups
    kubectl exec -n grill-stats -it backup-restore-job -- find /backup -name "*.tar.gz.enc" -mtime +30 -delete
-   
+
    # Check retention policies
    kubectl get configmap backup-config -n grill-stats -o yaml
    ```
@@ -234,10 +234,10 @@ vim apps/grill-stats/backup/overlays/prod/backup-config.yaml
    ```bash
    # Check verification logs
    kubectl logs -n grill-stats -l app.kubernetes.io/name=backup-verification
-   
+
    # Test backup integrity
    kubectl exec -n grill-stats -it backup-restore-job -- /scripts/verify-backups.sh
-   
+
    # Check encryption keys
    kubectl get secret backup-encryption-secret -n grill-stats
    ```

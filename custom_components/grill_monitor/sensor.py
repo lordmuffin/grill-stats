@@ -1,13 +1,15 @@
 """Support for Grill Monitor sensors."""
+
 from __future__ import annotations
 
-from homeassistant.components.sensor import SensorEntity, SensorDeviceClass
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
 from . import DOMAIN, GrillMonitorDataCoordinator
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -17,6 +19,7 @@ async def async_setup_entry(
     """Set up the Grill Monitor sensors."""
     coordinator = hass.data[DOMAIN][config_entry.entry_id]
     async_add_entities([GrillTemperatureSensor(coordinator)])
+
 
 class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
     """Representation of a Grill Temperature Sensor."""

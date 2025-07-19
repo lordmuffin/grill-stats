@@ -2,8 +2,8 @@
 ALTER TABLE devices ADD COLUMN IF NOT EXISTS user_id INTEGER;
 
 -- Add foreign key constraint (assuming users table exists from auth service)
-ALTER TABLE devices 
-ADD CONSTRAINT fk_devices_user_id 
+ALTER TABLE devices
+ADD CONSTRAINT fk_devices_user_id
 FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
 
 -- Create index for user_id to improve query performance
@@ -17,7 +17,7 @@ CREATE INDEX IF NOT EXISTS idx_devices_user_active ON devices(user_id, active);
 
 -- Create view for user devices with health information
 CREATE OR REPLACE VIEW user_devices_summary AS
-SELECT 
+SELECT
     d.device_id,
     d.name,
     d.device_type,
@@ -29,17 +29,17 @@ SELECT
     dh.signal_strength,
     dh.last_seen,
     dh.status as health_status,
-    CASE 
+    CASE
         WHEN dh.last_seen > CURRENT_TIMESTAMP - INTERVAL '10 minutes' THEN 'online'
         WHEN dh.last_seen > CURRENT_TIMESTAMP - INTERVAL '1 hour' THEN 'idle'
         ELSE 'offline'
     END as connection_status,
     d.configuration
 FROM devices d
-LEFT JOIN device_health dh ON d.device_id = dh.device_id 
+LEFT JOIN device_health dh ON d.device_id = dh.device_id
     AND dh.id = (
-        SELECT id FROM device_health dh2 
-        WHERE dh2.device_id = d.device_id 
+        SELECT id FROM device_health dh2
+        WHERE dh2.device_id = d.device_id
         ORDER BY created_at DESC LIMIT 1
     )
 WHERE d.active = TRUE;

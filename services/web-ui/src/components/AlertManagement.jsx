@@ -22,7 +22,7 @@ const AlertManagement = ({ devices = [], probes = [] }) => {
                 credentials: 'include'
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 setAlerts(data.data.alerts || []);
             } else {
@@ -41,7 +41,7 @@ const AlertManagement = ({ devices = [], probes = [] }) => {
             alert('Please select a device and probe first');
             return;
         }
-        
+
         setEditingAlert(null);
         setShowForm(true);
     };
@@ -56,14 +56,14 @@ const AlertManagement = ({ devices = [], probes = [] }) => {
     const handleSaveAlert = (alertData) => {
         if (editingAlert) {
             // Update existing alert in list
-            setAlerts(prev => prev.map(alert => 
+            setAlerts(prev => prev.map(alert =>
                 alert.id === alertData.id ? alertData : alert
             ));
         } else {
             // Add new alert to list
             setAlerts(prev => [...prev, alertData]);
         }
-        
+
         setShowForm(false);
         setEditingAlert(null);
         setSelectedDevice('');
@@ -113,11 +113,11 @@ const AlertManagement = ({ devices = [], probes = [] }) => {
         if (!alert.is_active) {
             return <span className="alert-status inactive">Inactive</span>;
         }
-        
+
         if (alert.triggered_at && !alert.notification_sent) {
             return <span className="alert-status triggered">Triggered</span>;
         }
-        
+
         return <span className="alert-status active">Active</span>;
     };
 
@@ -240,7 +240,7 @@ const AlertManagement = ({ devices = [], probes = [] }) => {
 
             <div className="alerts-list">
                 <h3>Existing Alerts</h3>
-                
+
                 {alerts.length === 0 ? (
                     <div className="empty-state">
                         <p>No alerts configured yet.</p>

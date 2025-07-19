@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS devices (
     active BOOLEAN DEFAULT TRUE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Add constraints
     CONSTRAINT valid_device_type CHECK (device_type IN ('thermoworks', 'rfx', 'custom')),
     CONSTRAINT valid_device_id CHECK (char_length(device_id) > 0)
@@ -30,10 +30,10 @@ CREATE TABLE IF NOT EXISTS device_health (
     status VARCHAR(50) DEFAULT 'unknown',
     metadata JSONB DEFAULT '{}',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Foreign key constraint
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
-    
+
     -- Status constraint
     CONSTRAINT valid_status CHECK (status IN ('online', 'offline', 'error', 'unknown', 'maintenance'))
 );
@@ -48,13 +48,13 @@ CREATE TABLE IF NOT EXISTS device_configuration (
     is_encrypted BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Foreign key constraint
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
-    
+
     -- Unique constraint for device + key combination
     UNIQUE(device_id, config_key),
-    
+
     -- Type constraint
     CONSTRAINT valid_config_type CHECK (config_type IN ('string', 'integer', 'float', 'boolean', 'json'))
 );
@@ -82,30 +82,30 @@ BEGIN
 END;
 $$ language 'plpgsql';
 
-CREATE TRIGGER update_devices_updated_at 
-    BEFORE UPDATE ON devices 
+CREATE TRIGGER update_devices_updated_at
+    BEFORE UPDATE ON devices
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER update_device_config_updated_at 
-    BEFORE UPDATE ON device_configuration 
+CREATE TRIGGER update_device_config_updated_at
+    BEFORE UPDATE ON device_configuration
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Insert sample data for testing
-INSERT INTO devices (device_id, name, device_type, configuration) VALUES 
+INSERT INTO devices (device_id, name, device_type, configuration) VALUES
     ('test_device_001', 'Test Grill Monitor', 'thermoworks', '{"probe_count": 2, "max_temp": 500}'),
     ('test_device_002', 'Test Smoker Monitor', 'thermoworks', '{"probe_count": 4, "max_temp": 300}'),
     ('rfx_device_001', 'RFX Test Probe', 'rfx', '{"frequency": "433MHz", "protocol": "oregon"}')
 ON CONFLICT (device_id) DO NOTHING;
 
 -- Insert sample health data
-INSERT INTO device_health (device_id, battery_level, signal_strength, last_seen, status) VALUES 
+INSERT INTO device_health (device_id, battery_level, signal_strength, last_seen, status) VALUES
     ('test_device_001', 85, 95, CURRENT_TIMESTAMP - INTERVAL '5 minutes', 'online'),
     ('test_device_002', 92, 88, CURRENT_TIMESTAMP - INTERVAL '2 minutes', 'online'),
     ('rfx_device_001', 78, 76, CURRENT_TIMESTAMP - INTERVAL '10 minutes', 'online')
 ON CONFLICT DO NOTHING;
 
 -- Insert sample configuration data
-INSERT INTO device_configuration (device_id, config_key, config_value, config_type) VALUES 
+INSERT INTO device_configuration (device_id, config_key, config_value, config_type) VALUES
     ('test_device_001', 'temperature_unit', 'fahrenheit', 'string'),
     ('test_device_001', 'sync_interval', '300', 'integer'),
     ('test_device_001', 'auto_sync', 'true', 'boolean'),
@@ -117,7 +117,7 @@ ON CONFLICT (device_id, config_key) DO NOTHING;
 
 -- Create a view for device summary
 CREATE OR REPLACE VIEW device_summary AS
-SELECT 
+SELECT
     d.device_id,
     d.name,
     d.device_type,
@@ -130,10 +130,10 @@ SELECT
     dh.status as health_status,
     COUNT(dc.id) as config_count
 FROM devices d
-LEFT JOIN device_health dh ON d.device_id = dh.device_id 
+LEFT JOIN device_health dh ON d.device_id = dh.device_id
     AND dh.id = (
-        SELECT id FROM device_health dh2 
-        WHERE dh2.device_id = d.device_id 
+        SELECT id FROM device_health dh2
+        WHERE dh2.device_id = d.device_id
         ORDER BY created_at DESC LIMIT 1
     )
 LEFT JOIN device_configuration dc ON d.device_id = dc.device_id

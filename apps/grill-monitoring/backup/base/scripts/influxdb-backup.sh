@@ -87,20 +87,20 @@ echo '{"buckets": [' > "$BUCKET_STATS_FILE"
 BUCKET_COUNT=0
 for bucket in $BUCKETS; do
     log_info "Gathering statistics for bucket: $bucket"
-    
+
     # Get bucket size and measurement count
     BUCKET_SIZE=$(influx query --host="$INFLUX_HOST" --org="$INFLUX_ORG" --token="$INFLUX_TOKEN" \
         "from(bucket: \"$bucket\") |> range(start: -30d) |> count() |> yield(name: \"count\")" \
         --raw 2>/dev/null | tail -n +2 | wc -l || echo "0")
-    
+
     LAST_WRITE=$(influx query --host="$INFLUX_HOST" --org="$INFLUX_ORG" --token="$INFLUX_TOKEN" \
         "from(bucket: \"$bucket\") |> range(start: -1d) |> last() |> yield(name: \"last\")" \
         --raw 2>/dev/null | tail -1 | cut -d, -f6 || echo "unknown")
-    
+
     if [[ $BUCKET_COUNT -gt 0 ]]; then
         echo ',' >> "$BUCKET_STATS_FILE"
     fi
-    
+
     cat >> "$BUCKET_STATS_FILE" <<EOF
     {
         "name": "$bucket",
@@ -109,7 +109,7 @@ for bucket in $BUCKETS; do
         "retention_days": ${BUCKET_RETENTION[$bucket]:-30}
     }
 EOF
-    
+
     ((BUCKET_COUNT++))
 done
 
@@ -118,10 +118,10 @@ echo ']}' >> "$BUCKET_STATS_FILE"
 # Backup each bucket
 for bucket in $BUCKETS; do
     log_info "Backing up bucket: $bucket"
-    
+
     BUCKET_BACKUP_DIR="${BACKUP_DIR}/${bucket}"
     mkdir -p "$BUCKET_BACKUP_DIR"
-    
+
     # Perform backup with compression
     if influx backup "$BUCKET_BACKUP_DIR" \
         --host="$INFLUX_HOST" \
@@ -135,7 +135,7 @@ for bucket in $BUCKETS; do
         # Continue with other buckets instead of failing completely
         continue
     fi
-    
+
     # Create bucket-specific manifest
     BUCKET_MANIFEST="${BUCKET_BACKUP_DIR}/bucket_manifest.json"
     cat > "$BUCKET_MANIFEST" <<EOF
@@ -222,7 +222,7 @@ fi
 if [[ "${BACKUP_REMOTE_SYNC:-false}" == "true" ]]; then
     log_info "Syncing to remote storage..."
     REMOTE_PATH="${BACKUP_REMOTE_BASE:-s3://grill-stats-backups}/influxdb/$(basename "$ENCRYPTED_BACKUP")"
-    
+
     if sync_to_remote "$ENCRYPTED_BACKUP" "$REMOTE_PATH" "${BACKUP_REMOTE_TYPE:-s3}"; then
         log_info "Remote sync completed"
     else

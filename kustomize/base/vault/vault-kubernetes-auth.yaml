@@ -11,23 +11,23 @@ data:
   setup-kubernetes-auth.sh: |
     #!/bin/bash
     set -e
-    
+
     echo "Setting up Vault Kubernetes Authentication..."
-    
+
     # Wait for Vault to be ready
     until vault status > /dev/null 2>&1; do
       echo "Waiting for Vault to be ready..."
       sleep 5
     done
-    
+
     # Enable Kubernetes auth method
     echo "Enabling Kubernetes auth method..."
     vault auth enable kubernetes || echo "Kubernetes auth already enabled"
-    
+
     # Get service account token and CA certificate
     TOKEN_REVIEW_JWT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
     KUBERNETES_CA_CERT=$(cat /var/run/secrets/kubernetes.io/serviceaccount/ca.crt)
-    
+
     # Configure Kubernetes auth method
     echo "Configuring Kubernetes auth method..."
     vault write auth/kubernetes/config \
@@ -35,123 +35,123 @@ data:
       kubernetes_host="https://kubernetes.default.svc.cluster.local:443" \
       kubernetes_ca_cert="$KUBERNETES_CA_CERT" \
       issuer="https://kubernetes.default.svc.cluster.local"
-    
+
     # Create policies
     echo "Creating Vault policies..."
-    
+
     # Encryption service policy
     vault policy write grill-stats-encryption - <<EOF
     # Allow encryption/decryption operations for user credentials
     path "transit/encrypt/thermoworks-user-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-user-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow encryption/decryption operations for API tokens
     path "transit/encrypt/thermoworks-api-tokens-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-api-tokens-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow encryption/decryption operations for device credentials
     path "transit/encrypt/thermoworks-device-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-device-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow reading key information (for rotation status)
     path "transit/keys/thermoworks-user-credentials-*" {
       capabilities = ["read"]
     }
-    
+
     path "transit/keys/thermoworks-api-tokens-*" {
       capabilities = ["read"]
     }
-    
+
     path "transit/keys/thermoworks-device-credentials-*" {
       capabilities = ["read"]
     }
-    
+
     # Allow token renewal
     path "auth/token/renew-self" {
       capabilities = ["update"]
     }
-    
+
     # Allow token lookup for self
     path "auth/token/lookup-self" {
       capabilities = ["read"]
     }
     EOF
-    
+
     # Key rotation service policy
     vault policy write grill-stats-key-rotation - <<EOF
     # Allow key rotation operations
     path "transit/keys/thermoworks-user-credentials-*/rotate" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-api-tokens-*/rotate" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-device-credentials-*/rotate" {
       capabilities = ["update"]
     }
-    
+
     # Allow key configuration updates
     path "transit/keys/thermoworks-user-credentials-*/config" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-api-tokens-*/config" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-device-credentials-*/config" {
       capabilities = ["update"]
     }
-    
+
     # Allow reading key information and status
     path "transit/keys/thermoworks-*" {
       capabilities = ["read", "list"]
     }
-    
+
     # Allow reading encryption/decryption capabilities for testing
     path "transit/encrypt/thermoworks-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow token operations
     path "auth/token/renew-self" {
       capabilities = ["update"]
     }
-    
+
     path "auth/token/lookup-self" {
       capabilities = ["read"]
     }
-    
+
     # Allow audit log access
     path "sys/audit" {
       capabilities = ["read", "list"]
     }
     EOF
-    
+
     # Create Kubernetes auth roles
     echo "Creating Kubernetes auth roles..."
-    
+
     # Encryption service role
     vault write auth/kubernetes/role/grill-stats-encryption \
       bound_service_account_names=grill-stats-encryption \
@@ -159,7 +159,7 @@ data:
       policies=grill-stats-encryption \
       ttl=1h \
       max_ttl=24h
-    
+
     # Key rotation service role
     vault write auth/kubernetes/role/grill-stats-key-rotation \
       bound_service_account_names=grill-stats-key-rotation \
@@ -167,7 +167,7 @@ data:
       policies=grill-stats-key-rotation \
       ttl=1h \
       max_ttl=24h
-    
+
     # Auth service role
     vault write auth/kubernetes/role/grill-stats-auth \
       bound_service_account_names=grill-stats-auth \
@@ -175,7 +175,7 @@ data:
       policies=grill-stats-encryption \
       ttl=1h \
       max_ttl=24h
-    
+
     # Device service role
     vault write auth/kubernetes/role/grill-stats-device \
       bound_service_account_names=grill-stats-device \
@@ -183,7 +183,7 @@ data:
       policies=grill-stats-encryption \
       ttl=1h \
       max_ttl=24h
-    
+
     # Temperature service role
     vault write auth/kubernetes/role/grill-stats-temperature \
       bound_service_account_names=grill-stats-temperature \
@@ -191,7 +191,7 @@ data:
       policies=grill-stats-encryption \
       ttl=1h \
       max_ttl=24h
-    
+
     echo "Vault Kubernetes authentication setup completed successfully!"
 ---
 apiVersion: batch/v1

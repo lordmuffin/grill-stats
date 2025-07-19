@@ -102,7 +102,7 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
       ...prev,
       [field]: value
     }));
-    
+
     // Clear submit message when user starts typing
     if (submitMessage.text) {
       setSubmitMessage({ type: '', text: '' });
@@ -111,11 +111,11 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Validate all fields
     const isDeviceIdValid = validateDeviceId(formData.deviceId);
     const isNicknameValid = validateNickname(formData.nickname);
-    
+
     if (!isDeviceIdValid || !isNicknameValid) {
       setSubmitMessage({
         type: 'error',
@@ -139,26 +139,26 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
           type: 'success',
           text: `Device "${formData.nickname}" has been successfully registered!`
         });
-        
+
         // Clear form
         setFormData({ deviceId: '', nickname: '' });
         setValidation({
           deviceId: { isValid: null, message: '' },
           nickname: { isValid: null, message: '' }
         });
-        
+
         // Notify parent component
         if (onDeviceAdded) {
           onDeviceAdded(data.data);
         }
-        
+
         // Auto-collapse form after success
         setTimeout(() => {
           if (onToggle) {
             onToggle();
           }
         }, 2000);
-        
+
       } else {
         setSubmitMessage({
           type: 'error',
@@ -195,7 +195,7 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
           ▼
         </span>
       </div>
-      
+
       {isExpanded && (
         <div className="form-content">
           <form onSubmit={handleSubmit}>
@@ -213,7 +213,7 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
                   value={formData.deviceId}
                   onChange={(e) => handleInputChange('deviceId', e.target.value)}
                   placeholder="e.g., TW-ABC-123"
-                  className={validation.deviceId.isValid === false ? 'error' : 
+                  className={validation.deviceId.isValid === false ? 'error' :
                             validation.deviceId.isValid === true ? 'success' : ''}
                   disabled={isSubmitting}
                   maxLength={11}
@@ -224,7 +224,7 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
                   </div>
                 )}
               </div>
-              
+
               <div className="form-group">
                 <label htmlFor="nickname">
                   Device Nickname *
@@ -238,7 +238,7 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
                   value={formData.nickname}
                   onChange={(e) => handleInputChange('nickname', e.target.value)}
                   placeholder="e.g., Grill Thermometer"
-                  className={validation.nickname.isValid === false ? 'error' : 
+                  className={validation.nickname.isValid === false ? 'error' :
                             validation.nickname.isValid === true ? 'success' : ''}
                   disabled={isSubmitting}
                   maxLength={50}
@@ -250,13 +250,13 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
                 )}
               </div>
             </div>
-            
+
             {submitMessage.text && (
               <div className={`message message-${submitMessage.type}`}>
                 {submitMessage.text}
               </div>
             )}
-            
+
             <div className="form-actions">
               <button
                 type="button"
@@ -282,11 +282,11 @@ const AddDeviceForm = ({ isExpanded, onToggle, onDeviceAdded }) => {
               </button>
             </div>
           </form>
-          
-          <div style={{ 
-            marginTop: '1.5rem', 
-            padding: '1rem', 
-            backgroundColor: '#f8f9fa', 
+
+          <div style={{
+            marginTop: '1.5rem',
+            padding: '1rem',
+            backgroundColor: '#f8f9fa',
             borderRadius: '4px',
             fontSize: '0.85rem',
             color: '#6c757d'

@@ -165,12 +165,12 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Failed to decrypt backup file"
         exit 1
     fi
-    
+
     if ! decompress_file "$DECRYPTED_BACKUP" "$EXTRACTED_BACKUP_DIR"; then
         log_error "Failed to extract backup file"
         exit 1
     fi
-    
+
     log_info "Backup decrypted and extracted successfully"
 else
     log_info "DRY RUN: Would decrypt and extract backup"
@@ -186,19 +186,19 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Backup manifest not found: $BACKUP_MANIFEST"
         exit 1
     fi
-    
+
     # Read backup information
     BACKUP_TIMESTAMP=$(jq -r '.timestamp' "$BACKUP_MANIFEST")
     BACKUP_SERVICE=$(jq -r '.service' "$BACKUP_MANIFEST")
     BACKUP_SIZE=$(jq -r '.size' "$BACKUP_MANIFEST")
     BUCKET_COUNT=$(jq -r '.additional_info.bucket_count' "$BACKUP_MANIFEST")
-    
+
     log_info "Backup information:"
     log_info "- Timestamp: $BACKUP_TIMESTAMP"
     log_info "- Service: $BACKUP_SERVICE"
     log_info "- Size: $BACKUP_SIZE"
     log_info "- Bucket count: $BUCKET_COUNT"
-    
+
     # List available buckets in backup
     AVAILABLE_BUCKETS=$(find "$EXTRACTED_BACKUP_DIR" -maxdepth 1 -type d -name "grill-stats-*" -o -name "_*" | xargs -I {} basename {} | sort)
     log_info "Available buckets in backup: $(echo "$AVAILABLE_BUCKETS" | tr '\n' ' ')"
@@ -220,7 +220,7 @@ if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
     echo "Available buckets: $(echo "$AVAILABLE_BUCKETS" | tr '\n' ' ')"
     echo ""
     read -p "Are you sure you want to proceed? (yes/no): " -r
-    
+
     if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
         log_info "Restore cancelled by user"
         exit 0
@@ -232,27 +232,27 @@ restore_bucket() {
     local bucket_name=$1
     local bucket_backup_dir="${EXTRACTED_BACKUP_DIR}/${bucket_name}"
     local target_bucket_name="${bucket_name}${NEW_BUCKET_SUFFIX}"
-    
+
     if [[ "$TEST_MODE" != "true" && "$NEW_BUCKET_SUFFIX" == "_restored" ]]; then
         target_bucket_name="$bucket_name"
     fi
-    
+
     log_info "Restoring bucket: $bucket_name -> $target_bucket_name"
-    
+
     if [[ ! -d "$bucket_backup_dir" ]]; then
         log_warning "Bucket backup directory not found: $bucket_backup_dir"
         return 1
     fi
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "DRY RUN: Would restore bucket $bucket_name to $target_bucket_name"
         return 0
     fi
-    
+
     # Create target bucket if it doesn't exist (for test mode)
     if [[ "$TEST_MODE" == "true" || "$NEW_BUCKET_SUFFIX" != "_restored" ]]; then
         log_info "Creating target bucket: $target_bucket_name"
-        
+
         # Check if bucket already exists
         if influx bucket list --host="$INFLUX_HOST" --org="$INFLUX_ORG" --token="$INFLUX_TOKEN" --name="$target_bucket_name" > /dev/null 2>&1; then
             log_info "Bucket $target_bucket_name already exists"
@@ -265,7 +265,7 @@ restore_bucket() {
             fi
         fi
     fi
-    
+
     # Restore bucket data
     if influx restore "$bucket_backup_dir" \
         --host="$INFLUX_HOST" \
@@ -288,7 +288,7 @@ FAILED_BUCKETS=()
 if [[ -n "$SPECIFIC_BUCKET" ]]; then
     # Restore only specific bucket
     log_info "Restoring specific bucket: $SPECIFIC_BUCKET"
-    
+
     if echo "$AVAILABLE_BUCKETS" | grep -q "^$SPECIFIC_BUCKET$"; then
         if restore_bucket "$SPECIFIC_BUCKET"; then
             RESTORED_BUCKETS+=("$SPECIFIC_BUCKET")
@@ -302,7 +302,7 @@ if [[ -n "$SPECIFIC_BUCKET" ]]; then
 else
     # Restore all buckets
     log_info "Restoring all buckets..."
-    
+
     for bucket in $AVAILABLE_BUCKETS; do
         if restore_bucket "$bucket"; then
             RESTORED_BUCKETS+=("$bucket")
@@ -315,7 +315,7 @@ fi
 # Restore metadata if available
 if [[ -d "$METADATA_DIR" && "$DRY_RUN" != "true" ]]; then
     log_info "Restoring metadata..."
-    
+
     # Restore dashboards
     if [[ -f "$METADATA_DIR/dashboards.json" ]]; then
         log_info "Restoring dashboards..."
@@ -323,7 +323,7 @@ if [[ -d "$METADATA_DIR" && "$DRY_RUN" != "true" ]]; then
         # For now, we'll just log the availability
         log_info "Dashboard metadata available but automatic restore not implemented"
     fi
-    
+
     # Restore tasks
     if [[ -f "$METADATA_DIR/tasks.json" ]]; then
         log_info "Restoring tasks..."
@@ -337,23 +337,23 @@ fi
 # Verify restored buckets
 if [[ "$DRY_RUN" != "true" ]]; then
     log_info "Verifying restored buckets..."
-    
+
     for bucket in "${RESTORED_BUCKETS[@]}"; do
         target_bucket_name="${bucket}${NEW_BUCKET_SUFFIX}"
-        
+
         if [[ "$TEST_MODE" != "true" && "$NEW_BUCKET_SUFFIX" == "_restored" ]]; then
             target_bucket_name="$bucket"
         fi
-        
+
         # Check if bucket exists
         if influx bucket list --host="$INFLUX_HOST" --org="$INFLUX_ORG" --token="$INFLUX_TOKEN" --name="$target_bucket_name" > /dev/null 2>&1; then
             log_info "Bucket $target_bucket_name verified"
-            
+
             # Get measurement count
             MEASUREMENT_COUNT=$(influx query --host="$INFLUX_HOST" --org="$INFLUX_ORG" --token="$INFLUX_TOKEN" \
                 "import \"influxdata/influxdb/schema\" schema.measurements(bucket: \"$target_bucket_name\") |> count()" \
                 --raw 2>/dev/null | tail -n +2 | wc -l || echo "0")
-            
+
             log_info "Bucket $target_bucket_name contains $MEASUREMENT_COUNT measurements"
         else
             log_error "Bucket $target_bucket_name not found after restore"

@@ -48,37 +48,37 @@ data:
     port 6379
     protected-mode yes
     requirepass ${REDIS_PASSWORD}
-    
+
     # Persistence - aggressive for production
     save 900 1
     save 300 10
     save 60 10000
-    
+
     # Memory management - production limits
     maxmemory 1536mb
     maxmemory-policy allkeys-lru
-    
+
     # Logging - production level
     loglevel notice
     logfile ""
-    
+
     # Connection handling
     timeout 300
     tcp-keepalive 300
     tcp-backlog 511
-    
+
     # Database configuration
     databases 16
-    
+
     # Keyspace notifications
     notify-keyspace-events "Ex"
-    
+
     # RDB persistence
     rdbcompression yes
     rdbchecksum yes
     dbfilename dump.rdb
     dir /data
-    
+
     # AOF persistence - enabled for production durability
     appendonly yes
     appendfilename "appendonly.aof"
@@ -86,23 +86,23 @@ data:
     no-appendfsync-on-rewrite no
     auto-aof-rewrite-percentage 100
     auto-aof-rewrite-min-size 64mb
-    
+
     # Performance tuning - production optimized
     stop-writes-on-bgsave-error yes
     rdbcompression yes
     lazyfree-lazy-eviction yes
     lazyfree-lazy-expire yes
     lazyfree-lazy-server-del yes
-    
+
     # Client buffer limits - production settings
     client-output-buffer-limit normal 0 0 0
     client-output-buffer-limit replica 256mb 64mb 60
     client-output-buffer-limit pubsub 32mb 8mb 60
-    
+
     # Slow log - production threshold
     slowlog-log-slower-than 10000
     slowlog-max-len 128
-    
+
     # Production-optimized data structure settings
     hash-max-ziplist-entries 512
     hash-max-ziplist-value 64
@@ -111,23 +111,23 @@ data:
     zset-max-ziplist-value 64
     list-max-ziplist-size -2
     list-compress-depth 0
-    
+
     # HyperLogLog settings
     hll-sparse-max-bytes 3000
-    
+
     # Streams settings
     stream-node-max-bytes 4096
     stream-node-max-entries 100
-    
+
     # Active rehashing
     activerehashing yes
-    
+
     # Jemalloc background thread
     jemalloc-bg-thread yes
-    
+
     # Lua script timeout
     lua-time-limit 5000
-    
+
     # Production security settings
     rename-command FLUSHDB "FLUSHDB_DANGEROUS"
     rename-command FLUSHALL "FLUSHALL_DANGEROUS"

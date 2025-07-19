@@ -24,7 +24,7 @@
       ]
     },
     {
-      "device_id": "mock-bluedot-002", 
+      "device_id": "mock-bluedot-002",
       "name": "Mock BlueDOT",
       "model": "BLUEDOT",
       "firmware_version": "2.1.0",
@@ -45,7 +45,7 @@
           "alarm_high": 205
         },
         {
-          "probe_id": "probe_2", 
+          "probe_id": "probe_2",
           "name": "Pit Temperature",
           "type": "ambient",
           "min_temp": -40,
@@ -81,7 +81,7 @@
         {
           "probe_id": "probe_2",
           "name": "Chicken Breast",
-          "type": "food", 
+          "type": "food",
           "min_temp": -40,
           "max_temp": 572,
           "current_temp": 155.7,

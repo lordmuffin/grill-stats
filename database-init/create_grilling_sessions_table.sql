@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS grilling_sessions (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Foreign key constraint to users table
     CONSTRAINT fk_grilling_sessions_user_id FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -49,7 +49,7 @@ CREATE TRIGGER trigger_update_grilling_sessions_updated_at
 
 -- Create view for active sessions with calculated duration
 CREATE OR REPLACE VIEW active_grilling_sessions AS
-SELECT 
+SELECT
     s.*,
     EXTRACT(EPOCH FROM (CURRENT_TIMESTAMP - s.start_time))/60 AS current_duration_minutes,
     u.email as user_email,
@@ -60,7 +60,7 @@ WHERE s.status = 'active';
 
 -- Create view for session statistics
 CREATE OR REPLACE VIEW grilling_session_stats AS
-SELECT 
+SELECT
     user_id,
     COUNT(*) as total_sessions,
     COUNT(CASE WHEN status = 'completed' THEN 1 END) as completed_sessions,
@@ -84,19 +84,19 @@ GROUP BY user_id;
 -- Insert some sample data for testing (optional - uncomment if needed)
 /*
 INSERT INTO grilling_sessions (user_id, name, start_time, end_time, devices_used, status, max_temperature, min_temperature, avg_temperature, duration_minutes, session_type, notes)
-VALUES 
+VALUES
     (1, 'Weekend BBQ', '2024-01-15 14:00:00', '2024-01-15 18:30:00', '["device_001", "device_002"]', 'completed', 450.5, 225.0, 325.5, 270, 'grilling', 'Great family BBQ session'),
     (1, 'Brisket Smoke', '2024-01-20 08:00:00', '2024-01-20 20:00:00', '["device_001"]', 'completed', 275.0, 225.0, 250.0, 720, 'smoking', 'Low and slow brisket cook'),
     (1, 'Quick Dinner', '2024-01-25 17:30:00', null, '["device_002"]', 'active', 400.0, 350.0, 375.0, null, 'grilling', 'Quick weeknight dinner');
 */
 
 -- Verify the table was created successfully
-SELECT 
-    table_name, 
-    column_name, 
-    data_type, 
+SELECT
+    table_name,
+    column_name,
+    data_type,
     is_nullable,
     column_default
-FROM information_schema.columns 
-WHERE table_name = 'grilling_sessions' 
+FROM information_schema.columns
+WHERE table_name = 'grilling_sessions'
 ORDER BY ordinal_position;

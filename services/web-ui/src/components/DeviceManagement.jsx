@@ -36,10 +36,10 @@ const DeviceManagement = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await deviceApi.getDevices(forceRefresh);
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         setDevices(data.data.devices || []);
       } else {
@@ -73,7 +73,7 @@ const DeviceManagement = () => {
       setError(null);
       const response = await deviceApi.syncDevices();
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         // Refresh devices after sync
         setTimeout(() => {
@@ -90,12 +90,12 @@ const DeviceManagement = () => {
 
   const formatLastSeen = (lastSeen) => {
     if (!lastSeen) return 'Never';
-    
+
     const date = new Date(lastSeen);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
@@ -130,24 +130,24 @@ const DeviceManagement = () => {
     <div className="device-management">
       <div className="device-management-header">
         <h1 className="device-management-title">Device Management</h1>
-        
+
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           {mockMode && (
             <div className="mock-mode-indicator">
               Mock Mode
             </div>
           )}
-          
+
           <div className="device-management-actions">
-            <button 
-              onClick={() => fetchDevices(true)} 
+            <button
+              onClick={() => fetchDevices(true)}
               className="btn btn-secondary"
               disabled={loading}
             >
               Refresh
             </button>
-            <button 
-              onClick={handleSync} 
+            <button
+              onClick={handleSync}
               className="btn btn-primary"
             >
               Sync with ThermoWorks
@@ -175,7 +175,7 @@ const DeviceManagement = () => {
             {devices.length} device{devices.length !== 1 ? 's' : ''}
           </span>
         </div>
-        
+
         {devices.length === 0 ? (
           <div className="empty-state">
             <h3>No devices registered</h3>
@@ -183,7 +183,7 @@ const DeviceManagement = () => {
               You haven't registered any ThermoWorks devices yet.<br />
               Use the form above to add your first device, or sync with your ThermoWorks account to discover devices.
             </p>
-            <button 
+            <button
               onClick={() => setIsFormExpanded(true)}
               className="btn btn-primary"
             >
@@ -193,7 +193,7 @@ const DeviceManagement = () => {
         ) : (
           <div className="device-grid">
             {devices.map(device => (
-              <DeviceCard 
+              <DeviceCard
                 key={device.device_id}
                 device={device}
                 onRemove={handleRemoveDevice}
@@ -219,7 +219,7 @@ const DeviceManagement = () => {
 // Enhanced DeviceCard component with remove functionality
 const DeviceCard = ({ device, onRemove, onNavigate, formatLastSeen, getStatusColor }) => {
   const deviceName = device.name || device.nickname || `Device ${device.device_id}`;
-  
+
   return (
     <div className="device-card">
       <div className="device-card-header">
@@ -235,7 +235,7 @@ const DeviceCard = ({ device, onRemove, onNavigate, formatLastSeen, getStatusCol
           Remove
         </button>
       </div>
-      
+
       <div className="device-status">
         <span className={`status-indicator ${getStatusColor(device.status)}`}></span>
         <span style={{ textTransform: 'capitalize' }}>{device.status || 'Unknown'}</span>
@@ -243,25 +243,25 @@ const DeviceCard = ({ device, onRemove, onNavigate, formatLastSeen, getStatusCol
           {formatLastSeen(device.last_seen)}
         </span>
       </div>
-      
+
       {device.model && (
         <div style={{ marginBottom: '1rem', color: '#7f8c8d', fontSize: '0.9rem' }}>
           Model: {device.model}
         </div>
       )}
-      
+
       {device.device_type && (
         <div style={{ marginBottom: '1rem', color: '#7f8c8d', fontSize: '0.9rem' }}>
           Type: <span style={{ textTransform: 'capitalize' }}>{device.device_type}</span>
         </div>
       )}
-      
+
       {device.probes && device.probes.length > 0 && (
         <div style={{ marginBottom: '1rem', color: '#7f8c8d', fontSize: '0.9rem' }}>
           Probes: {device.probes.length}
         </div>
       )}
-      
+
       <div style={{ display: 'flex', gap: '0.5rem', marginTop: '1rem' }}>
         <button
           onClick={() => onNavigate(`/devices/${device.device_id}/live`)}
@@ -278,11 +278,11 @@ const DeviceCard = ({ device, onRemove, onNavigate, formatLastSeen, getStatusCol
           History
         </button>
       </div>
-      
+
       {device.firmware_version && (
-        <div style={{ 
-          marginTop: '1rem', 
-          fontSize: '0.7rem', 
+        <div style={{
+          marginTop: '1rem',
+          fontSize: '0.7rem',
           color: '#95a5a6',
           borderTop: '1px solid #ecf0f1',
           paddingTop: '0.5rem'

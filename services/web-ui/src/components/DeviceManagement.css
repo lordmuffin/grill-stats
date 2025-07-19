@@ -485,49 +485,49 @@
   .device-management {
     padding: 1rem;
   }
-  
+
   .device-management-header {
     flex-direction: column;
     align-items: stretch;
     text-align: center;
   }
-  
+
   .device-management-actions {
     justify-content: center;
   }
-  
+
   .add-device-form {
     padding: 1.5rem;
   }
-  
+
   .form-row {
     flex-direction: column;
   }
-  
+
   .form-group {
     min-width: unset;
   }
-  
+
   .device-grid {
     grid-template-columns: 1fr;
     padding: 1rem;
     gap: 1rem;
   }
-  
+
   .device-card {
     padding: 1rem;
   }
-  
+
   .dialog {
     padding: 1.5rem;
     margin: 1rem;
   }
-  
+
   .form-actions,
   .dialog-actions {
     flex-direction: column;
   }
-  
+
   .btn {
     justify-content: center;
   }
@@ -537,12 +537,12 @@
   .device-management-title {
     font-size: 1.5rem;
   }
-  
+
   .device-card-header {
     flex-direction: column;
     gap: 0.5rem;
   }
-  
+
   .device-remove-btn {
     align-self: flex-end;
   }

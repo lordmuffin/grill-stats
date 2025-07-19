@@ -34,7 +34,7 @@ check_op_cli() {
         print_error "Please install it from: https://developer.1password.com/docs/cli/get-started/"
         exit 1
     fi
-    
+
     print_status "1Password CLI is installed"
 }
 
@@ -45,7 +45,7 @@ check_op_signin() {
         print_error "Please run: op signin"
         exit 1
     fi
-    
+
     print_status "Signed in to 1Password CLI"
 }
 
@@ -56,26 +56,26 @@ create_op_item() {
     local item_category="$3"
     shift 3
     local fields=("$@")
-    
+
     print_status "Creating 1Password item: $item_title"
-    
+
     # Check if item already exists
     if op item get "$item_name" --vault="$VAULT_NAME" &> /dev/null; then
         print_warning "Item '$item_name' already exists, skipping creation"
         return 0
     fi
-    
+
     # Build the op item create command
     local cmd="op item create --category=\"$item_category\" --title=\"$item_title\" --vault=\"$VAULT_NAME\""
-    
+
     # Add fields
     for field in "${fields[@]}"; do
         cmd="$cmd --field=\"$field\""
     done
-    
+
     # Execute the command
     eval "$cmd"
-    
+
     if [ $? -eq 0 ]; then
         print_status "✓ Created item: $item_title"
     else
@@ -89,11 +89,11 @@ update_op_item() {
     local item_name="$1"
     local field_name="$2"
     local field_value="$3"
-    
+
     print_status "Updating 1Password item: $item_name"
-    
+
     op item edit "$item_name" --vault="$VAULT_NAME" --field "$field_name=$field_value"
-    
+
     if [ $? -eq 0 ]; then
         print_status "✓ Updated item: $item_name"
     else
@@ -116,19 +116,19 @@ generate_jwt_secret() {
 # Main setup function
 setup_1password_items() {
     print_status "Setting up 1Password items for grill-stats application..."
-    
+
     # 1. Vault Token
     create_op_item "grill-stats-vault-token" "Grill Stats Vault Token" "api credential" \
         "label=token,type=concealed,value=" \
         "label=vault_url,type=text,value=http://vault.vault.svc.cluster.local:8200" \
         "label=description,type=text,value=HashiCorp Vault token for grill-stats encryption service"
-    
+
     # 2. Vault Admin Token
     create_op_item "grill-stats-vault-admin-token" "Grill Stats Vault Admin Token" "api credential" \
         "label=token,type=concealed,value=" \
         "label=vault_url,type=text,value=http://vault.vault.svc.cluster.local:8200" \
         "label=description,type=text,value=HashiCorp Vault admin token for key rotation"
-    
+
     # 3. Database Credentials
     local db_password=$(generate_password 24)
     create_op_item "grill-stats-database-credentials" "Grill Stats Database Credentials" "database" \
@@ -138,7 +138,7 @@ setup_1password_items() {
         "label=username,type=text,value=grill_stats_app" \
         "label=password,type=concealed,value=$db_password" \
         "label=description,type=text,value=PostgreSQL database credentials for grill-stats"
-    
+
     # 4. JWT Secrets
     local jwt_secret=$(generate_jwt_secret)
     local app_secret=$(generate_password 32)
@@ -146,7 +146,7 @@ setup_1password_items() {
         "label=jwt_secret,type=concealed,value=$jwt_secret" \
         "label=app_secret_key,type=concealed,value=$app_secret" \
         "label=description,type=text,value=JWT and Flask application secrets for grill-stats"
-    
+
     # 5. ThermoWorks API Credentials
     create_op_item "grill-stats-thermoworks-api" "Grill Stats ThermoWorks API" "api credential" \
         "label=client_id,type=text,value=" \
@@ -154,7 +154,7 @@ setup_1password_items() {
         "label=base_url,type=text,value=https://api.thermoworks.com" \
         "label=auth_url,type=text,value=https://auth.thermoworks.com" \
         "label=description,type=text,value=ThermoWorks API credentials for grill-stats"
-    
+
     print_status "✓ All 1Password items created successfully"
 }
 
@@ -180,7 +180,7 @@ display_next_steps() {
 # Function to validate setup
 validate_setup() {
     print_status "Validating 1Password setup..."
-    
+
     declare -a required_items=(
         "grill-stats-vault-token"
         "grill-stats-vault-admin-token"
@@ -188,7 +188,7 @@ validate_setup() {
         "grill-stats-jwt-secrets"
         "grill-stats-thermoworks-api"
     )
-    
+
     for item in "${required_items[@]}"; do
         if op item get "$item" --vault="$VAULT_NAME" &> /dev/null; then
             print_status "✓ Item '$item' exists"
@@ -197,14 +197,14 @@ validate_setup() {
             return 1
         fi
     done
-    
+
     print_status "✓ All required 1Password items exist"
 }
 
 # Function to export example environment variables
 export_env_vars() {
     print_status "Exporting example environment variables..."
-    
+
     cat > "${SCRIPT_DIR}/grill-stats-env.example" << EOF
 # Example environment variables for grill-stats application
 # These values should be populated from 1Password Connect secrets
@@ -239,27 +239,27 @@ ENCRYPTION_RATE_WINDOW=60
 LOG_LEVEL=INFO
 DEBUG=false
 EOF
-    
+
     print_status "✓ Example environment variables exported to: ${SCRIPT_DIR}/grill-stats-env.example"
 }
 
 # Main execution
 main() {
     print_status "Starting 1Password setup for grill-stats application..."
-    
+
     # Check prerequisites
     check_op_cli
     check_op_signin
-    
+
     # Setup 1Password items
     setup_1password_items
-    
+
     # Validate setup
     validate_setup
-    
+
     # Export environment variables
     export_env_vars
-    
+
     # Display next steps
     display_next_steps
 }

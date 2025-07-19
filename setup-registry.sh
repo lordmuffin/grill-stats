@@ -46,9 +46,9 @@ check_docker() {
 # Function to create registry configuration
 create_registry_config() {
     log "Creating registry configuration..."
-    
+
     mkdir -p "${REGISTRY_CONFIG_DIR}"
-    
+
     cat > "${REGISTRY_CONFIG_DIR}/config.yml" << EOF
 version: 0.1
 log:
@@ -77,32 +77,32 @@ health:
     interval: 10s
     threshold: 3
 EOF
-    
+
     log "Registry configuration created at ${REGISTRY_CONFIG_DIR}/config.yml"
 }
 
 # Function to start the registry
 start_registry() {
     log "Starting Docker registry..."
-    
+
     # Check if registry is already running
     if docker ps | grep -q "${REGISTRY_NAME}"; then
         warn "Registry ${REGISTRY_NAME} is already running"
         return 0
     fi
-    
+
     # Remove existing stopped container
     if docker ps -a | grep -q "${REGISTRY_NAME}"; then
         log "Removing existing registry container..."
         docker rm -f "${REGISTRY_NAME}"
     fi
-    
+
     # Create volume for registry data
     if ! docker volume ls | grep -q "${REGISTRY_VOLUME}"; then
         log "Creating registry volume..."
         docker volume create "${REGISTRY_VOLUME}"
     fi
-    
+
     # Start the registry
     docker run -d \
         --name "${REGISTRY_NAME}" \
@@ -111,7 +111,7 @@ start_registry() {
         -v "${REGISTRY_VOLUME}:/var/lib/registry" \
         -v "$(pwd)/${REGISTRY_CONFIG_DIR}/config.yml:/etc/docker/registry/config.yml" \
         registry:2
-    
+
     # Wait for registry to be ready
     log "Waiting for registry to be ready..."
     for i in {1..30}; do
@@ -121,7 +121,7 @@ start_registry() {
         fi
         sleep 1
     done
-    
+
     if ! curl -sf "http://localhost:${REGISTRY_PORT}/v2/" > /dev/null 2>&1; then
         error "Registry failed to start properly"
         exit 1
@@ -131,7 +131,7 @@ start_registry() {
 # Function to stop the registry
 stop_registry() {
     log "Stopping Docker registry..."
-    
+
     if docker ps | grep -q "${REGISTRY_NAME}"; then
         docker stop "${REGISTRY_NAME}"
         docker rm "${REGISTRY_NAME}"
@@ -145,35 +145,35 @@ stop_registry() {
 get_registry_status() {
     log "Registry Status:"
     echo "================================================================"
-    
+
     if docker ps | grep -q "${REGISTRY_NAME}"; then
         echo "Status: RUNNING"
         echo "Container: ${REGISTRY_NAME}"
         echo "Port: ${REGISTRY_PORT}"
         echo "URL: http://localhost:${REGISTRY_PORT}"
         echo "API: http://localhost:${REGISTRY_PORT}/v2/"
-        
+
         # Get container info
         CONTAINER_ID=$(docker ps | grep "${REGISTRY_NAME}" | awk '{print $1}')
         UPTIME=$(docker ps --format "table {{.Status}}" | grep "${REGISTRY_NAME}" || echo "Unknown")
-        
+
         echo "Container ID: ${CONTAINER_ID}"
         echo "Uptime: ${UPTIME}"
-        
+
         # Check health
         if curl -sf "http://localhost:${REGISTRY_PORT}/v2/" > /dev/null 2>&1; then
             echo "Health: HEALTHY"
         else
             echo "Health: UNHEALTHY"
         fi
-        
+
         # List stored images
         echo ""
         info "Stored Images:"
-        
+
         # Get catalog
         CATALOG=$(curl -s "http://localhost:${REGISTRY_PORT}/v2/_catalog" | jq -r '.repositories[]?' 2>/dev/null)
-        
+
         if [ -n "${CATALOG}" ]; then
             while read -r repo; do
                 if [ -n "${repo}" ]; then
@@ -196,17 +196,17 @@ get_registry_status() {
         echo "Status: STOPPED"
         echo "Container: ${REGISTRY_NAME} (not running)"
     fi
-    
+
     echo "================================================================"
 }
 
 # Function to configure Docker daemon for insecure registry
 configure_docker_daemon() {
     log "Configuring Docker daemon for insecure registry..."
-    
+
     DOCKER_DAEMON_CONFIG="/etc/docker/daemon.json"
     REGISTRY_HOST="localhost:${REGISTRY_PORT}"
-    
+
     if [ "$(uname)" = "Darwin" ]; then
         # macOS Docker Desktop
         warn "For macOS Docker Desktop, manually add ${REGISTRY_HOST} to insecure registries:"
@@ -218,12 +218,12 @@ configure_docker_daemon() {
     elif [ "$(uname)" = "Linux" ]; then
         # Linux Docker daemon
         info "Adding ${REGISTRY_HOST} to insecure registries..."
-        
+
         # Create or update daemon.json
         if [ -f "${DOCKER_DAEMON_CONFIG}" ]; then
             # Backup existing config
             sudo cp "${DOCKER_DAEMON_CONFIG}" "${DOCKER_DAEMON_CONFIG}.backup"
-            
+
             # Add insecure registry to existing config
             TEMP_CONFIG=$(mktemp)
             jq ". + {\"insecure-registries\": ([.\"insecure-registries\"[]?, \"${REGISTRY_HOST}\"] | unique)}" "${DOCKER_DAEMON_CONFIG}" > "${TEMP_CONFIG}"
@@ -233,11 +233,11 @@ configure_docker_daemon() {
             sudo mkdir -p /etc/docker
             echo "{\"insecure-registries\": [\"${REGISTRY_HOST}\"]}" | sudo tee "${DOCKER_DAEMON_CONFIG}"
         fi
-        
+
         # Restart Docker daemon
         log "Restarting Docker daemon..."
         sudo systemctl restart docker
-        
+
         # Wait for Docker to be ready
         for i in {1..30}; do
             if docker info &> /dev/null; then
@@ -255,51 +255,51 @@ configure_docker_daemon() {
 # Function to test registry functionality
 test_registry() {
     log "Testing registry functionality..."
-    
+
     REGISTRY_HOST="localhost:${REGISTRY_PORT}"
     TEST_IMAGE="hello-world"
     TEST_TAG="${REGISTRY_HOST}/grill-stats/test:latest"
-    
+
     # Pull a test image
     log "Pulling test image..."
     docker pull "${TEST_IMAGE}"
-    
+
     # Tag and push to registry
     log "Tagging and pushing test image..."
     docker tag "${TEST_IMAGE}" "${TEST_TAG}"
     docker push "${TEST_TAG}"
-    
+
     # Remove local image and pull from registry
     log "Testing pull from registry..."
     docker rmi "${TEST_TAG}"
     docker pull "${TEST_TAG}"
-    
+
     # Clean up
     docker rmi "${TEST_TAG}"
-    
+
     log "Registry test completed successfully!"
 }
 
 # Function to clean up registry
 cleanup_registry() {
     log "Cleaning up registry..."
-    
+
     # Stop and remove container
     if docker ps -a | grep -q "${REGISTRY_NAME}"; then
         docker stop "${REGISTRY_NAME}" 2>/dev/null || true
         docker rm "${REGISTRY_NAME}" 2>/dev/null || true
     fi
-    
+
     # Remove volume
     if docker volume ls | grep -q "${REGISTRY_VOLUME}"; then
         docker volume rm "${REGISTRY_VOLUME}" 2>/dev/null || true
     fi
-    
+
     # Remove config directory
     if [ -d "${REGISTRY_CONFIG_DIR}" ]; then
         rm -rf "${REGISTRY_CONFIG_DIR}"
     fi
-    
+
     log "Registry cleanup completed"
 }
 
@@ -331,7 +331,7 @@ Examples:
     $0 status               # Show registry status
     $0 test                 # Test registry functionality
     $0 cleanup              # Remove registry and data
-    
+
 Registry Information:
     URL: http://localhost:5000
     API: http://localhost:5000/v2/

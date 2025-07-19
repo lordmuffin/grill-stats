@@ -1,6 +1,6 @@
 # Initialize models package
 
-from .user import User
 from .temperature_alert import TemperatureAlert
+from .user import User
 
-__all__ = ['User', 'TemperatureAlert']
+__all__ = ["User", "TemperatureAlert"]

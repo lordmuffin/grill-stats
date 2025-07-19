@@ -48,27 +48,27 @@ const COLORS = [
 const LiveDeviceDashboard = () => {
   const { deviceId } = useParams();
   const navigate = useNavigate();
-  
+
   // Component state
   const [device, setDevice] = useState(null);
   const [liveData, setLiveData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [connectionStatus, setConnectionStatus] = useState('connecting');
-  
+
   // Chart state
   const [temperatureHistory, setTemperatureHistory] = useState({});
   const [chartData, setChartData] = useState({
     labels: [],
     datasets: []
   });
-  
+
   // Refs
   const eventSourceRef = useRef(null);
   const retryTimeoutRef = useRef(null);
   const retryCount = useRef(0);
   const maxRetries = 5;
-  
+
   // Chart options
   const chartOptions = {
     responsive: true,
@@ -135,7 +135,7 @@ const LiveDeviceDashboard = () => {
       }
     }
   };
-  
+
   // Load device information
   useEffect(() => {
     const loadDevice = async () => {
@@ -149,62 +149,62 @@ const LiveDeviceDashboard = () => {
         setLoading(false);
       }
     };
-    
+
     if (deviceId) {
       loadDevice();
     }
   }, [deviceId]);
-  
+
   // Set up SSE connection for live data
   useEffect(() => {
     if (!deviceId) return;
-    
+
     const connectToLiveStream = () => {
       try {
         setConnectionStatus('connecting');
-        
+
         // Create EventSource connection
         const eventSource = new EventSource(`/api/devices/${deviceId}/stream`);
         eventSourceRef.current = eventSource;
-        
+
         eventSource.onopen = () => {
           console.log('Live data stream connected');
           setConnectionStatus('connected');
           setError(null);
           retryCount.current = 0;
         };
-        
+
         eventSource.onmessage = (event) => {
           try {
             const data = JSON.parse(event.data);
-            
+
             if (data.error) {
               console.error('Live data stream error:', data.error);
               setError(data.error);
               return;
             }
-            
+
             // Update live data
             setLiveData(data);
-            
+
             // Update temperature history for charts
             updateTemperatureHistory(data);
-            
+
             setConnectionStatus('connected');
-            
+
           } catch (err) {
             console.error('Error parsing live data:', err);
           }
         };
-        
+
         eventSource.onerror = (error) => {
           console.error('Live data stream error:', error);
           setConnectionStatus('error');
-          
+
           if (retryCount.current < maxRetries) {
             retryCount.current++;
             console.log(`Retrying connection... attempt ${retryCount.current}/${maxRetries}`);
-            
+
             // Retry connection with exponential backoff
             retryTimeoutRef.current = setTimeout(() => {
               eventSource.close();
@@ -214,15 +214,15 @@ const LiveDeviceDashboard = () => {
             setError('Unable to connect to live data stream. Please refresh the page.');
           }
         };
-        
+
       } catch (err) {
         console.error('Failed to create live data stream:', err);
         setError('Failed to connect to live data stream');
       }
     };
-    
+
     connectToLiveStream();
-    
+
     // Cleanup
     return () => {
       if (eventSourceRef.current) {
@@ -233,46 +233,46 @@ const LiveDeviceDashboard = () => {
       }
     };
   }, [deviceId]);
-  
+
   // Update temperature history for charts
   const updateTemperatureHistory = (data) => {
     setTemperatureHistory(prev => {
       const newHistory = { ...prev };
       const currentTime = new Date(data.timestamp);
-      
+
       data.channels.forEach(channel => {
         const channelId = channel.channel_id;
-        
+
         if (!newHistory[channelId]) {
           newHistory[channelId] = [];
         }
-        
+
         // Add new data point
         newHistory[channelId].push({
           x: currentTime,
           y: channel.temperature,
           connected: channel.is_connected
         });
-        
+
         // Keep only last 50 points (about 4 minutes at 5-second intervals)
         if (newHistory[channelId].length > 50) {
           newHistory[channelId] = newHistory[channelId].slice(-50);
         }
       });
-      
+
       return newHistory;
     });
   };
-  
+
   // Update chart data when temperature history changes
   useEffect(() => {
     if (!liveData || !liveData.channels) return;
-    
+
     const datasets = liveData.channels.map((channel, index) => {
       const channelId = channel.channel_id;
       const history = temperatureHistory[channelId] || [];
       const color = COLORS[index % COLORS.length];
-      
+
       return {
         label: channel.name,
         data: history,
@@ -283,22 +283,22 @@ const LiveDeviceDashboard = () => {
         pointHoverRadius: 5,
         tension: 0.1,
         // Show disconnected points differently
-        pointBackgroundColor: history.map(point => 
+        pointBackgroundColor: history.map(point =>
           point.connected ? color : '#999999'
         )
       };
     });
-    
+
     setChartData({
       datasets
     });
   }, [liveData, temperatureHistory]);
-  
+
   // Handle back to device list
   const handleBackToList = () => {
     navigate('/dashboard');
   };
-  
+
   // Handle connection retry
   const handleRetry = () => {
     if (eventSourceRef.current) {
@@ -310,7 +310,7 @@ const LiveDeviceDashboard = () => {
     setConnectionStatus('connecting');
     window.location.reload();
   };
-  
+
   // Render loading state
   if (loading) {
     return (
@@ -320,7 +320,7 @@ const LiveDeviceDashboard = () => {
       </div>
     );
   }
-  
+
   // Render error state
   if (error) {
     return (
@@ -338,7 +338,7 @@ const LiveDeviceDashboard = () => {
       </div>
     );
   }
-  
+
   // Render dashboard
   return (
     <div className="live-dashboard">
@@ -358,7 +358,7 @@ const LiveDeviceDashboard = () => {
           </div>
         </div>
       </div>
-      
+
       {/* Device Status Cards */}
       {liveData && liveData.status && (
         <div className="device-status-cards">
@@ -371,7 +371,7 @@ const LiveDeviceDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="status-card signal">
             <div className="status-icon">📶</div>
             <div className="status-info">
@@ -381,7 +381,7 @@ const LiveDeviceDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="status-card connection">
             <div className="status-icon">🔗</div>
             <div className="status-info">
@@ -393,7 +393,7 @@ const LiveDeviceDashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* Temperature Channels */}
       {liveData && liveData.channels && (
         <div className="temperature-channels">
@@ -418,7 +418,7 @@ const LiveDeviceDashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* Temperature Chart */}
       {chartData.datasets.length > 0 && (
         <div className="temperature-chart">
@@ -428,7 +428,7 @@ const LiveDeviceDashboard = () => {
           </div>
         </div>
       )}
-      
+
       {/* No Data State */}
       {liveData && (!liveData.channels || liveData.channels.length === 0) && (
         <div className="no-data-state">
@@ -437,7 +437,7 @@ const LiveDeviceDashboard = () => {
           <p>Make sure the device is powered on and properly connected.</p>
         </div>
       )}
-      
+
       {/* Data Info */}
       {liveData && (
         <div className="data-info">

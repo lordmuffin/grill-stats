@@ -142,7 +142,7 @@ log_info "Timeout: $TIMEOUT seconds"
 find_latest_backup() {
     local service=$1
     local service_dir="${BACKUP_BASE_DIR}/${service}"
-    
+
     if [[ -d "$service_dir" ]]; then
         find "$service_dir" -name "*.tar.gz.enc" -type f -printf '%T@ %p\n' | sort -n | tail -1 | cut -d' ' -f2-
     else
@@ -216,19 +216,19 @@ if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
     echo "  - Overwrite all database contents"
     echo "  - Restore from the following backups:"
     echo ""
-    
+
     if [[ "$SKIP_POSTGRESQL" != "true" ]]; then
         echo "  PostgreSQL: $(basename "$POSTGRESQL_BACKUP")"
     fi
-    
+
     if [[ "$SKIP_INFLUXDB" != "true" ]]; then
         echo "  InfluxDB:   $(basename "$INFLUXDB_BACKUP")"
     fi
-    
+
     if [[ "$SKIP_REDIS" != "true" ]]; then
         echo "  Redis:      $(basename "$REDIS_BACKUP")"
     fi
-    
+
     echo ""
     echo "Test mode: $TEST_MODE"
     echo "Expected downtime: 30-60 minutes"
@@ -236,7 +236,7 @@ if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
     echo "=========================================="
     echo ""
     read -p "Are you ABSOLUTELY SURE you want to proceed? (type 'YES' to confirm): " -r
-    
+
     if [[ "$REPLY" != "YES" ]]; then
         log_info "Restore cancelled by user"
         exit 0
@@ -262,10 +262,10 @@ update_restore_status() {
     local service=$1
     local status=$2
     local message=$3
-    
+
     RESTORE_STATUS=$(echo "$RESTORE_STATUS" | jq ".services.${service}.status = \"$status\"")
     RESTORE_STATUS=$(echo "$RESTORE_STATUS" | jq ".services.${service}.message = \"$message\"")
-    
+
     # Write status to file
     echo "$RESTORE_STATUS" | jq . > "${RESTORE_DIR}/restore_status.json"
 }
@@ -276,25 +276,25 @@ run_restore_with_timeout() {
     local script_path=$2
     local backup_file=$3
     local additional_args=${4:-""}
-    
+
     log_info "Starting $service restore..."
     update_restore_status "$service" "in_progress" "Restore in progress"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         additional_args="$additional_args --dry-run"
     fi
-    
+
     if [[ "$TEST_MODE" == "true" ]]; then
         additional_args="$additional_args --test"
     fi
-    
+
     if [[ "$FORCE" == "true" ]]; then
         additional_args="$additional_args --force"
     fi
-    
+
     local restore_command="$script_path $additional_args $backup_file"
     log_info "Running command: $restore_command"
-    
+
     if timeout "$TIMEOUT" bash -c "$restore_command" > "${RESTORE_DIR}/${service}_restore.log" 2>&1; then
         log_info "$service restore completed successfully"
         update_restore_status "$service" "completed" "Restore completed successfully"
@@ -318,21 +318,21 @@ log_info "Step 1: Pre-restore validation"
 if [[ "$DRY_RUN" != "true" ]]; then
     # Check if services are running
     log_info "Checking service status..."
-    
+
     # Check PostgreSQL
     if [[ "$SKIP_POSTGRESQL" != "true" ]]; then
         if ! check_service_health "postgresql" "postgresql" "5432"; then
             log_warning "PostgreSQL service not responding"
         fi
     fi
-    
+
     # Check InfluxDB
     if [[ "$SKIP_INFLUXDB" != "true" ]]; then
         if ! check_service_health "influxdb" "influxdb" "8086"; then
             log_warning "InfluxDB service not responding"
         fi
     fi
-    
+
     # Check Redis
     if [[ "$SKIP_REDIS" != "true" ]]; then
         if ! check_service_health "redis" "redis" "6379"; then
@@ -348,25 +348,25 @@ log_info "Step 2: Stopping services"
 
 if [[ "$SKIP_SERVICES" != "true" && "$DRY_RUN" != "true" ]]; then
     log_info "Stopping application services..."
-    
+
     # Scale down all deployments
     if kubectl scale deployment --all --replicas=0 -n grill-stats; then
         log_info "Deployments scaled down successfully"
     else
         log_warning "Failed to scale down some deployments"
     fi
-    
+
     # Wait for pods to terminate
     log_info "Waiting for pods to terminate..."
     sleep 30
-    
+
     # Check if any pods are still running
     RUNNING_PODS=$(kubectl get pods -n grill-stats --field-selector=status.phase=Running --no-headers | wc -l)
     if [[ $RUNNING_PODS -gt 0 ]]; then
         log_warning "$RUNNING_PODS pods still running, waiting longer..."
         sleep 30
     fi
-    
+
     log_info "Services stopped"
 elif [[ "$DRY_RUN" == "true" ]]; then
     log_info "DRY RUN: Would stop application services"
@@ -403,22 +403,22 @@ log_info "Step 4: Starting services"
 
 if [[ "$SKIP_SERVICES" != "true" && "$TEST_MODE" != "true" && "$DRY_RUN" != "true" ]]; then
     log_info "Starting application services..."
-    
+
     # Scale up deployments
     if kubectl scale deployment --all --replicas=1 -n grill-stats; then
         log_info "Deployments scaled up successfully"
     else
         log_warning "Failed to scale up some deployments"
     fi
-    
+
     # Wait for services to be ready
     log_info "Waiting for services to be ready..."
     sleep 60
-    
+
     # Check pod readiness
     READY_PODS=$(kubectl get pods -n grill-stats --field-selector=status.phase=Running --no-headers | wc -l)
     log_info "$READY_PODS pods are running"
-    
+
     log_info "Services started"
 elif [[ "$DRY_RUN" == "true" ]]; then
     log_info "DRY RUN: Would start application services"
@@ -430,7 +430,7 @@ log_info "Step 5: Post-restore validation"
 if [[ "$DRY_RUN" != "true" ]]; then
     # Health checks
     log_info "Performing health checks..."
-    
+
     # PostgreSQL health check
     if [[ "$SKIP_POSTGRESQL" != "true" ]]; then
         if check_service_health "postgresql" "postgresql" "5432"; then
@@ -440,7 +440,7 @@ if [[ "$DRY_RUN" != "true" ]]; then
             RESTORE_FAILED=true
         fi
     fi
-    
+
     # InfluxDB health check
     if [[ "$SKIP_INFLUXDB" != "true" ]]; then
         if check_service_health "influxdb" "influxdb" "8086"; then
@@ -450,7 +450,7 @@ if [[ "$DRY_RUN" != "true" ]]; then
             RESTORE_FAILED=true
         fi
     fi
-    
+
     # Redis health check
     if [[ "$SKIP_REDIS" != "true" ]]; then
         if check_service_health "redis" "redis" "6379"; then

@@ -22,7 +22,7 @@ spec:
         factor: 2
         maxDuration: 3m
   revisionHistoryLimit: 10
-  
+
   # Production-specific sync windows
   syncWindows:
   - kind: deny
@@ -31,11 +31,11 @@ spec:
     applications:
     - grill-stats-core-services
     manualSync: false
-    
+
   # Production health checks
   health:
   - timeout: 300s
-    
+
   info:
   - name: Environment
     value: prod-lab
@@ -45,7 +45,7 @@ spec:
     value: "true"
   - name: Backup Strategy
     value: "Automated daily backups"
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -71,7 +71,7 @@ spec:
         factor: 2
         maxDuration: 10m
   revisionHistoryLimit: 20  # Keep more history for databases
-  
+
   # Production database sync windows
   syncWindows:
   - kind: deny
@@ -80,11 +80,11 @@ spec:
     applications:
     - grill-stats-databases
     manualSync: true
-    
+
   # Extended health checks for databases
   health:
   - timeout: 600s
-    
+
   info:
   - name: Environment
     value: prod-lab
@@ -96,7 +96,7 @@ spec:
     value: "Automated hourly backups with 30-day retention"
   - name: Disaster Recovery
     value: "Cross-region replication enabled"
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -121,7 +121,7 @@ spec:
         factor: 2
         maxDuration: 15m
   revisionHistoryLimit: 15
-  
+
   # Production secret sync windows
   syncWindows:
   - kind: allow
@@ -130,11 +130,11 @@ spec:
     applications:
     - grill-stats-secrets
     manualSync: true
-    
+
   # Extended health checks for secrets
   health:
   - timeout: 300s
-    
+
   info:
   - name: Environment
     value: prod-lab
@@ -144,7 +144,7 @@ spec:
     value: "1Password Connect with encryption at rest"
   - name: Rotation Policy
     value: "Automated secret rotation every 90 days"
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -169,11 +169,11 @@ spec:
         factor: 2
         maxDuration: 3m
   revisionHistoryLimit: 10
-  
+
   # Production monitoring health checks
   health:
   - timeout: 180s
-    
+
   info:
   - name: Environment
     value: prod-lab

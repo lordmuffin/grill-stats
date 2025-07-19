@@ -14,16 +14,16 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: main
     path: kustomize/base/core-services
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: grill-stats
-    
+
   syncPolicy:
     automated:
       prune: true
@@ -40,9 +40,9 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-        
+
   revisionHistoryLimit: 10
-  
+
   info:
   - name: Description
     value: ThermoWorks BBQ monitoring core microservices
@@ -50,7 +50,7 @@ spec:
     value: prod-lab
   - name: Services
     value: auth, device, temperature, historical, encryption, web-ui
-    
+
   # Ignore differences in dynamic fields
   ignoreDifferences:
   - group: 'apps'
@@ -69,7 +69,7 @@ spec:
     jsonPointers:
     - /status
     - /spec/metrics
-    
+
   # Custom health checks for microservices
   health:
     - group: 'apps'
@@ -92,7 +92,7 @@ spec:
         health_status.status = "Progressing"
         health_status.message = "Deployment is being updated"
         return health_status
-        
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -111,18 +111,18 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: develop
     path: kustomize/overlays/dev-lab
     directory:
       include: '{core-services,namespace}/**'
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: grill-stats-dev
-    
+
   syncPolicy:
     automated:
       prune: true
@@ -139,9 +139,9 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-        
+
   revisionHistoryLimit: 5
-  
+
   info:
   - name: Description
     value: Development core microservices
@@ -151,7 +151,7 @@ spec:
     value: auth, device, temperature, historical, encryption, web-ui
   - name: Configuration
     value: Development settings with lower resources
-    
+
   # Ignore differences in dynamic fields
   ignoreDifferences:
   - group: 'apps'
@@ -165,7 +165,7 @@ spec:
     jsonPointers:
     - /spec/clusterIP
     - /spec/clusterIPs
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -183,16 +183,16 @@ metadata:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: grill-stats
-  
+
   source:
     repoURL: https://github.com/lordmuffin/grill-stats.git
     targetRevision: main
     path: kustomize/base/ingress
-    
+
   destination:
     server: https://kubernetes.default.svc
     namespace: grill-stats
-    
+
   syncPolicy:
     automated:
       prune: true
@@ -208,9 +208,9 @@ spec:
         duration: 5s
         factor: 2
         maxDuration: 3m
-        
+
   revisionHistoryLimit: 10
-  
+
   info:
   - name: Description
     value: Ingress configuration and TLS certificates
@@ -218,7 +218,7 @@ spec:
     value: prod-lab
   - name: Components
     value: Traefik IngressRoute, Middleware, Certificates
-    
+
   # Ignore differences in certificate status
   ignoreDifferences:
   - group: 'cert-manager.io'

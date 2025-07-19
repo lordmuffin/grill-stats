@@ -28,15 +28,15 @@ run_test_suite() {
     local suite_name="$1"
     local test_command="$2"
     local description="$3"
-    
+
     TOTAL_TEST_SUITES=$((TOTAL_TEST_SUITES + 1))
-    
+
     echo -e "${BLUE}📋 Test Suite: $suite_name${NC}"
     echo "Description: $description"
     echo "Command: $test_command"
     echo "$(date): Starting $suite_name..." >> test-results.log
     echo ""
-    
+
     if eval "$test_command"; then
         echo -e "${GREEN}✅ $suite_name: PASSED${NC}"
         PASSED_TEST_SUITES=$((PASSED_TEST_SUITES + 1))
@@ -46,7 +46,7 @@ run_test_suite() {
         FAILED_TEST_SUITES=$((FAILED_TEST_SUITES + 1))
         echo "$(date): $suite_name FAILED" >> test-results.log
     fi
-    
+
     echo ""
     echo "=================================================="
     echo ""
@@ -55,19 +55,19 @@ run_test_suite() {
 # Cleanup function
 cleanup_all() {
     echo -e "${YELLOW}🧹 Cleaning up all test resources...${NC}"
-    
+
     # Stop and remove all test containers
     podman stop grill-stats-enhanced device-service-enhanced temperature-service-enhanced 2>/dev/null || true
     podman rm grill-stats-enhanced device-service-enhanced temperature-service-enhanced 2>/dev/null || true
-    
+
     # Clean up pod if it exists
     podman pod stop grill-stats-test-pod 2>/dev/null || true
     podman pod rm grill-stats-test-pod 2>/dev/null || true
-    
+
     # Clean up Docker Compose if running
     docker-compose -f docker-compose.enhanced.yml down 2>/dev/null || true
     podman-compose -f docker-compose.enhanced.yml down 2>/dev/null || true
-    
+
     echo "✅ Cleanup completed"
 }
 
@@ -90,7 +90,7 @@ echo "✅ All dependencies available"
 echo ""
 
 # Check if Python requests module is available
-python3 -c "import requests" 2>/dev/null || { 
+python3 -c "import requests" 2>/dev/null || {
     echo "⚠️ Python requests module not available, some tests may fail"
 }
 

@@ -122,39 +122,39 @@ data:
     # Sentinel configuration for Redis high availability
     port 26379
     bind 0.0.0.0
-    
+
     # Sentinel monitoring configuration
     sentinel monitor grill-stats-master redis-0.redis-service.grill-stats.svc.cluster.local 6379 2
     sentinel auth-pass grill-stats-master ${REDIS_PASSWORD}
     sentinel down-after-milliseconds grill-stats-master 5000
     sentinel parallel-syncs grill-stats-master 1
     sentinel failover-timeout grill-stats-master 10000
-    
+
     # Sentinel announcement - helps with service discovery
     sentinel announce-ip ${HOSTNAME}.redis-sentinel.grill-stats.svc.cluster.local
     sentinel announce-port 26379
-    
+
     # Sentinel logging
     logfile ""
     loglevel notice
-    
+
     # Sentinel configuration persistence
     dir /data
-    
+
     # Sentinel security
     protected-mode no  # Disabled for internal cluster communication
-    
+
     # Sentinel scripts (optional notification scripts)
     # sentinel notification-script grill-stats-master /path/to/notification-script.sh
     # sentinel client-reconfig-script grill-stats-master /path/to/reconfig-script.sh
-    
+
     # Sentinel performance tuning
     sentinel resolve-hostnames yes
     sentinel announce-hostnames yes
-    
+
     # Sentinel failover configuration
     sentinel deny-scripts-reconfig yes
-    
+
     # Additional monitoring settings
     sentinel master-reboot-down-after-period grill-stats-master 0
 ---

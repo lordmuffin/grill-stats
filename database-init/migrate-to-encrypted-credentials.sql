@@ -6,7 +6,7 @@
 
 -- Create a backup of existing credentials if they exist in the users table
 CREATE TABLE IF NOT EXISTS thermoworks_credentials_backup AS
-SELECT 
+SELECT
     id as user_id,
     email,
     thermoworks_access_token,
@@ -14,8 +14,8 @@ SELECT
     thermoworks_token_expires,
     created_at,
     updated_at
-FROM users 
-WHERE thermoworks_access_token IS NOT NULL 
+FROM users
+WHERE thermoworks_access_token IS NOT NULL
    OR thermoworks_refresh_token IS NOT NULL;
 
 -- Add a comment to the backup table
@@ -30,34 +30,34 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         'users_with_thermoworks_tokens'::TEXT,
         COUNT(*)::BIGINT,
         'Users with ThermoWorks tokens in users table'::TEXT
-    FROM users 
-    WHERE thermoworks_access_token IS NOT NULL 
+    FROM users
+    WHERE thermoworks_access_token IS NOT NULL
        OR thermoworks_refresh_token IS NOT NULL
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'encrypted_credentials_count'::TEXT,
         COUNT(*)::BIGINT,
         'Encrypted credentials in thermoworks_credentials table'::TEXT
     FROM thermoworks_credentials
     WHERE is_active = TRUE
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'backup_records_count'::TEXT,
         COUNT(*)::BIGINT,
         'Records in backup table'::TEXT
     FROM thermoworks_credentials_backup
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'total_users_count'::TEXT,
         COUNT(*)::BIGINT,
         'Total users in system'::TEXT
@@ -78,22 +78,22 @@ BEGIN
     ) THEN
         RETURN FALSE;
     END IF;
-    
+
     -- Check if algorithm is valid
     IF (metadata_json->>'algorithm') NOT IN ('aes256-gcm96') THEN
         RETURN FALSE;
     END IF;
-    
+
     -- Check if key_version is a positive integer
     IF NOT (metadata_json->>'key_version')::INTEGER > 0 THEN
         RETURN FALSE;
     END IF;
-    
+
     -- Check if access_count is a non-negative integer
     IF NOT (metadata_json->>'access_count')::INTEGER >= 0 THEN
         RETURN FALSE;
     END IF;
-    
+
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
@@ -116,9 +116,9 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         tc.user_id,
-        CASE 
+        CASE
             WHEN NOT is_credential_encrypted(tc.encrypted_email) THEN 'INVALID_EMAIL_ENCRYPTION'
             WHEN NOT is_credential_encrypted(tc.encrypted_password) THEN 'INVALID_PASSWORD_ENCRYPTION'
             WHEN NOT validate_encryption_metadata(tc.encryption_metadata) THEN 'INVALID_METADATA'
@@ -126,7 +126,7 @@ BEGIN
             WHEN tc.encrypted_password IS NULL OR tc.encrypted_password = '' THEN 'MISSING_PASSWORD'
             ELSE 'VALID'
         END,
-        CASE 
+        CASE
             WHEN NOT is_credential_encrypted(tc.encrypted_email) THEN 'Email is not properly encrypted with Vault'
             WHEN NOT is_credential_encrypted(tc.encrypted_password) THEN 'Password is not properly encrypted with Vault'
             WHEN NOT validate_encryption_metadata(tc.encryption_metadata) THEN 'Encryption metadata is invalid or incomplete'
@@ -174,7 +174,7 @@ CREATE TABLE IF NOT EXISTS credential_access_log (
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ip_address TEXT,
-    
+
     -- Index for querying
     CONSTRAINT chk_action CHECK (action IN ('encrypt', 'decrypt', 'rotate', 'validate', 'delete'))
 );
@@ -190,11 +190,11 @@ RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM credential_access_log 
+    DELETE FROM credential_access_log
     WHERE timestamp < NOW() - INTERVAL '1 day' * retention_days;
-    
+
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    
+
     RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -217,7 +217,7 @@ CREATE TRIGGER trigger_thermoworks_credentials_updated_at
 
 -- Create a view for encrypted credential statistics
 CREATE OR REPLACE VIEW encrypted_credential_stats AS
-SELECT 
+SELECT
     COUNT(*) as total_credentials,
     COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_credentials,
     COUNT(CASE WHEN is_active = FALSE THEN 1 END) as inactive_credentials,

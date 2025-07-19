@@ -86,7 +86,7 @@ services:
 
   # Application services with proper dependencies
   device-service:
-    build: 
+    build:
       context: ./services/device-service
       dockerfile: Dockerfile
     ports:
@@ -114,7 +114,7 @@ services:
       - grill-stats
 
   temperature-service:
-    build: 
+    build:
       context: ./services/temperature-service
       dockerfile: Dockerfile
     ports:
@@ -147,7 +147,7 @@ services:
       - grill-stats
 
   historical-data-service:
-    build: 
+    build:
       context: ./services/historical-data-service
       dockerfile: Dockerfile
     ports:
@@ -211,27 +211,27 @@ services:
       sh -c "
         echo '🧪 Starting Comprehensive Service Testing...'
         echo '============================================='
-        
+
         echo '📡 Testing Device Service...'
         curl -f http://device-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
-        
+
         echo '🌡️  Testing Temperature Service...'
         curl -f http://temperature-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
-        
+
         echo '📊 Testing Historical Data Service...'
         curl -f http://historical-data-service:8080/health -w '\n  Status: %{http_code}, Time: %{time_total}s\n'
-        
+
         echo '🔍 Testing API Endpoints...'
         curl -f http://device-service:8080/api/devices -w '\n  Devices API Status: %{http_code}\n'
-        
+
         echo '✅ All core services healthy!'
-        
+
         echo '📊 Service Health Summary:'
         echo '=========================='
         curl -s http://device-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Device Service: ❌'
         curl -s http://temperature-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Temperature Service: ❌'
         curl -s http://historical-data-service:8080/health | grep -o '\"overall_status\":\"[^\"]*\"' || echo 'Historical Data Service: ❌'
-        
+
         echo '🎉 Comprehensive testing complete!'
       "
     networks:
@@ -252,7 +252,7 @@ services:
     volumes:
       - ./tests/api:/etc/newman
     command: |
-      run /etc/newman/grill-stats-api-tests.json 
+      run /etc/newman/grill-stats-api-tests.json
       --environment /etc/newman/test-environment.json
       --reporters cli,json
       --reporter-json-export /etc/newman/results.json

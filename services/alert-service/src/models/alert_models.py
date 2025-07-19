@@ -1,8 +1,19 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field, validator
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, ForeignKey, Float
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -35,7 +46,7 @@ class NotificationChannelType(str, Enum):
 
 class AlertRule(Base):
     __tablename__ = "alert_rules"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
@@ -44,14 +55,14 @@ class AlertRule(Base):
     enabled = Column(Boolean, default=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     alerts = relationship("Alert", back_populates="rule")
 
 
 class Alert(Base):
     __tablename__ = "alerts"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     rule_id = Column(Integer, ForeignKey("alert_rules.id"), nullable=False)
     fingerprint = Column(String(255), unique=True, nullable=False)
@@ -70,7 +81,7 @@ class Alert(Base):
     resolved_by = Column(String(255))
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    
+
     # Relationships
     rule = relationship("AlertRule", back_populates="alerts")
     events = relationship("AlertEvent", back_populates="alert")
@@ -79,35 +90,37 @@ class Alert(Base):
 
 class AlertEvent(Base):
     __tablename__ = "alert_events"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=False)
-    event_type = Column(String(50), nullable=False)  # created, updated, acknowledged, resolved
+    event_type = Column(
+        String(50), nullable=False
+    )  # created, updated, acknowledged, resolved
     event_data = Column(JSON)
     timestamp = Column(DateTime, default=datetime.utcnow)
     user_id = Column(String(255))
-    
+
     # Relationships
     alert = relationship("Alert", back_populates="events")
 
 
 class AlertCorrelation(Base):
     __tablename__ = "alert_correlations"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=False)
     correlation_id = Column(String(255), nullable=False)
     correlation_type = Column(String(50), nullable=False)  # temporal, spatial, causal
     confidence_score = Column(Float, nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
-    
+
     # Relationships
     alert = relationship("Alert", back_populates="correlations")
 
 
 class NotificationChannel(Base):
     __tablename__ = "notification_channels"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     type = Column(String(50), nullable=False)
@@ -119,7 +132,7 @@ class NotificationChannel(Base):
 
 class EscalationPolicy(Base):
     __tablename__ = "escalation_policies"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     description = Column(Text)
@@ -137,11 +150,11 @@ class AlertRuleCreate(BaseModel):
     severity: AlertSeverity
     enabled: bool = True
 
-    @validator('condition')
+    @validator("condition")
     def validate_condition(cls, v):
-        required_fields = ['metric', 'operator', 'threshold']
+        required_fields = ["metric", "operator", "threshold"]
         if not all(field in v for field in required_fields):
-            raise ValueError('Condition must contain metric, operator, and threshold')
+            raise ValueError("Condition must contain metric, operator, and threshold")
         return v
 
 
@@ -199,22 +212,30 @@ class NotificationChannelCreate(BaseModel):
     configuration: Dict[str, Any]
     enabled: bool = True
 
-    @validator('configuration')
+    @validator("configuration")
     def validate_configuration(cls, v, values):
-        channel_type = values.get('type')
+        channel_type = values.get("type")
         if channel_type == NotificationChannelType.EMAIL:
-            required_fields = ['smtp_server', 'smtp_port', 'username', 'password', 'recipients']
+            required_fields = [
+                "smtp_server",
+                "smtp_port",
+                "username",
+                "password",
+                "recipients",
+            ]
         elif channel_type == NotificationChannelType.SMS:
-            required_fields = ['provider', 'api_key', 'from_number', 'to_numbers']
+            required_fields = ["provider", "api_key", "from_number", "to_numbers"]
         elif channel_type == NotificationChannelType.PUSH:
-            required_fields = ['provider', 'api_key', 'app_id']
+            required_fields = ["provider", "api_key", "app_id"]
         elif channel_type == NotificationChannelType.WEBHOOK:
-            required_fields = ['url', 'method']
+            required_fields = ["url", "method"]
         else:
             required_fields = []
-        
+
         if not all(field in v for field in required_fields):
-            raise ValueError(f'Configuration for {channel_type} must contain: {required_fields}')
+            raise ValueError(
+                f"Configuration for {channel_type} must contain: {required_fields}"
+            )
         return v
 
 
@@ -224,11 +245,13 @@ class EscalationPolicyCreate(BaseModel):
     rules: List[Dict[str, Any]]
     enabled: bool = True
 
-    @validator('rules')
+    @validator("rules")
     def validate_rules(cls, v):
         for rule in v:
-            if not all(field in rule for field in ['delay_minutes', 'channels']):
-                raise ValueError('Each escalation rule must contain delay_minutes and channels')
+            if not all(field in rule for field in ["delay_minutes", "channels"]):
+                raise ValueError(
+                    "Each escalation rule must contain delay_minutes and channels"
+                )
         return v
 
 
@@ -238,8 +261,8 @@ class AlertCorrelationCreate(BaseModel):
     correlation_type: str
     confidence_score: float
 
-    @validator('confidence_score')
+    @validator("confidence_score")
     def validate_confidence_score(cls, v):
         if not 0 <= v <= 1:
-            raise ValueError('Confidence score must be between 0 and 1')
+            raise ValueError("Confidence score must be between 0 and 1")
         return v

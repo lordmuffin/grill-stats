@@ -16,40 +16,40 @@ CREATE TABLE IF NOT EXISTS temperature_alerts (
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     device_id VARCHAR(100) NOT NULL,
     probe_id VARCHAR(100) NOT NULL,
-    
+
     -- Alert configuration
     target_temperature DECIMAL(5,2),           -- For target alerts
     min_temperature DECIMAL(5,2),              -- For range alerts
-    max_temperature DECIMAL(5,2),              -- For range alerts  
+    max_temperature DECIMAL(5,2),              -- For range alerts
     threshold_value DECIMAL(5,2),              -- For rising/falling alerts
-    
+
     alert_type alert_type_enum NOT NULL DEFAULT 'target',
     temperature_unit VARCHAR(1) DEFAULT 'F',   -- F or C
-    
+
     -- Alert state
     is_active BOOLEAN DEFAULT true,
     triggered_at TIMESTAMP,
     last_checked_at TIMESTAMP,
     last_temperature DECIMAL(5,2),             -- Track last known temperature
     notification_sent BOOLEAN DEFAULT false,
-    
+
     -- Metadata
     name VARCHAR(100),                          -- User-friendly alert name
     description VARCHAR(255),                   -- Optional description
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW(),
-    
+
     -- Constraints
     CONSTRAINT valid_target_temp CHECK (
-        (alert_type = 'target' AND target_temperature IS NOT NULL) OR 
+        (alert_type = 'target' AND target_temperature IS NOT NULL) OR
         alert_type != 'target'
     ),
     CONSTRAINT valid_range_temps CHECK (
-        (alert_type = 'range' AND min_temperature IS NOT NULL AND max_temperature IS NOT NULL AND min_temperature < max_temperature) OR 
+        (alert_type = 'range' AND min_temperature IS NOT NULL AND max_temperature IS NOT NULL AND min_temperature < max_temperature) OR
         alert_type != 'range'
     ),
     CONSTRAINT valid_threshold CHECK (
-        (alert_type IN ('rising', 'falling') AND threshold_value IS NOT NULL AND threshold_value > 0) OR 
+        (alert_type IN ('rising', 'falling') AND threshold_value IS NOT NULL AND threshold_value > 0) OR
         alert_type NOT IN ('rising', 'falling')
     ),
     CONSTRAINT valid_temp_unit CHECK (temperature_unit IN ('F', 'C'))
@@ -83,7 +83,7 @@ DECLARE
 BEGIN
     -- Check if we have any users to create sample alerts for
     SELECT id INTO sample_user_id FROM users LIMIT 1;
-    
+
     IF sample_user_id IS NOT NULL THEN
         -- Sample target temperature alert
         INSERT INTO temperature_alerts (
@@ -93,7 +93,7 @@ BEGIN
             sample_user_id, 'sample_device_1', 'probe_1', 'Grill Ready Alert',
             'Alert when grill reaches target temperature', 'target', 350.0, 'F'
         ) ON CONFLICT DO NOTHING;
-        
+
         -- Sample range alert
         INSERT INTO temperature_alerts (
             user_id, device_id, probe_id, name, description,
@@ -102,7 +102,7 @@ BEGIN
             sample_user_id, 'sample_device_1', 'probe_2', 'Safe Range Alert',
             'Alert when temperature goes outside safe range', 'range', 225.0, 275.0, 'F'
         ) ON CONFLICT DO NOTHING;
-        
+
         -- Sample rising alert
         INSERT INTO temperature_alerts (
             user_id, device_id, probe_id, name, description,
@@ -117,12 +117,12 @@ END $$;
 COMMIT;
 
 -- Verify the table was created successfully
-SELECT 
+SELECT
     table_name,
     column_name,
     data_type,
     is_nullable,
     column_default
-FROM information_schema.columns 
+FROM information_schema.columns
 WHERE table_name = 'temperature_alerts'
 ORDER BY ordinal_position;

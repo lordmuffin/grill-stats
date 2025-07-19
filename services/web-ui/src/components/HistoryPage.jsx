@@ -46,7 +46,7 @@ const HistoryPage = () => {
             }
 
             const data = await response.json();
-            
+
             if (data.success) {
                 setSessions(data.data.sessions);
                 setTotalPages(Math.ceil(data.data.count / SESSIONS_PER_PAGE));
@@ -74,11 +74,11 @@ const HistoryPage = () => {
             });
 
             const data = await response.json();
-            
+
             if (data.success) {
                 // Update local state
-                setSessions(prev => prev.map(session => 
-                    session.id === sessionId 
+                setSessions(prev => prev.map(session =>
+                    session.id === sessionId
                         ? { ...session, name: data.data.name }
                         : session
                 ));
@@ -96,10 +96,10 @@ const HistoryPage = () => {
     // Format duration in minutes to human readable
     const formatDuration = (minutes) => {
         if (!minutes || minutes < 0) return '0 min';
-        
+
         const hours = Math.floor(minutes / 60);
         const mins = minutes % 60;
-        
+
         if (hours > 0) {
             return `${hours}h ${mins}m`;
         }
@@ -115,7 +115,7 @@ const HistoryPage = () => {
     // Format date/time
     const formatDateTime = (dateString) => {
         if (!dateString) return 'N/A';
-        
+
         const date = new Date(dateString);
         return new Intl.DateTimeFormat('en-US', {
             month: 'short',
@@ -144,12 +144,12 @@ const HistoryPage = () => {
     // Filter and sort sessions
     const getFilteredAndSortedSessions = () => {
         let filtered = sessions.filter(session => {
-            const matchesSearch = !searchTerm || 
+            const matchesSearch = !searchTerm ||
                 (session.name && session.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
                 (session.session_type && session.session_type.toLowerCase().includes(searchTerm.toLowerCase()));
-            
+
             const matchesFilter = !filterStatus || session.status === filterStatus;
-            
+
             return matchesSearch && matchesFilter;
         });
 
@@ -287,7 +287,7 @@ const HistoryPage = () => {
                     <div className="empty-state-icon">🔥</div>
                     <h3>No grilling sessions found</h3>
                     <p>
-                        {sessions.length === 0 
+                        {sessions.length === 0
                             ? "Start grilling to see your session history here!"
                             : "Try adjusting your search or filter criteria."
                         }
@@ -299,8 +299,8 @@ const HistoryPage = () => {
                         <table className="sessions-table">
                             <thead>
                                 <tr>
-                                    <th 
-                                        onClick={() => handleSort('name')} 
+                                    <th
+                                        onClick={() => handleSort('name')}
                                         className={sortBy === 'name' ? 'sortable active' : 'sortable'}
                                     >
                                         Session Name
@@ -310,8 +310,8 @@ const HistoryPage = () => {
                                             </span>
                                         )}
                                     </th>
-                                    <th 
-                                        onClick={() => handleSort('start_time')} 
+                                    <th
+                                        onClick={() => handleSort('start_time')}
                                         className={sortBy === 'start_time' ? 'sortable active' : 'sortable'}
                                     >
                                         Start Time
@@ -321,8 +321,8 @@ const HistoryPage = () => {
                                             </span>
                                         )}
                                     </th>
-                                    <th 
-                                        onClick={() => handleSort('duration_minutes')} 
+                                    <th
+                                        onClick={() => handleSort('duration_minutes')}
                                         className={sortBy === 'duration_minutes' ? 'sortable active' : 'sortable'}
                                     >
                                         Duration
@@ -332,8 +332,8 @@ const HistoryPage = () => {
                                             </span>
                                         )}
                                     </th>
-                                    <th 
-                                        onClick={() => handleSort('max_temperature')} 
+                                    <th
+                                        onClick={() => handleSort('max_temperature')}
                                         className={sortBy === 'max_temperature' ? 'sortable active' : 'sortable'}
                                     >
                                         Max Temp
@@ -343,8 +343,8 @@ const HistoryPage = () => {
                                             </span>
                                         )}
                                     </th>
-                                    <th 
-                                        onClick={() => handleSort('session_type')} 
+                                    <th
+                                        onClick={() => handleSort('session_type')}
                                         className={sortBy === 'session_type' ? 'sortable active' : 'sortable'}
                                     >
                                         Type
@@ -354,8 +354,8 @@ const HistoryPage = () => {
                                             </span>
                                         )}
                                     </th>
-                                    <th 
-                                        onClick={() => handleSort('status')} 
+                                    <th
+                                        onClick={() => handleSort('status')}
                                         className={sortBy === 'status' ? 'sortable active' : 'sortable'}
                                     >
                                         Status
@@ -389,14 +389,14 @@ const HistoryPage = () => {
                                                         autoFocus
                                                     />
                                                     <div className="edit-actions">
-                                                        <button 
+                                                        <button
                                                             onClick={() => handleSaveSessionName(session.id)}
                                                             className="save-button"
                                                             title="Save"
                                                         >
                                                             ✓
                                                         </button>
-                                                        <button 
+                                                        <button
                                                             onClick={handleCancelEdit}
                                                             className="cancel-button"
                                                             title="Cancel"
@@ -408,7 +408,7 @@ const HistoryPage = () => {
                                             ) : (
                                                 <div className="session-name">
                                                     <span>{session.name || 'Unnamed Session'}</span>
-                                                    <button 
+                                                    <button
                                                         onClick={() => handleEditSessionName(session)}
                                                         className="edit-name-button"
                                                         title="Edit name"
@@ -422,7 +422,7 @@ const HistoryPage = () => {
                                             {formatDateTime(session.start_time)}
                                         </td>
                                         <td className="duration-cell">
-                                            {session.status === 'active' 
+                                            {session.status === 'active'
                                                 ? formatDuration(session.current_duration)
                                                 : formatDuration(session.duration_minutes)
                                             }
@@ -441,7 +441,7 @@ const HistoryPage = () => {
                                             </span>
                                         </td>
                                         <td className="actions-cell">
-                                            <button 
+                                            <button
                                                 className="view-details-button"
                                                 title="View details (coming soon)"
                                                 disabled
@@ -457,19 +457,19 @@ const HistoryPage = () => {
 
                     {totalPages > 1 && (
                         <div className="pagination">
-                            <button 
+                            <button
                                 onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                                 disabled={currentPage === 1}
                                 className="pagination-button"
                             >
                                 Previous
                             </button>
-                            
+
                             <span className="pagination-info">
                                 Page {currentPage} of {totalPages}
                             </span>
-                            
-                            <button 
+
+                            <button
                                 onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                                 disabled={currentPage === totalPages}
                                 className="pagination-button"

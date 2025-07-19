@@ -290,7 +290,7 @@ Mock mode is automatically disabled in production:
 ```python
 # In config.py
 MOCK_MODE = (
-    os.getenv('MOCK_MODE', 'false').lower() in ['true', '1', 'yes', 'on'] 
+    os.getenv('MOCK_MODE', 'false').lower() in ['true', '1', 'yes', 'on']
     and os.getenv('FLASK_ENV', 'production') != 'production'
 )
 ```
@@ -405,7 +405,7 @@ def _simulate_temperature_change(self, probe_data: Dict[str, Any]) -> float:
     """Customize temperature simulation patterns"""
     probe_type = probe_data.get('type', 'ambient')
     current_temp = probe_data.get('current_temp', 70.0)
-    
+
     if probe_type == 'food':
         # Custom food probe simulation logic
         target_temp = 203.0  # Brisket target
@@ -414,7 +414,7 @@ def _simulate_temperature_change(self, probe_data: Dict[str, Any]) -> float:
             change = calculate_custom_food_change(current_temp, target_temp)
         else:
             change = random.uniform(-1.0, 1.0)
-    
+
     return current_temp + change
 ```
 
@@ -428,11 +428,11 @@ def test_device_list_with_mock_data():
     """Test that device list endpoint works with mock data"""
     app.config['TESTING'] = True
     os.environ['MOCK_MODE'] = 'true'
-    
+
     with app.test_client() as client:
         response = client.get('/devices')
         assert response.status_code == 200
-        
+
         data = response.get_json()
         assert len(data) == 4  # Expected number of mock devices
         assert all(device['device_id'].startswith(('mock-', 'test-', 'fake-')) for device in data)

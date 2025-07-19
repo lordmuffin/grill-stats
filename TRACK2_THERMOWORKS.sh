@@ -1,7 +1,7 @@
 #!/bin/bash
 # =======================================================================
 # ThermoWorks Integration Test Script
-# 
+#
 # Purpose: Verify ThermoWorks API integration, authentication, and data
 # Environment: Production - grill-stats.lab.apj.dev
 # =======================================================================
@@ -35,14 +35,14 @@ check_status() {
 
 login() {
   log "Attempting login with $TEST_EMAIL..."
-  
+
   LOGIN_RESPONSE=$(curl -s -X POST "$API_BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
-  
+
   # Extract token from response
   AUTH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
-  
+
   if [[ "$AUTH_TOKEN" == "null" || -z "$AUTH_TOKEN" ]]; then
     log "❌ Login failed. Response: $LOGIN_RESPONSE"
     return 1
@@ -75,7 +75,7 @@ if [[ $(echo $DEVICES_RESPONSE | jq 'type') == "array" ]]; then
   log "✅ ThermoWorks API key is valid (able to fetch devices)"
   DEVICE_COUNT=$(echo $DEVICES_RESPONSE | jq '. | length')
   log "  Found $DEVICE_COUNT devices"
-  
+
   # Store first device ID for subsequent tests
   if [[ $DEVICE_COUNT -gt 0 ]]; then
     TEST_DEVICE_ID=$(echo $DEVICES_RESPONSE | jq -r '.[0].id')
@@ -113,15 +113,15 @@ if [[ $DEVICE_COUNT -gt 0 ]]; then
     DEVICE_NAME=$(echo $device | jq -r '.name')
     DEVICE_MODEL=$(echo $device | jq -r '.model // "Unknown"')
     FIRMWARE=$(echo $device | jq -r '.firmware_version // "Unknown"')
-    
+
     log "Device: $DEVICE_NAME (ID: $DEVICE_ID)"
     log "  Model: $DEVICE_MODEL"
     log "  Firmware: $FIRMWARE"
-    
+
     # Get temperature data to verify probe details
     if [[ -n "$DEVICE_ID" ]]; then
       TEMP_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices/$DEVICE_ID/temperature")
-      
+
       # Check if we got valid temperature data
       if [[ $(echo $TEMP_RESPONSE | jq 'has("temperature")') == "true" ]]; then
         log "  ✅ Successfully retrieved temperature data"
@@ -144,20 +144,20 @@ log "\n--- Test 4: Multi-Probe Support ---"
 if [[ -n "$TEST_DEVICE_ID" ]]; then
   # Try to get probe-specific data if available
   DEVICE_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices/$TEST_DEVICE_ID/temperature")
-  
+
   # Check if there are multiple probes (look for probe_id field or array of probes)
   PROBE_IDS=$(echo $DEVICE_RESPONSE | jq -r '.probes[].id' 2>/dev/null)
-  
+
   if [[ -n "$PROBE_IDS" ]]; then
     log "✅ Device has multiple probes"
     log "Probe IDs: $PROBE_IDS"
-    
+
     # Test each probe
     echo $DEVICE_RESPONSE | jq -c '.probes[]' | while read -r probe; do
       PROBE_ID=$(echo $probe | jq -r '.id')
       PROBE_TYPE=$(echo $probe | jq -r '.type // "Unknown"')
       PROBE_TEMP=$(echo $probe | jq -r '.temperature')
-      
+
       log "  Probe $PROBE_ID ($PROBE_TYPE): $PROBE_TEMP°$(echo $DEVICE_RESPONSE | jq -r '.unit // "F"')"
     done
   else
@@ -179,12 +179,12 @@ for i in {1..3}; do
   START_TIME=$(date +%s.%N)
   curl -s -o /dev/null -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices"
   END_TIME=$(date +%s.%N)
-  
+
   # Calculate execution time
   EXEC_TIME=$(echo "$END_TIME - $START_TIME" | bc)
-  
+
   log "  Request $i completed in ${EXEC_TIME}s"
-  
+
   # Wait briefly between requests
   sleep 2
 done
@@ -216,7 +216,7 @@ fi
 # Test immediately after to verify system recovers
 if [[ -n "$TEST_DEVICE_ID" ]]; then
   RECOVERY_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices/$TEST_DEVICE_ID/temperature")
-  
+
   if [[ $(echo $RECOVERY_RESPONSE | jq 'has("temperature")') == "true" ]]; then
     log "✅ System successfully recovered after error"
     log "  Temperature: $(echo $RECOVERY_RESPONSE | jq -r '.temperature')°$(echo $RECOVERY_RESPONSE | jq -r '.unit // "F"')"
@@ -232,57 +232,57 @@ if [[ -n "$TEST_DEVICE_ID" ]]; then
   # Get historical data to check for validation
   START_TIME=$(date -u -d "24 hours ago" +"%Y-%m-%dT%H:%M:%S")
   END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
-  
+
   HISTORY_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
     "$API_BASE_URL/devices/$TEST_DEVICE_ID/history?start=$START_TIME&end=$END_TIME")
-  
+
   if [[ $(echo $HISTORY_RESPONSE | jq 'type') == "array" ]]; then
     POINTS_COUNT=$(echo $HISTORY_RESPONSE | jq '. | length')
     log "Retrieved $POINTS_COUNT historical data points"
-    
+
     # Check for obviously invalid readings (negative temps, extremely high temps)
     INVALID_COUNT=$(echo $HISTORY_RESPONSE | jq '[.[] | select(.temperature < -20 or .temperature > 1000)] | length')
-    
+
     if [[ $INVALID_COUNT -eq 0 ]]; then
       log "✅ No obviously invalid temperature readings detected"
     else
       log "⚠️ Found $INVALID_COUNT potentially invalid temperature readings"
     fi
-    
+
     # Check for data gaps
     if [[ $POINTS_COUNT -gt 1 ]]; then
       # Extract timestamps
       TIMESTAMPS_FILE="/tmp/timestamps.txt"
       echo $HISTORY_RESPONSE | jq -r '.[].timestamp' > $TIMESTAMPS_FILE
-      
+
       # Calculate average gap between readings in minutes
       PREV_TS=""
       SUM_GAPS=0
       COUNT_GAPS=0
-      
+
       while read TS; do
         if [[ -n "$PREV_TS" ]]; then
           TS_SEC=$(date -d "$TS" +%s)
           PREV_TS_SEC=$(date -d "$PREV_TS" +%s)
           GAP_MIN=$(( (TS_SEC - PREV_TS_SEC) / 60 ))
-          
+
           SUM_GAPS=$((SUM_GAPS + GAP_MIN))
           COUNT_GAPS=$((COUNT_GAPS + 1))
         fi
         PREV_TS=$TS
       done < $TIMESTAMPS_FILE
-      
+
       if [[ $COUNT_GAPS -gt 0 ]]; then
         AVG_GAP=$((SUM_GAPS / COUNT_GAPS))
         log "Average gap between readings: ${AVG_GAP} minutes"
-        
+
         if [[ $AVG_GAP -le 10 ]]; then
           log "✅ Polling frequency appears adequate (avg. ${AVG_GAP} min)"
         else
           log "⚠️ Polling frequency may be too low (avg. ${AVG_GAP} min)"
         fi
       fi
-      
+
       rm $TIMESTAMPS_FILE
     fi
   else
@@ -299,10 +299,10 @@ log "\n--- Test 8: Disconnected Probe Detection ---"
 
 if [[ -n "$TEST_DEVICE_ID" ]]; then
   DEVICE_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices/$TEST_DEVICE_ID/temperature")
-  
+
   # Check for status field or other error indicators
   CONNECTION_STATUS=$(echo $DEVICE_RESPONSE | jq -r '.status // .connection_status // "unknown"')
-  
+
   if [[ "$CONNECTION_STATUS" == "connected" || "$CONNECTION_STATUS" == "online" ]]; then
     log "✅ Device connection status tracking is functional"
     log "  Current status: $CONNECTION_STATUS"
@@ -311,10 +311,10 @@ if [[ -n "$TEST_DEVICE_ID" ]]; then
   else
     log "⚠️ Cannot determine if disconnection detection is supported"
   fi
-  
+
   # Check if temperature is null or an error value
   TEMP_VALUE=$(echo $DEVICE_RESPONSE | jq -r '.temperature')
-  
+
   if [[ "$TEMP_VALUE" == "null" || "$TEMP_VALUE" == "" ]]; then
     log "⚠️ Temperature reading is null - possible disconnected probe"
   fi

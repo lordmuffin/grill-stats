@@ -24,7 +24,7 @@ configMapGenerator:
       - scripts/influxdb-backup.sh
       - scripts/redis-backup.sh
       - scripts/verify-backups.sh
-  
+
   - name: recovery-scripts
     files:
       - scripts/postgresql-restore.sh

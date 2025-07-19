@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import './SetAlertForm.css';
 
-const SetAlertForm = ({ 
-    deviceId, 
-    probeId, 
-    deviceName, 
+const SetAlertForm = ({
+    deviceId,
+    probeId,
+    deviceName,
     probeName,
     existingAlert = null,
     onSave,
@@ -21,7 +21,7 @@ const SetAlertForm = ({
         threshold_value: '',
         temperature_unit: 'F'
     });
-    
+
     const [alertTypes, setAlertTypes] = useState([]);
     const [errors, setErrors] = useState({});
     const [loading, setLoading] = useState(false);
@@ -35,7 +35,7 @@ const SetAlertForm = ({
                     credentials: 'include'
                 });
                 const data = await response.json();
-                
+
                 if (data.success) {
                     setAlertTypes(data.data.alert_types);
                 }
@@ -43,7 +43,7 @@ const SetAlertForm = ({
                 console.error('Error fetching alert types:', error);
             }
         };
-        
+
         fetchAlertTypes();
     }, []);
 
@@ -75,7 +75,7 @@ const SetAlertForm = ({
             ...prev,
             [name]: value
         }));
-        
+
         // Clear error for this field
         if (errors[name]) {
             setErrors(prev => ({
@@ -87,18 +87,18 @@ const SetAlertForm = ({
 
     const validateForm = () => {
         const newErrors = {};
-        
+
         if (!formData.name.trim()) {
             newErrors.name = 'Alert name is required';
         }
-        
+
         switch (formData.alert_type) {
             case 'target':
                 if (!formData.target_temperature || isNaN(formData.target_temperature)) {
                     newErrors.target_temperature = 'Valid target temperature is required';
                 }
                 break;
-                
+
             case 'range':
                 if (!formData.min_temperature || isNaN(formData.min_temperature)) {
                     newErrors.min_temperature = 'Valid minimum temperature is required';
@@ -106,34 +106,34 @@ const SetAlertForm = ({
                 if (!formData.max_temperature || isNaN(formData.max_temperature)) {
                     newErrors.max_temperature = 'Valid maximum temperature is required';
                 }
-                if (formData.min_temperature && formData.max_temperature && 
+                if (formData.min_temperature && formData.max_temperature &&
                     parseFloat(formData.min_temperature) >= parseFloat(formData.max_temperature)) {
                     newErrors.max_temperature = 'Maximum must be greater than minimum';
                 }
                 break;
-                
+
             case 'rising':
             case 'falling':
-                if (!formData.threshold_value || isNaN(formData.threshold_value) || 
+                if (!formData.threshold_value || isNaN(formData.threshold_value) ||
                     parseFloat(formData.threshold_value) <= 0) {
                     newErrors.threshold_value = 'Valid positive threshold value is required';
                 }
                 break;
         }
-        
+
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        
+
         if (!validateForm()) {
             return;
         }
-        
+
         setSaving(true);
-        
+
         try {
             const alertData = {
                 device_id: deviceId,
@@ -145,7 +145,7 @@ const SetAlertForm = ({
                 max_temperature: formData.max_temperature ? parseFloat(formData.max_temperature) : null,
                 threshold_value: formData.threshold_value ? parseFloat(formData.threshold_value) : null
             };
-            
+
             let response;
             if (existingAlert) {
                 // Update existing alert
@@ -168,9 +168,9 @@ const SetAlertForm = ({
                     body: JSON.stringify(alertData)
                 });
             }
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 onSave && onSave(data.data);
             } else {
@@ -192,17 +192,17 @@ const SetAlertForm = ({
         if (!existingAlert || !window.confirm('Are you sure you want to delete this alert?')) {
             return;
         }
-        
+
         setSaving(true);
-        
+
         try {
             const response = await fetch(`/api/alerts/${existingAlert.id}`, {
                 method: 'DELETE',
                 credentials: 'include'
             });
-            
+
             const data = await response.json();
-            
+
             if (data.success) {
                 onDelete && onDelete(existingAlert.id);
             } else {
@@ -226,14 +226,14 @@ const SetAlertForm = ({
                     {deviceName || deviceId} - {probeName || probeId}
                 </p>
             </div>
-            
+
             <form onSubmit={handleSubmit} className="alert-form">
                 {errors.general && (
                     <div className="alert-form-error general-error">
                         {errors.general}
                     </div>
                 )}
-                
+
                 <div className="form-group">
                     <label htmlFor="name">Alert Name *</label>
                     <input
@@ -247,7 +247,7 @@ const SetAlertForm = ({
                     />
                     {errors.name && <div className="field-error">{errors.name}</div>}
                 </div>
-                
+
                 <div className="form-group">
                     <label htmlFor="description">Description</label>
                     <textarea
@@ -259,7 +259,7 @@ const SetAlertForm = ({
                         rows="2"
                     />
                 </div>
-                
+
                 <div className="form-group">
                     <label htmlFor="alert_type">Alert Type *</label>
                     <select
@@ -281,7 +281,7 @@ const SetAlertForm = ({
                         </div>
                     )}
                 </div>
-                
+
                 <div className="temperature-inputs">
                     {formData.alert_type === 'target' && (
                         <div className="form-group">
@@ -304,7 +304,7 @@ const SetAlertForm = ({
                             )}
                         </div>
                     )}
-                    
+
                     {formData.alert_type === 'range' && (
                         <>
                             <div className="form-group">
@@ -326,7 +326,7 @@ const SetAlertForm = ({
                                     <div className="field-error">{errors.min_temperature}</div>
                                 )}
                             </div>
-                            
+
                             <div className="form-group">
                                 <label htmlFor="max_temperature">Maximum Temperature *</label>
                                 <div className="temperature-input-group">
@@ -348,7 +348,7 @@ const SetAlertForm = ({
                             </div>
                         </>
                     )}
-                    
+
                     {(formData.alert_type === 'rising' || formData.alert_type === 'falling') && (
                         <div className="form-group">
                             <label htmlFor="threshold_value">
@@ -374,7 +374,7 @@ const SetAlertForm = ({
                         </div>
                     )}
                 </div>
-                
+
                 <div className="form-group">
                     <label htmlFor="temperature_unit">Temperature Unit</label>
                     <select
@@ -387,7 +387,7 @@ const SetAlertForm = ({
                         <option value="C">Celsius (°C)</option>
                     </select>
                 </div>
-                
+
                 <div className="form-actions">
                     <button
                         type="button"
@@ -397,7 +397,7 @@ const SetAlertForm = ({
                     >
                         Cancel
                     </button>
-                    
+
                     {existingAlert && (
                         <button
                             type="button"
@@ -408,7 +408,7 @@ const SetAlertForm = ({
                             {saving ? 'Deleting...' : 'Delete'}
                         </button>
                     )}
-                    
+
                     <button
                         type="submit"
                         className="btn btn-primary"

@@ -381,36 +381,36 @@
   .live-dashboard {
     padding: 10px;
   }
-  
+
   .dashboard-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 15px;
   }
-  
+
   .header-left {
     flex-direction: column;
     align-items: flex-start;
     gap: 10px;
   }
-  
+
   .header-left h1 {
     font-size: 2em;
   }
-  
+
   .device-status-cards {
     grid-template-columns: 1fr;
   }
-  
+
   .channels-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .data-info {
     flex-direction: column;
     gap: 10px;
   }
-  
+
   .temperature-value {
     font-size: 2.5em;
   }
@@ -420,11 +420,11 @@
   .header-left h1 {
     font-size: 1.5em;
   }
-  
+
   .temperature-value {
     font-size: 2em;
   }
-  
+
   .chart-container {
     height: 300px;
   }

@@ -11,7 +11,7 @@ Team D has successfully implemented Chunk 4: Session Tracking System for the gri
 
 - **SQLAlchemy Model**: Complete model with relationships to User table
 - **Fields**: id, user_id (FK), name, start_time, end_time, devices_used, status, max_temperature, min_temperature, avg_temperature, duration_minutes, session_type, notes, created_at, updated_at
-- **Methods**: 
+- **Methods**:
   - `to_dict()`: Convert to JSON-serializable dictionary
   - `calculate_duration()`: Calculate session duration in minutes
   - `is_active()`: Check if session is currently active
@@ -57,7 +57,7 @@ Team D has successfully implemented Chunk 4: Session Tracking System for the gri
 - **POST /api/sessions/simulate**: Simulate sessions for testing (mock mode)
 
 ### 5. History Page Frontend ✅
-**Files**: 
+**Files**:
 - `/services/web-ui/src/components/HistoryPage.jsx`
 - `/services/web-ui/src/components/HistoryPage.css`
 
@@ -103,7 +103,7 @@ The system analyzes temperature patterns to automatically detect cooking session
 5. **Session End**: Detects stable/declining temperatures for 60+ minutes
 6. **Type Classification**: Automatically classifies based on temperature patterns:
    - **Grilling**: Max temp ≥ 400°F
-   - **Roasting**: Max temp 300-399°F  
+   - **Roasting**: Max temp 300-399°F
    - **Smoking**: Max temp ≤ 275°F
    - **Cooking**: General cooking (other ranges)
 
@@ -155,8 +155,8 @@ CREATE TABLE grilling_sessions (
     notes TEXT,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
-    CONSTRAINT fk_grilling_sessions_user_id 
+
+    CONSTRAINT fk_grilling_sessions_user_id
         FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 ```

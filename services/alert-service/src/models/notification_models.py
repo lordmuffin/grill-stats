@@ -1,8 +1,19 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, ForeignKey, Float
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -26,7 +37,7 @@ class NotificationPriority(str, Enum):
 
 class NotificationTemplate(Base):
     __tablename__ = "notification_templates"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     name = Column(String(255), nullable=False)
     channel_type = Column(String(50), nullable=False)
@@ -39,7 +50,7 @@ class NotificationTemplate(Base):
 
 class NotificationHistory(Base):
     __tablename__ = "notification_history"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     alert_id = Column(Integer, nullable=False)
     channel_id = Column(Integer, nullable=False)
@@ -62,7 +73,7 @@ class NotificationHistory(Base):
 
 class NotificationQuota(Base):
     __tablename__ = "notification_quotas"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     channel_type = Column(String(50), nullable=False)
     recipient = Column(String(255), nullable=False)
@@ -76,7 +87,7 @@ class NotificationQuota(Base):
 
 class NotificationPreference(Base):
     __tablename__ = "notification_preferences"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     user_id = Column(String(255), nullable=False)
     channel_type = Column(String(50), nullable=False)
@@ -210,8 +221,8 @@ class NotificationResponse(BaseModel):
     status: NotificationStatus
     message: str
     estimated_delivery: Optional[datetime] = None
-    
-    
+
+
 class BulkNotificationRequest(BaseModel):
     alert_ids: List[int]
     channel_ids: List[int]

@@ -71,41 +71,41 @@ EOF
 # Check if required tools are installed
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     for tool in "${REQUIRED_TOOLS[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             log_error "$tool is not installed or not in PATH"
             exit 1
         fi
     done
-    
+
     # Check if kubectl can connect to cluster
     if ! kubectl cluster-info &> /dev/null; then
         log_error "Cannot connect to Kubernetes cluster"
         exit 1
     fi
-    
+
     log_success "All prerequisites satisfied"
 }
 
 # Validate secrets before deployment
 validate_secrets() {
     local env="$1"
-    
+
     if [[ "$SKIP_VALIDATION" == "true" ]]; then
         log_warning "Skipping validation as requested"
         return 0
     fi
-    
+
     log_info "Validating secrets for environment: $env"
-    
+
     local validation_script="${BASE_DIR}/validate-secrets.sh"
-    
+
     if [[ ! -f "$validation_script" ]]; then
         log_warning "Validation script not found, skipping validation"
         return 0
     fi
-    
+
     if ! "$validation_script" --dry-run; then
         log_error "Validation failed for environment: $env"
         if [[ "$FORCE" == "false" ]]; then
@@ -115,7 +115,7 @@ validate_secrets() {
             log_warning "Validation failed but forcing deployment"
         fi
     fi
-    
+
     log_success "Validation passed for environment: $env"
     return 0
 }
@@ -123,9 +123,9 @@ validate_secrets() {
 # Create namespace if it doesn't exist
 ensure_namespace() {
     local namespace="$1"
-    
+
     log_info "Ensuring namespace exists: $namespace"
-    
+
     if ! kubectl get namespace "$namespace" &> /dev/null; then
         log_info "Creating namespace: $namespace"
         if [[ "$DRY_RUN" == "false" ]]; then
@@ -143,7 +143,7 @@ deploy_environment() {
     local env="$1"
     local namespace
     local kustomize_dir
-    
+
     case "$env" in
         "base")
             namespace="grill-stats"
@@ -162,28 +162,28 @@ deploy_environment() {
             return 1
             ;;
     esac
-    
+
     log_info "Deploying secrets for environment: $env"
     log_info "Namespace: $namespace"
     log_info "Kustomize directory: $kustomize_dir"
-    
+
     # Validate secrets
     validate_secrets "$env" || return 1
-    
+
     # Ensure namespace exists
     ensure_namespace "$namespace"
-    
+
     # Build kustomization
     log_info "Building kustomization for environment: $env"
-    
+
     if ! kustomize build "$kustomize_dir" > /dev/null; then
         log_error "Failed to build kustomization for environment: $env"
         return 1
     fi
-    
+
     # Deploy secrets
     log_info "Deploying secrets for environment: $env"
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would deploy the following resources:"
         kustomize build "$kustomize_dir" | kubectl apply --dry-run=client -f -
@@ -195,7 +195,7 @@ deploy_environment() {
             return 1
         fi
     fi
-    
+
     return 0
 }
 
@@ -204,26 +204,26 @@ wait_for_secrets() {
     local namespace="$1"
     local timeout=300  # 5 minutes
     local interval=10  # 10 seconds
-    
+
     log_info "Waiting for OnePassword Connect to populate secrets in namespace: $namespace"
-    
+
     local secrets=("auth-service-secrets" "device-service-secrets" "temperature-service-secrets")
-    
+
     for secret in "${secrets[@]}"; do
         log_info "Waiting for secret: $secret"
-        
+
         local elapsed=0
         while [[ $elapsed -lt $timeout ]]; do
             if kubectl get secret "$secret" -n "$namespace" -o jsonpath='{.data}' 2>/dev/null | grep -q "."; then
                 log_success "Secret populated: $secret"
                 break
             fi
-            
+
             sleep $interval
             elapsed=$((elapsed + interval))
             log_info "Waiting for secret $secret... (${elapsed}s/${timeout}s)"
         done
-        
+
         if [[ $elapsed -ge $timeout ]]; then
             log_warning "Timeout waiting for secret to be populated: $secret"
         fi
@@ -234,7 +234,7 @@ wait_for_secrets() {
 verify_deployment() {
     local env="$1"
     local namespace
-    
+
     case "$env" in
         "base")
             namespace="grill-stats"
@@ -250,46 +250,46 @@ verify_deployment() {
             return 1
             ;;
     esac
-    
+
     log_info "Verifying deployment for environment: $env"
-    
+
     # Check if OnePasswordItem resources exist
     local onepassword_items
     onepassword_items=$(kubectl get onepassworditems -n "$namespace" --no-headers 2>/dev/null | wc -l)
-    
+
     if [[ $onepassword_items -eq 0 ]]; then
         log_warning "No OnePasswordItem resources found in namespace: $namespace"
     else
         log_success "Found $onepassword_items OnePasswordItem resources in namespace: $namespace"
     fi
-    
+
     # Check if secrets exist
     local secrets
     secrets=$(kubectl get secrets -n "$namespace" --no-headers 2>/dev/null | grep -c "grill-stats" || echo "0")
-    
+
     if [[ $secrets -eq 0 ]]; then
         log_warning "No grill-stats secrets found in namespace: $namespace"
     else
         log_success "Found $secrets grill-stats secrets in namespace: $namespace"
     fi
-    
+
     # Wait for secrets to be populated (if not dry run)
     if [[ "$DRY_RUN" == "false" ]]; then
         wait_for_secrets "$namespace"
     fi
-    
+
     return 0
 }
 
 # Main deployment function
 main() {
     local exit_code=0
-    
+
     log_info "Starting Grill Stats 1Password Connect secrets deployment"
-    
+
     # Check prerequisites
     check_prerequisites
-    
+
     # Determine what to deploy
     if [[ -n "$ENVIRONMENT" ]]; then
         if [[ "$ENVIRONMENT" == "all" ]]; then
@@ -310,7 +310,7 @@ main() {
             verify_deployment "$env" || exit_code=1
         done
     fi
-    
+
     # Final deployment summary
     if [[ $exit_code -eq 0 ]]; then
         log_success "All deployments completed successfully"
@@ -321,7 +321,7 @@ main() {
     else
         log_error "Some deployments failed - check output above"
     fi
-    
+
     return $exit_code
 }
 

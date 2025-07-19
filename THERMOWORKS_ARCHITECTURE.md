@@ -355,7 +355,7 @@ CREATE INDEX idx_audit_log_created_at ON audit_log(created_at);
 CREATE DATABASE thermoworks_temperatures;
 
 -- Temperature data points
-temperature,device_id=<device_id>,probe=<probe_number>,user_id=<user_id> 
+temperature,device_id=<device_id>,probe=<probe_number>,user_id=<user_id>
   value=<temperature>,
   target=<target_temp>,
   ambient=<ambient_temp>
@@ -442,7 +442,7 @@ sequenceDiagram
 
     C->>N: GET /notifications/sse
     N->>C: SSE connection established
-    
+
     loop Every 30 seconds
         T->>TW: Poll temperature data
         TW->>T: Temperature readings

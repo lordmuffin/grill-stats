@@ -1,4 +1,5 @@
 """Config flow for Grill Monitoring integration."""
+
 import asyncio
 import logging
 from typing import Any, Dict, Optional
@@ -6,21 +7,20 @@ from typing import Any, Dict, Optional
 import aiohttp
 import async_timeout
 import voluptuous as vol
-
 from homeassistant import config_entries, core, exceptions
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
-    DOMAIN,
-    DEFAULT_NAME,
     CONF_DEVICE_SERVICE_URL,
-    CONF_TEMPERATURE_SERVICE_URL,
     CONF_SCAN_INTERVAL,
+    CONF_TEMPERATURE_SERVICE_URL,
     CONF_TIMEOUT,
     DEFAULT_DEVICE_SERVICE_URL,
-    DEFAULT_TEMPERATURE_SERVICE_URL,
+    DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
+    DEFAULT_TEMPERATURE_SERVICE_URL,
     DEFAULT_TIMEOUT,
+    DOMAIN,
     ERROR_CANNOT_CONNECT,
     ERROR_TIMEOUT,
     ERROR_UNKNOWN,
@@ -31,7 +31,9 @@ _LOGGER = logging.getLogger(__name__)
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_DEVICE_SERVICE_URL, default=DEFAULT_DEVICE_SERVICE_URL): str,
-        vol.Required(CONF_TEMPERATURE_SERVICE_URL, default=DEFAULT_TEMPERATURE_SERVICE_URL): str,
+        vol.Required(
+            CONF_TEMPERATURE_SERVICE_URL, default=DEFAULT_TEMPERATURE_SERVICE_URL
+        ): str,
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
             vol.Coerce(int), vol.Range(min=10, max=300)
         ),
@@ -54,38 +56,49 @@ class PlaceholderHub:
     async def authenticate(self, hass: core.HomeAssistant) -> tuple[bool, str]:
         """Test if we can authenticate with the services."""
         session = async_get_clientsession(hass)
-        
+
         try:
             async with async_timeout.timeout(self.timeout):
                 # Test device service health endpoint
                 device_health_url = f"{self.device_url}/health"
                 async with session.get(device_health_url) as response:
                     if response.status != 200:
-                        return False, f"Device service not reachable (status: {response.status})"
-                    
+                        return (
+                            False,
+                            f"Device service not reachable (status: {response.status})",
+                        )
+
                     device_health = await response.json()
                     _LOGGER.debug("Device service health: %s", device_health)
-                
+
                 # Test temperature service health endpoint
                 temp_health_url = f"{self.temperature_url}/health"
                 async with session.get(temp_health_url) as response:
                     if response.status != 200:
-                        return False, f"Temperature service not reachable (status: {response.status})"
-                    
+                        return (
+                            False,
+                            f"Temperature service not reachable (status: {response.status})",
+                        )
+
                     temp_health = await response.json()
                     _LOGGER.debug("Temperature service health: %s", temp_health)
-                
+
                 # Test actual API endpoints
                 devices_url = f"{self.device_url}/api/devices"
                 async with session.get(devices_url) as response:
                     if response.status != 200:
-                        return False, f"Device API not accessible (status: {response.status})"
-                    
+                        return (
+                            False,
+                            f"Device API not accessible (status: {response.status})",
+                        )
+
                     devices_data = await response.json()
-                    _LOGGER.debug("Found %d devices", len(devices_data.get("devices", [])))
-                
+                    _LOGGER.debug(
+                        "Found %d devices", len(devices_data.get("devices", []))
+                    )
+
                 return True, "Successfully connected to both services"
-                
+
         except asyncio.TimeoutError:
             return False, ERROR_TIMEOUT
         except aiohttp.ClientConnectorError:
@@ -155,7 +168,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 f"{user_input[CONF_DEVICE_SERVICE_URL]}_{user_input[CONF_TEMPERATURE_SERVICE_URL]}"
             )
             self._abort_if_unique_id_configured()
-            
+
             return self.async_create_entry(title=info["title"], data=user_input)
 
         return self.async_show_form(

@@ -38,7 +38,7 @@ patchesJson6902:
       - op: replace
         path: /spec/syncPolicy/automated/selfHeal
         value: true
-        
+
   - target:
       group: argoproj.io
       version: v1alpha1
@@ -54,7 +54,7 @@ patchesJson6902:
       - op: replace
         path: /spec/syncPolicy/automated/selfHeal
         value: true
-        
+
   - target:
       group: argoproj.io
       version: v1alpha1

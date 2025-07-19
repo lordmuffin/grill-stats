@@ -12,14 +12,14 @@ resources:
   # Core Ingress Configuration
   - traefik-ingressroute.yaml
   - traefik-middleware.yaml
-  
+
   # SSL/TLS Certificate Management
   - cert-issuer.yaml
-  
+
   # Administrative and Monitoring
   - traefik-admin.yaml
   - traefik-monitoring.yaml
-  
+
   # TCP Services (Database Access)
   - traefik-tcp.yaml
 

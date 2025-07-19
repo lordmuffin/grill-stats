@@ -29,7 +29,7 @@ export const AuthProvider = ({ children }) => {
               'Authorization': `Bearer ${token}`
             }
           });
-          
+
           if (response.ok) {
             const data = await response.json();
             if (data.status === 'success' && data.data.authenticated) {
@@ -57,7 +57,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiCall('/api/auth/login', {
         method: 'POST',
@@ -68,17 +68,17 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         const { user, jwt_token, session_token } = data.data;
-        
+
         // Store tokens
         localStorage.setItem('jwt_token', jwt_token);
         localStorage.setItem('session_token', session_token);
-        
+
         // Set user
         setUser(user);
-        
+
         return { success: true, user };
       } else {
         const errorMessage = data.message || 'Login failed';
@@ -98,7 +98,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const token = localStorage.getItem('jwt_token');
       const sessionToken = localStorage.getItem('session_token');
-      
+
       if (token) {
         await apiCall('/api/auth/logout', {
           method: 'POST',
@@ -122,7 +122,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (email, password, name) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const response = await apiCall('/api/auth/register', {
         method: 'POST',
@@ -133,7 +133,7 @@ export const AuthProvider = ({ children }) => {
       });
 
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         return { success: true, user: data.data.user };
       } else {

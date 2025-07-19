@@ -342,40 +342,40 @@
   .alert-management {
     padding: 16px;
   }
-  
+
   .device-probe-selector {
     flex-direction: column;
     align-items: stretch;
   }
-  
+
   .selector-group {
     min-width: unset;
   }
-  
+
   .alerts-grid {
     grid-template-columns: 1fr;
   }
-  
+
   .alert-card {
     padding: 16px;
   }
-  
+
   .alert-card-header {
     flex-direction: column;
     align-items: flex-start;
     gap: 8px;
   }
-  
+
   .alert-title {
     width: 100%;
   }
-  
+
   .alert-device-info {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
   }
-  
+
   .device-name::after {
     display: none;
   }

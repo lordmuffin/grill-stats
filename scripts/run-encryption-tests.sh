@@ -38,9 +38,9 @@ check_service() {
     local service_name="$1"
     local service_url="$2"
     local health_path="${3:-/health}"
-    
+
     print_status "Checking if $service_name is running at $service_url..."
-    
+
     if curl -f -s "$service_url$health_path" > /dev/null 2>&1; then
         print_status "✓ $service_name is running"
         return 0
@@ -53,33 +53,33 @@ check_service() {
 # Function to install test dependencies
 install_dependencies() {
     print_status "Installing test dependencies..."
-    
+
     # Create virtual environment if it doesn't exist
     if [ ! -d "$PROJECT_ROOT/venv" ]; then
         print_status "Creating virtual environment..."
         python3 -m venv "$PROJECT_ROOT/venv"
     fi
-    
+
     # Activate virtual environment
     source "$PROJECT_ROOT/venv/bin/activate"
-    
+
     # Install requirements
     if [ -f "$PROJECT_ROOT/requirements-test.txt" ]; then
         pip install -r "$PROJECT_ROOT/requirements-test.txt"
     else
         pip install pytest pytest-cov requests
     fi
-    
+
     print_status "Test dependencies installed"
 }
 
 # Function to run unit tests
 run_unit_tests() {
     print_status "Running unit tests..."
-    
+
     cd "$PROJECT_ROOT"
     source venv/bin/activate
-    
+
     # Run unit tests with coverage
     python -m pytest \
         "$TESTS_DIR/unit/encryption/" \
@@ -88,7 +88,7 @@ run_unit_tests() {
         --cov-report=html:htmlcov \
         --cov-report=term-missing \
         --junit-xml=test-results/unit-tests.xml
-    
+
     if [ $? -eq 0 ]; then
         print_status "✓ Unit tests passed"
     else
@@ -100,21 +100,21 @@ run_unit_tests() {
 # Function to run integration tests
 run_integration_tests() {
     print_status "Running integration tests..."
-    
+
     cd "$PROJECT_ROOT"
     source venv/bin/activate
-    
+
     # Set environment variables for tests
     export ENCRYPTION_SERVICE_URL="$ENCRYPTION_SERVICE_URL"
     export AUTH_SERVICE_URL="$AUTH_SERVICE_URL"
     export VAULT_URL="$VAULT_URL"
-    
+
     # Run integration tests
     python -m pytest \
         "$TESTS_DIR/integration/test_encryption_integration.py" \
         -v \
         --junit-xml=test-results/integration-tests.xml
-    
+
     if [ $? -eq 0 ]; then
         print_status "✓ Integration tests passed"
     else
@@ -126,17 +126,17 @@ run_integration_tests() {
 # Function to run security tests
 run_security_tests() {
     print_status "Running security tests..."
-    
+
     cd "$PROJECT_ROOT"
     source venv/bin/activate
-    
+
     # Run security-focused tests
     python -m pytest \
         "$TESTS_DIR/integration/test_encryption_integration.py::TestSecurityValidation" \
         "$TESTS_DIR/integration/test_encryption_integration.py::TestRateLimitingIntegration" \
         -v \
         --junit-xml=test-results/security-tests.xml
-    
+
     if [ $? -eq 0 ]; then
         print_status "✓ Security tests passed"
     else
@@ -148,10 +148,10 @@ run_security_tests() {
 # Function to run performance tests
 run_performance_tests() {
     print_status "Running performance tests..."
-    
+
     cd "$PROJECT_ROOT"
     source venv/bin/activate
-    
+
     # Simple performance test
     python -c "
 import time
@@ -170,19 +170,19 @@ for i in range(50):
             'password': 'password123',
             'user_id': str(i + 1000)
         }
-        
+
         response = requests.post(
             '$ENCRYPTION_SERVICE_URL/encrypt',
             json=payload,
             headers={'Content-Type': 'application/json'},
             timeout=10
         )
-        
+
         if response.status_code == 200:
             success_count += 1
         else:
             error_count += 1
-            
+
     except Exception as e:
         error_count += 1
 
@@ -205,7 +205,7 @@ else:
     print('Performance test FAILED')
     exit(1)
 "
-    
+
     if [ $? -eq 0 ]; then
         print_status "✓ Performance tests passed"
     else
@@ -217,12 +217,12 @@ else:
 # Function to generate test report
 generate_test_report() {
     print_status "Generating test report..."
-    
+
     cd "$PROJECT_ROOT"
-    
+
     # Create test results directory
     mkdir -p test-results
-    
+
     # Generate HTML report
     cat > test-results/test-report.html << EOF
 <!DOCTYPE html>
@@ -246,7 +246,7 @@ generate_test_report() {
         <h1>Encryption Service Test Report</h1>
         <p>Generated on: $(date)</p>
     </div>
-    
+
     <div class="section">
         <h2>Test Summary</h2>
         <table>
@@ -257,12 +257,12 @@ generate_test_report() {
             <tr><td>Performance Tests</td><td class="success">✓ Passed</td><td>Performance within acceptable limits</td></tr>
         </table>
     </div>
-    
+
     <div class="section">
         <h2>Test Coverage</h2>
         <p>Code coverage report available in: <a href="htmlcov/index.html">htmlcov/index.html</a></p>
     </div>
-    
+
     <div class="section">
         <h2>Test Configuration</h2>
         <table>
@@ -275,67 +275,67 @@ generate_test_report() {
 </body>
 </html>
 EOF
-    
+
     print_status "Test report generated: test-results/test-report.html"
 }
 
 # Function to check prerequisites
 check_prerequisites() {
     print_status "Checking prerequisites..."
-    
+
     # Check if Python is available
     if ! command -v python3 &> /dev/null; then
         print_error "Python 3 is not installed"
         exit 1
     fi
-    
+
     # Check if pip is available
     if ! command -v pip &> /dev/null; then
         print_error "pip is not installed"
         exit 1
     fi
-    
+
     # Check if curl is available
     if ! command -v curl &> /dev/null; then
         print_error "curl is not installed"
         exit 1
     fi
-    
+
     print_status "Prerequisites check passed"
 }
 
 # Function to run all tests
 run_all_tests() {
     print_status "Running all encryption service tests..."
-    
+
     local test_failures=0
-    
+
     # Run unit tests
     if ! run_unit_tests; then
         test_failures=$((test_failures + 1))
     fi
-    
+
     # Check if services are running for integration tests
     local services_available=true
     if ! check_service "Encryption Service" "$ENCRYPTION_SERVICE_URL"; then
         services_available=false
     fi
-    
+
     if ! check_service "Auth Service" "$AUTH_SERVICE_URL"; then
         services_available=false
     fi
-    
+
     if $services_available; then
         # Run integration tests
         if ! run_integration_tests; then
             test_failures=$((test_failures + 1))
         fi
-        
+
         # Run security tests
         if ! run_security_tests; then
             test_failures=$((test_failures + 1))
         fi
-        
+
         # Run performance tests
         if ! run_performance_tests; then
             test_failures=$((test_failures + 1))
@@ -343,10 +343,10 @@ run_all_tests() {
     else
         print_warning "Skipping integration tests - services not available"
     fi
-    
+
     # Generate test report
     generate_test_report
-    
+
     if [ $test_failures -eq 0 ]; then
         print_status "✓ All tests passed!"
         return 0
@@ -359,16 +359,16 @@ run_all_tests() {
 # Main execution
 main() {
     print_status "Starting encryption service test suite..."
-    
+
     # Check prerequisites
     check_prerequisites
-    
+
     # Install dependencies
     install_dependencies
-    
+
     # Create test results directory
     mkdir -p "$PROJECT_ROOT/test-results"
-    
+
     # Run all tests
     run_all_tests
 }

@@ -20,7 +20,7 @@ A comprehensive Home Assistant integration for monitoring ThermoWorks wireless t
 ### HACS Installation (Recommended)
 
 1. Open HACS in your Home Assistant instance
-2. Go to "Integrations" 
+2. Go to "Integrations"
 3. Click the three dots in the top right corner
 4. Select "Custom repositories"
 5. Add this repository URL: `https://github.com/lordmuffin/grill-stats`
@@ -165,7 +165,7 @@ services:
       - THERMOWORKS_API_KEY=your_api_key
       - DB_HOST=postgres
       - DB_NAME=grill_monitoring
-  
+
   temperature-service:
     environment:
       - THERMOWORKS_API_KEY=your_api_key

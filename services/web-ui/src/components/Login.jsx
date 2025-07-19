@@ -8,7 +8,7 @@ const Login = ({ onLoginSuccess }) => {
     password: '',
     login_type: 'thermoworks'
   });
-  
+
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [failedAttempts, setFailedAttempts] = useState(0);
@@ -19,7 +19,7 @@ const Login = ({ onLoginSuccess }) => {
       ...prev,
       [name]: value
     }));
-    
+
     // Clear error when user starts typing
     if (error) {
       setError('');
@@ -33,11 +33,11 @@ const Login = ({ onLoginSuccess }) => {
 
     try {
       const response = await loginUser(formData);
-      
+
       if (response.status === 'success') {
         // Reset failed attempts on successful login
         setFailedAttempts(0);
-        
+
         // Call parent callback with auth data
         onLoginSuccess(response.data);
       } else {
@@ -45,10 +45,10 @@ const Login = ({ onLoginSuccess }) => {
       }
     } catch (err) {
       console.error('Login error:', err);
-      
+
       // Track failed attempts
       setFailedAttempts(prev => prev + 1);
-      
+
       // Set appropriate error message
       if (err.message.includes('rate limit') || err.message.includes('Too many')) {
         setError('Too many failed attempts. Please try again later.');
@@ -71,7 +71,7 @@ const Login = ({ onLoginSuccess }) => {
           <h1>Grill Stats</h1>
           <p>ThermoWorks BBQ Monitoring</p>
         </div>
-        
+
         <form onSubmit={handleSubmit} className="login-form">
           <div className="form-group">
             <label htmlFor="email">ThermoWorks Email</label>
@@ -87,7 +87,7 @@ const Login = ({ onLoginSuccess }) => {
               className={error ? 'error' : ''}
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="password">Password</label>
             <input
@@ -102,7 +102,7 @@ const Login = ({ onLoginSuccess }) => {
               className={error ? 'error' : ''}
             />
           </div>
-          
+
           <div className="form-group">
             <label htmlFor="login_type">Login Type</label>
             <select
@@ -116,7 +116,7 @@ const Login = ({ onLoginSuccess }) => {
               <option value="local">Local Account</option>
             </select>
           </div>
-          
+
           {error && (
             <div className="error-message">
               <span className="error-icon">⚠️</span>
@@ -128,9 +128,9 @@ const Login = ({ onLoginSuccess }) => {
               )}
             </div>
           )}
-          
-          <button 
-            type="submit" 
+
+          <button
+            type="submit"
             className="login-button"
             disabled={!isFormValid || loading}
           >
@@ -144,15 +144,15 @@ const Login = ({ onLoginSuccess }) => {
             )}
           </button>
         </form>
-        
+
         <div className="login-footer">
           <p>
-            {formData.login_type === 'thermoworks' ? 
+            {formData.login_type === 'thermoworks' ?
               'Connect with your ThermoWorks Cloud account to access your devices.' :
               'Sign in with your local account.'
             }
           </p>
-          
+
           <div className="login-help">
             <p>
               <strong>First time user?</strong> Use your ThermoWorks Cloud credentials to get started.

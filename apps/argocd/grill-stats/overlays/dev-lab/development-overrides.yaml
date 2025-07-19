@@ -26,7 +26,7 @@ spec:
         factor: 2
         maxDuration: 3m
   revisionHistoryLimit: 5  # Keep fewer revisions for dev
-  
+
   # Development sync windows (more permissive)
   syncWindows:
   - kind: allow
@@ -35,11 +35,11 @@ spec:
     applications:
     - grill-stats-core-services-dev
     manualSync: true
-    
+
   # Faster health checks for development
   health:
   - timeout: 120s
-    
+
   info:
   - name: Environment
     value: dev-lab
@@ -51,7 +51,7 @@ spec:
     value: "Daily backups with 7-day retention"
   - name: Auto-Deploy
     value: "Enabled on develop branch"
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -80,7 +80,7 @@ spec:
         factor: 2
         maxDuration: 5m
   revisionHistoryLimit: 5
-  
+
   # Development database sync windows
   syncWindows:
   - kind: allow
@@ -89,11 +89,11 @@ spec:
     applications:
     - grill-stats-databases-dev
     manualSync: true
-    
+
   # Standard health checks for development
   health:
   - timeout: 300s
-    
+
   info:
   - name: Environment
     value: dev-lab
@@ -105,7 +105,7 @@ spec:
     value: "Daily backups with 7-day retention"
   - name: Data Persistence
     value: "Enabled with smaller volumes"
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -134,7 +134,7 @@ spec:
         factor: 2
         maxDuration: 10m
   revisionHistoryLimit: 5
-  
+
   # Development secret sync windows
   syncWindows:
   - kind: allow
@@ -143,11 +143,11 @@ spec:
     applications:
     - grill-stats-secrets-dev
     manualSync: true
-    
+
   # Standard health checks for development
   health:
   - timeout: 180s
-    
+
   info:
   - name: Environment
     value: dev-lab
@@ -157,7 +157,7 @@ spec:
     value: "1Password Connect with development secrets"
   - name: Rotation Policy
     value: "Manual rotation for development"
-    
+
 ---
 apiVersion: argoproj.io/v1alpha1
 kind: Application
@@ -185,11 +185,11 @@ spec:
         factor: 2
         maxDuration: 3m
   revisionHistoryLimit: 5
-  
+
   # Development monitoring health checks
   health:
   - timeout: 120s
-    
+
   info:
   - name: Environment
     value: dev-lab

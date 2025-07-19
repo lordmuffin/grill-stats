@@ -41,37 +41,37 @@ function AppContent() {
     <>
       {user && <Header />}
       <Routes>
-        <Route 
-          path="/login" 
-          element={user ? <Navigate to="/" replace /> : <Login />} 
+        <Route
+          path="/login"
+          element={user ? <Navigate to="/" replace /> : <Login />}
         />
-        <Route 
-          path="/" 
-          element={user ? <DeviceList /> : <Navigate to="/login" replace />} 
+        <Route
+          path="/"
+          element={user ? <DeviceList /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="/devices" 
-          element={user ? <DeviceList /> : <Navigate to="/login" replace />} 
+        <Route
+          path="/devices"
+          element={user ? <DeviceList /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="/devices/manage" 
-          element={user ? <DeviceManagement /> : <Navigate to="/login" replace />} 
+        <Route
+          path="/devices/manage"
+          element={user ? <DeviceManagement /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="/devices/:deviceId/live" 
-          element={user ? <LiveDeviceDashboard /> : <Navigate to="/login" replace />} 
+        <Route
+          path="/devices/:deviceId/live"
+          element={user ? <LiveDeviceDashboard /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="/devices/:deviceId/history" 
-          element={user ? <HistoricalGraph /> : <Navigate to="/login" replace />} 
+        <Route
+          path="/devices/:deviceId/history"
+          element={user ? <HistoricalGraph /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="/sessions/history" 
-          element={user ? <HistoryPage /> : <Navigate to="/login" replace />} 
+        <Route
+          path="/sessions/history"
+          element={user ? <HistoryPage /> : <Navigate to="/login" replace />}
         />
-        <Route 
-          path="*" 
-          element={<Navigate to="/" replace />} 
+        <Route
+          path="*"
+          element={<Navigate to="/" replace />}
         />
       </Routes>
     </>

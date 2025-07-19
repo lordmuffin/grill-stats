@@ -24,12 +24,12 @@ const DeviceCard = ({ device, onRefresh }) => {
 
   const formatLastSeen = (lastSeen) => {
     if (!lastSeen) return 'Never';
-    
+
     const date = new Date(lastSeen);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
@@ -59,10 +59,10 @@ const DeviceCard = ({ device, onRefresh }) => {
     try {
       setLoadingTemp(true);
       setTempError(null);
-      
+
       const response = await deviceApi.getDeviceTemperature(device.device_id);
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         setTemperature(data.data.readings || []);
       } else {
@@ -88,7 +88,7 @@ const DeviceCard = ({ device, onRefresh }) => {
     <div className="device-card">
       <h3>{device.name}</h3>
       <div className="device-model">{device.model}</div>
-      
+
       <div className="device-status">
         <span className={`status-indicator ${getStatusColor(device.status)}`}></span>
         <span style={{ textTransform: 'capitalize' }}>{device.status}</span>
@@ -96,7 +96,7 @@ const DeviceCard = ({ device, onRefresh }) => {
           {formatLastSeen(device.last_seen)}
         </span>
       </div>
-      
+
       <div className="device-details">
         <div className="detail-item">
           <span>Battery:</span>
@@ -115,7 +115,7 @@ const DeviceCard = ({ device, onRefresh }) => {
           <span>{device.probes ? device.probes.length : 0}</span>
         </div>
       </div>
-      
+
       {temperature && temperature.length > 0 && (
         <div style={{ marginTop: '1rem', padding: '0.75rem', backgroundColor: '#f8f9fa', borderRadius: '4px' }}>
           <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', color: '#2c3e50' }}>
@@ -131,40 +131,40 @@ const DeviceCard = ({ device, onRefresh }) => {
           ))}
         </div>
       )}
-      
+
       {tempError && (
         <div style={{ marginTop: '1rem', color: '#e74c3c', fontSize: '0.8rem' }}>
           {tempError}
         </div>
       )}
-      
+
       <div className="device-actions">
-        <button 
+        <button
           onClick={handleLiveView}
           className="btn btn-primary btn-small"
           title="View live temperature monitoring dashboard"
         >
           Live View
         </button>
-        <button 
+        <button
           onClick={handleGetTemperature}
           className="btn btn-secondary btn-small"
           disabled={loadingTemp}
         >
           {loadingTemp ? 'Loading...' : 'Get Temp'}
         </button>
-        <button 
+        <button
           onClick={handleViewHistory}
           className="btn btn-secondary btn-small"
         >
           History
         </button>
       </div>
-      
+
       {device.firmware_version && (
-        <div style={{ 
-          marginTop: '1rem', 
-          fontSize: '0.7rem', 
+        <div style={{
+          marginTop: '1rem',
+          fontSize: '0.7rem',
           color: '#95a5a6',
           borderTop: '1px solid #ecf0f1',
           paddingTop: '0.5rem'
