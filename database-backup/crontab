@@ -1,0 +1,11 @@
+# Database backup cron jobs for Grill Stats
+# Format: minute hour day month day-of-week command
+
+# PostgreSQL backup - Daily at 1:00 AM
+0 1 * * * /scripts/postgres-backup.sh >> /backups/postgres/backup.log 2>&1
+
+# InfluxDB backup - Daily at 2:00 AM
+0 2 * * * /scripts/influxdb-backup.sh >> /backups/influxdb/backup.log 2>&1
+
+# Redis backup - Daily at 3:00 AM
+0 3 * * * /scripts/redis-backup.sh >> /backups/redis/backup.log 2>&1

@@ -1,0 +1,54 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: redis-backup
+  namespace: grill-stats
+spec:
+  schedule: "0 3 * * *"  # Daily at 3:00 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          serviceAccountName: backup-sa
+          containers:
+          - name: redis-backup
+            image: redis:7-alpine
+            command:
+            - /bin/bash
+            - /scripts/redis-backup.sh
+            env:
+            - name: REDIS_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: redis-host
+            - name: REDIS_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: redis-port
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: redis-password
+                  optional: true
+            - name: ENVIRONMENT
+              value: "production"
+            volumeMounts:
+            - name: backup-scripts
+              mountPath: /scripts
+            - name: redis-backups
+              mountPath: /backups
+          volumes:
+          - name: backup-scripts
+            configMap:
+              name: db-backup-scripts
+              defaultMode: 0755
+          - name: redis-backups
+            persistentVolumeClaim:
+              claimName: db-backups-pvc
+          restartPolicy: OnFailure

@@ -1,0 +1,62 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: influxdb-backup
+  namespace: grill-stats
+spec:
+  schedule: "0 2 * * *"  # Daily at 2:00 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  failedJobsHistoryLimit: 1
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: influxdb-backup
+            image: influxdb:1.8
+            command:
+            - /bin/bash
+            - /scripts/influxdb-backup.sh
+            env:
+            - name: INFLUXDB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: influxdb-host
+            - name: INFLUXDB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: influxdb-port
+            - name: INFLUXDB_DATABASE
+              valueFrom:
+                configMapKeyRef:
+                  name: db-config
+                  key: influxdb-database
+            - name: INFLUXDB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: influxdb-user
+            - name: INFLUXDB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: influxdb-password
+            - name: ENVIRONMENT
+              value: "production"
+            volumeMounts:
+            - name: backup-scripts
+              mountPath: /scripts
+            - name: influxdb-backups
+              mountPath: /backups
+          volumes:
+          - name: backup-scripts
+            configMap:
+              name: db-backup-scripts
+              defaultMode: 0755
+          - name: influxdb-backups
+            persistentVolumeClaim:
+              claimName: db-backups-pvc
+          restartPolicy: OnFailure

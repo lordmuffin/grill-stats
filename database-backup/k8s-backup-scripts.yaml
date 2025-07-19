@@ -1,0 +1,378 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-backup-scripts
+  namespace: grill-stats
+data:
+  postgres-backup.sh: |
+    #!/bin/bash
+    # PostgreSQL Backup Script for Grill Stats
+    # This script creates automated backups of PostgreSQL database with retention policies
+
+    set -e  # Exit immediately if a command exits with a non-zero status
+
+    # Configuration
+    BACKUP_DIR="/backups/postgres"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    RETENTION_DAYS=30  # Keep backups for 30 days
+    DB_NAME=${DB_NAME:-"grill_stats"}
+    DB_USER=${DB_USER:-"postgres"}
+    DB_PASSWORD=${DB_PASSWORD:-"postgres"}
+    DB_HOST=${DB_HOST:-"postgres"}
+    DB_PORT=${DB_PORT:-"5432"}
+    ENVIRONMENT=${ENVIRONMENT:-"production"}
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "${BACKUP_DIR}"
+    mkdir -p "${BACKUP_DIR}/daily"
+    mkdir -p "${BACKUP_DIR}/weekly"
+    mkdir -p "${BACKUP_DIR}/monthly"
+
+    # Log function
+    log() {
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+    }
+
+    # Backup function
+    perform_backup() {
+      log "Starting PostgreSQL backup for ${DB_NAME}"
+
+      # Create backup filename
+      BACKUP_FILE="${BACKUP_DIR}/daily/${DB_NAME}_${TIMESTAMP}.sql.gz"
+
+      # Execute pg_dump
+      PGPASSWORD="${DB_PASSWORD}" pg_dump \
+        -h "${DB_HOST}" \
+        -p "${DB_PORT}" \
+        -U "${DB_USER}" \
+        -d "${DB_NAME}" \
+        -F c \
+        -b \
+        -v \
+        -f "${BACKUP_FILE%.gz}"
+
+      # Compress the backup
+      gzip -f "${BACKUP_FILE%.gz}"
+
+      # Check if backup was successful
+      if [ $? -eq 0 ]; then
+        log "Backup successfully created: ${BACKUP_FILE}"
+
+        # Calculate backup size
+        BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+        log "Backup size: ${BACKUP_SIZE}"
+
+        # Create symbolic links for weekly and monthly backups
+        DAY_OF_WEEK=$(date +"%u")
+        DAY_OF_MONTH=$(date +"%d")
+
+        # Weekly backup (on Sunday, day 7)
+        if [ "${DAY_OF_WEEK}" = "7" ]; then
+          WEEK_NUMBER=$(date +"%U")
+          ln -sf "${BACKUP_FILE}" "${BACKUP_DIR}/weekly/${DB_NAME}_week${WEEK_NUMBER}.sql.gz"
+          log "Created weekly backup link for week ${WEEK_NUMBER}"
+        fi
+
+        # Monthly backup (on 1st day of month)
+        if [ "${DAY_OF_MONTH}" = "01" ]; then
+          MONTH_NAME=$(date +"%b")
+          ln -sf "${BACKUP_FILE}" "${BACKUP_DIR}/monthly/${DB_NAME}_${MONTH_NAME}.sql.gz"
+          log "Created monthly backup link for ${MONTH_NAME}"
+        fi
+      else
+        log "ERROR: Backup failed!"
+        exit 1
+      fi
+    }
+
+    # Clean old backups
+    cleanup_old_backups() {
+      log "Cleaning up old backups (older than ${RETENTION_DAYS} days)"
+      find "${BACKUP_DIR}/daily" -name "*.sql.gz" -type f -mtime +${RETENTION_DAYS} -delete
+      log "Cleanup completed"
+    }
+
+    # Verify backup integrity
+    verify_backup() {
+      log "Verifying backup integrity for ${BACKUP_FILE}"
+
+      # Test the backup file with pg_restore (without actually restoring)
+      PGPASSWORD="${DB_PASSWORD}" pg_restore -l "${BACKUP_FILE}" > /dev/null
+
+      if [ $? -eq 0 ]; then
+        log "Backup verification successful"
+      else
+        log "ERROR: Backup verification failed!"
+        exit 1
+      fi
+    }
+
+    # Main execution
+    log "=== PostgreSQL Backup Script ==="
+    log "Environment: ${ENVIRONMENT}"
+    log "Database: ${DB_NAME} on ${DB_HOST}:${DB_PORT}"
+
+    # Perform backup
+    perform_backup
+
+    # Verify the latest backup
+    verify_backup
+
+    # Clean up old backups
+    cleanup_old_backups
+
+    log "Backup process completed successfully"
+    exit 0
+
+  influxdb-backup.sh: |
+    #!/bin/bash
+    # InfluxDB Backup Script for Grill Stats
+    # This script creates automated backups of InfluxDB time-series data with retention policies
+
+    set -e  # Exit immediately if a command exits with a non-zero status
+
+    # Configuration
+    BACKUP_DIR="/backups/influxdb"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    RETENTION_DAYS=30  # Keep backups for 30 days
+    INFLUXDB_HOST=${INFLUXDB_HOST:-"influxdb"}
+    INFLUXDB_PORT=${INFLUXDB_PORT:-"8086"}
+    INFLUXDB_DATABASE=${INFLUXDB_DATABASE:-"grill_stats"}
+    INFLUXDB_USERNAME=${INFLUXDB_USERNAME:-"admin"}
+    INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD:-"influx-password"}
+    ENVIRONMENT=${ENVIRONMENT:-"production"}
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "${BACKUP_DIR}"
+    mkdir -p "${BACKUP_DIR}/daily"
+    mkdir -p "${BACKUP_DIR}/weekly"
+    mkdir -p "${BACKUP_DIR}/monthly"
+
+    # Log function
+    log() {
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+    }
+
+    # Backup function
+    perform_backup() {
+      log "Starting InfluxDB backup for ${INFLUXDB_DATABASE}"
+
+      # Create backup directory
+      BACKUP_PATH="${BACKUP_DIR}/daily/${INFLUXDB_DATABASE}_${TIMESTAMP}"
+      mkdir -p "${BACKUP_PATH}"
+
+      # Execute influxd backup
+      influxd backup \
+        -database "${INFLUXDB_DATABASE}" \
+        -host "${INFLUXDB_HOST}:${INFLUXDB_PORT}" \
+        -retention autogen \
+        "${BACKUP_PATH}"
+
+      # Check if backup was successful
+      if [ $? -eq 0 ]; then
+        log "Backup successfully created: ${BACKUP_PATH}"
+
+        # Compress the backup
+        tar -czf "${BACKUP_PATH}.tar.gz" -C "${BACKUP_DIR}/daily" "$(basename "${BACKUP_PATH}")"
+        rm -rf "${BACKUP_PATH}"  # Remove uncompressed backup
+
+        # Calculate backup size
+        BACKUP_SIZE=$(du -h "${BACKUP_PATH}.tar.gz" | cut -f1)
+        log "Backup size: ${BACKUP_SIZE}"
+
+        # Create symbolic links for weekly and monthly backups
+        DAY_OF_WEEK=$(date +"%u")
+        DAY_OF_MONTH=$(date +"%d")
+
+        # Weekly backup (on Sunday, day 7)
+        if [ "${DAY_OF_WEEK}" = "7" ]; then
+          WEEK_NUMBER=$(date +"%U")
+          ln -sf "${BACKUP_PATH}.tar.gz" "${BACKUP_DIR}/weekly/${INFLUXDB_DATABASE}_week${WEEK_NUMBER}.tar.gz"
+          log "Created weekly backup link for week ${WEEK_NUMBER}"
+        fi
+
+        # Monthly backup (on 1st day of month)
+        if [ "${DAY_OF_MONTH}" = "01" ]; then
+          MONTH_NAME=$(date +"%b")
+          ln -sf "${BACKUP_PATH}.tar.gz" "${BACKUP_DIR}/monthly/${INFLUXDB_DATABASE}_${MONTH_NAME}.tar.gz"
+          log "Created monthly backup link for ${MONTH_NAME}"
+        fi
+      else
+        log "ERROR: Backup failed!"
+        exit 1
+      fi
+    }
+
+    # Clean old backups
+    cleanup_old_backups() {
+      log "Cleaning up old backups (older than ${RETENTION_DAYS} days)"
+      find "${BACKUP_DIR}/daily" -name "*.tar.gz" -type f -mtime +${RETENTION_DAYS} -delete
+      log "Cleanup completed"
+    }
+
+    # Verify backup integrity
+    verify_backup() {
+      log "Verifying backup integrity"
+
+      # Extract backup to a temporary location without overwriting the original database
+      TMP_EXTRACT="/tmp/influxdb_verify_${TIMESTAMP}"
+      mkdir -p "${TMP_EXTRACT}"
+
+      tar -xzf "${BACKUP_PATH}.tar.gz" -C "${TMP_EXTRACT}"
+
+      # Check if files exist and are not empty
+      MANIFEST_FILE=$(find "${TMP_EXTRACT}" -name "*.manifest" | head -n 1)
+
+      if [ -s "${MANIFEST_FILE}" ]; then
+        log "Backup verification successful - manifest file exists and is not empty"
+        rm -rf "${TMP_EXTRACT}"  # Clean up
+      else
+        log "ERROR: Backup verification failed - manifest file is missing or empty!"
+        rm -rf "${TMP_EXTRACT}"  # Clean up
+        exit 1
+      fi
+    }
+
+    # Main execution
+    log "=== InfluxDB Backup Script ==="
+    log "Environment: ${ENVIRONMENT}"
+    log "Database: ${INFLUXDB_DATABASE} on ${INFLUXDB_HOST}:${INFLUXDB_PORT}"
+
+    # Perform backup
+    perform_backup
+
+    # Verify the latest backup
+    verify_backup
+
+    # Clean up old backups
+    cleanup_old_backups
+
+    log "Backup process completed successfully"
+    exit 0
+
+  redis-backup.sh: |
+    #!/bin/bash
+    # Redis Backup Script for Grill Stats
+    # This script creates automated backups of Redis data by triggering BGSAVE
+
+    set -e  # Exit immediately if a command exits with a non-zero status
+
+    # Configuration
+    BACKUP_DIR="/backups/redis"
+    TIMESTAMP=$(date +"%Y%m%d_%H%M%S")
+    RETENTION_DAYS=30  # Keep backups for 30 days
+    REDIS_HOST=${REDIS_HOST:-"redis"}
+    REDIS_PORT=${REDIS_PORT:-"6379"}
+    REDIS_PASSWORD=${REDIS_PASSWORD:-""}
+    ENVIRONMENT=${ENVIRONMENT:-"production"}
+
+    # Create backup directory if it doesn't exist
+    mkdir -p "${BACKUP_DIR}"
+    mkdir -p "${BACKUP_DIR}/daily"
+    mkdir -p "${BACKUP_DIR}/weekly"
+    mkdir -p "${BACKUP_DIR}/monthly"
+
+    # Log function
+    log() {
+      echo "[$(date +'%Y-%m-%d %H:%M:%S')] $1"
+    }
+
+    # Backup function
+    perform_backup() {
+      log "Starting Redis backup"
+
+      # Create backup filename
+      BACKUP_FILE="${BACKUP_DIR}/daily/redis_${TIMESTAMP}.rdb"
+
+      # Trigger BGSAVE on Redis server
+      AUTH_PARAM=""
+      if [ -n "${REDIS_PASSWORD}" ]; then
+        AUTH_PARAM="-a ${REDIS_PASSWORD}"
+      fi
+
+      redis-cli -h "${REDIS_HOST}" -p "${REDIS_PORT}" ${AUTH_PARAM} BGSAVE
+
+      # Wait for BGSAVE to complete
+      log "Waiting for BGSAVE to complete..."
+      sleep 5
+
+      # Copy the dump.rdb file
+      log "Copying RDB file..."
+
+      # For Kubernetes, we use kubectl cp to copy from Redis pod
+      REDIS_POD=$(kubectl get pods -n grill-stats -l app=redis -o jsonpath="{.items[0].metadata.name}")
+      kubectl cp grill-stats/${REDIS_POD}:/data/dump.rdb "${BACKUP_FILE}"
+
+      # Check if backup was successful
+      if [ -f "${BACKUP_FILE}" ]; then
+        log "Backup successfully created: ${BACKUP_FILE}"
+
+        # Compress the backup
+        gzip -f "${BACKUP_FILE}"
+        BACKUP_FILE="${BACKUP_FILE}.gz"
+
+        # Calculate backup size
+        BACKUP_SIZE=$(du -h "${BACKUP_FILE}" | cut -f1)
+        log "Backup size: ${BACKUP_SIZE}"
+
+        # Create symbolic links for weekly and monthly backups
+        DAY_OF_WEEK=$(date +"%u")
+        DAY_OF_MONTH=$(date +"%d")
+
+        # Weekly backup (on Sunday, day 7)
+        if [ "${DAY_OF_WEEK}" = "7" ]; then
+          WEEK_NUMBER=$(date +"%U")
+          ln -sf "${BACKUP_FILE}" "${BACKUP_DIR}/weekly/redis_week${WEEK_NUMBER}.rdb.gz"
+          log "Created weekly backup link for week ${WEEK_NUMBER}"
+        fi
+
+        # Monthly backup (on 1st day of month)
+        if [ "${DAY_OF_MONTH}" = "01" ]; then
+          MONTH_NAME=$(date +"%b")
+          ln -sf "${BACKUP_FILE}" "${BACKUP_DIR}/monthly/redis_${MONTH_NAME}.rdb.gz"
+          log "Created monthly backup link for ${MONTH_NAME}"
+        fi
+      else
+        log "ERROR: Backup failed!"
+        exit 1
+      fi
+    }
+
+    # Clean old backups
+    cleanup_old_backups() {
+      log "Cleaning up old backups (older than ${RETENTION_DAYS} days)"
+      find "${BACKUP_DIR}/daily" -name "*.rdb.gz" -type f -mtime +${RETENTION_DAYS} -delete
+      log "Cleanup completed"
+    }
+
+    # Verify backup integrity
+    verify_backup() {
+      log "Verifying backup integrity for ${BACKUP_FILE}"
+
+      # Check file size is reasonable (not empty or too small)
+      FILE_SIZE=$(stat -c%s "${BACKUP_FILE}")
+
+      if [ "${FILE_SIZE}" -lt 1024 ]; then
+        log "ERROR: Backup file is too small (${FILE_SIZE} bytes), might be corrupted!"
+        exit 1
+      else
+        log "Backup verification successful - file size is ${FILE_SIZE} bytes"
+      fi
+    }
+
+    # Main execution
+    log "=== Redis Backup Script ==="
+    log "Environment: ${ENVIRONMENT}"
+    log "Redis server: ${REDIS_HOST}:${REDIS_PORT}"
+
+    # Perform backup
+    perform_backup
+
+    # Verify the latest backup
+    verify_backup
+
+    # Clean up old backups
+    cleanup_old_backups
+
+    log "Backup process completed successfully"
+    exit 0

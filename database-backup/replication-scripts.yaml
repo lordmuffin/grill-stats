@@ -1,0 +1,103 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: replication-scripts
+  namespace: grill-stats
+data:
+  pg-setup-replication.sh: |
+    #!/bin/bash
+    # Script to set up PostgreSQL streaming replication
+
+    # Configuration
+    PRIMARY_HOST=${PRIMARY_HOST:-"postgres-primary"}
+    PRIMARY_PORT=${PRIMARY_PORT:-"5432"}
+    REPLICA_HOST=${REPLICA_HOST:-"postgres-replica"}
+    REPLICA_PORT=${REPLICA_PORT:-"5432"}
+    REPLICATION_USER=${REPLICATION_USER:-"replication"}
+    REPLICATION_PASSWORD=${REPLICATION_PASSWORD:-"replication_password"}
+    POSTGRES_USER=${POSTGRES_USER:-"postgres"}
+    POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-"postgres"}
+
+    echo "Setting up PostgreSQL streaming replication..."
+
+    # Create replication user on primary
+    PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${PRIMARY_HOST}" -p "${PRIMARY_PORT}" -U "${POSTGRES_USER}" -c "
+      CREATE USER ${REPLICATION_USER} REPLICATION LOGIN ENCRYPTED PASSWORD '${REPLICATION_PASSWORD}';
+    "
+
+    # Create replication slot on primary
+    PGPASSWORD="${POSTGRES_PASSWORD}" psql -h "${PRIMARY_HOST}" -p "${PRIMARY_PORT}" -U "${POSTGRES_USER}" -c "
+      SELECT pg_create_physical_replication_slot('replica_1');
+    "
+
+    # Take base backup from primary
+    PGPASSWORD="${REPLICATION_PASSWORD}" pg_basebackup -h "${PRIMARY_HOST}" -p "${PRIMARY_PORT}" -U "${REPLICATION_USER}" -D /var/lib/postgresql/data -Fp -Xs -P -R
+
+    echo "PostgreSQL replication setup completed successfully"
+
+  influxdb-setup-replication.sh: |
+    #!/bin/bash
+    # Script to set up InfluxDB replication using continuous queries
+
+    # Configuration
+    PRIMARY_HOST=${PRIMARY_HOST:-"influxdb-primary"}
+    PRIMARY_PORT=${PRIMARY_PORT:-"8086"}
+    REPLICA_HOST=${REPLICA_HOST:-"influxdb-replica"}
+    REPLICA_PORT=${REPLICA_PORT:-"8086"}
+    INFLUXDB_USER=${INFLUXDB_USER:-"admin"}
+    INFLUXDB_PASSWORD=${INFLUXDB_PASSWORD:-"influx-password"}
+    DATABASE=${DATABASE:-"grill_stats"}
+    REPLICA_DATABASE=${REPLICA_DATABASE:-"grill_stats_replica"}
+
+    echo "Setting up InfluxDB replication using continuous queries..."
+
+    # Create remote database for replication
+    curl -s -XPOST "http://${REPLICA_HOST}:${REPLICA_PORT}/query" \
+      --data-urlencode "q=CREATE DATABASE ${REPLICA_DATABASE}" \
+      -u "${INFLUXDB_USER}:${INFLUXDB_PASSWORD}"
+
+    # Add remote server to primary
+    curl -s -XPOST "http://${PRIMARY_HOST}:${PRIMARY_PORT}/query" \
+      --data-urlencode "q=CREATE DATABASE ${REPLICA_DATABASE}" \
+      -u "${INFLUXDB_USER}:${INFLUXDB_PASSWORD}"
+
+    # Create continuous query for replication
+    curl -s -XPOST "http://${PRIMARY_HOST}:${PRIMARY_PORT}/query" \
+      --data-urlencode "q=CREATE CONTINUOUS QUERY \"cq_replicate_temperature\" ON \"${DATABASE}\" RESAMPLE EVERY 1m BEGIN SELECT * INTO \"${REPLICA_DATABASE}\".\"autogen\".:MEASUREMENT FROM \"${DATABASE}\".\"autogen\"./.*/ GROUP BY * END" \
+      -u "${INFLUXDB_USER}:${INFLUXDB_PASSWORD}"
+
+    echo "InfluxDB replication setup completed successfully"
+
+  redis-setup-replication.sh: |
+    #!/bin/bash
+    # Script to set up Redis replication
+
+    # Configuration
+    PRIMARY_HOST=${PRIMARY_HOST:-"redis-primary"}
+    PRIMARY_PORT=${PRIMARY_PORT:-"6379"}
+    REPLICA_HOST=${REPLICA_HOST:-"redis-replica"}
+    REPLICA_PORT=${REPLICA_PORT:-"6379"}
+    REDIS_PASSWORD=${REDIS_PASSWORD:-""}
+
+    echo "Setting up Redis replication..."
+
+    # Set replication configuration on replica
+    AUTH_PARAM=""
+    if [ -n "${REDIS_PASSWORD}" ]; then
+      AUTH_PARAM="-a ${REDIS_PASSWORD}"
+    fi
+
+    # Configure replica to replicate from primary
+    redis-cli -h "${REPLICA_HOST}" -p "${REPLICA_PORT}" ${AUTH_PARAM} CONFIG SET replicaof "${PRIMARY_HOST}" "${PRIMARY_PORT}"
+
+    # Check replication status
+    ROLE=$(redis-cli -h "${REPLICA_HOST}" -p "${REPLICA_PORT}" ${AUTH_PARAM} INFO | grep role | cut -d: -f2 | tr -d '[:space:]')
+
+    if [ "${ROLE}" = "slave" ]; then
+      echo "Redis replication configured successfully"
+    else
+      echo "Error: Redis replication configuration failed"
+      exit 1
+    fi
+
+    echo "Redis replication setup completed successfully"

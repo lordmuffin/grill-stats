@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: db-replication-config
+  namespace: grill-stats
+data:
+  postgresql-replication.conf: |
+    # PostgreSQL replication configuration
+    wal_level = replica
+    max_wal_senders = 10
+    max_replication_slots = 10
+    hot_standby = on
+    hot_standby_feedback = on
+
+    # Archive WAL segments
+    archive_mode = on
+    archive_command = 'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'
+    archive_timeout = 60
+
+    # Replication settings
+    synchronous_commit = on
+    synchronous_standby_names = 'replica_1'
+
+  postgresql-replica-recovery.conf: |
+    # PostgreSQL replica recovery configuration
+    standby_mode = 'on'
+    primary_conninfo = 'host=postgres-primary port=5432 user=replication password=replication_password'
+    primary_slot_name = 'replica_1'
+    recovery_target_timeline = 'latest'
+
+  influxdb-replication.conf: |
+    # InfluxDB continuous query for replication
+    # This creates a continuous query that duplicates data to a remote InfluxDB instance
+    CREATE CONTINUOUS QUERY "cq_replicate_temperature" ON "grill_stats"
+    RESAMPLE EVERY 1m
+    BEGIN
+      SELECT *
+      INTO "grill_stats_replica"."autogen".:MEASUREMENT
+      FROM "grill_stats"."autogen"./.*/
+      GROUP BY *
+    END
+
+  redis-replication.conf: |
+    # Redis replication configuration
+    replicaof redis-primary 6379
+
+    # Replication settings
+    replica-serve-stale-data yes
+    replica-read-only yes
+    repl-diskless-sync yes
+    repl-diskless-sync-delay 5
+    repl-timeout 60
+
+    # Add persistence configuration for replica
+    appendonly yes
+    appendfilename "appendonly.aof"
+    appendfsync everysec
+    no-appendfsync-on-rewrite no
+    auto-aof-rewrite-percentage 100
+    auto-aof-rewrite-min-size 64mb

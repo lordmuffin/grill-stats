@@ -1,0 +1,89 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: replication-docs
+  namespace: grill-stats
+data:
+  README.md: |
+    # Cross-Region Database Replication
+
+    This document describes the cross-region replication setup for the Grill Monitoring Platform databases.
+
+    ## PostgreSQL Replication
+
+    PostgreSQL uses streaming replication to maintain a hot standby in a secondary region.
+
+    ### Setup
+
+    1. Configure primary with:
+       - WAL archiving
+       - Replication slots
+       - Hot standby mode
+
+    2. Configure replica with:
+       - Standby mode
+       - Connection to primary
+       - Recovery settings
+
+    3. Monitor replication lag:
+       ```sql
+       SELECT now() - pg_last_xact_replay_timestamp() AS replication_lag;
+       ```
+
+    ### Failover Procedure
+
+    1. Promote standby to primary:
+       ```bash
+       pg_ctl promote -D /var/lib/postgresql/data
+       ```
+
+    2. Update connection strings in application
+
+    3. Reconfigure original primary as new standby after recovery
+
+    ## InfluxDB Replication
+
+    InfluxDB uses continuous queries to replicate data to a secondary region.
+
+    ### Setup
+
+    1. Create replica database in secondary region
+
+    2. Configure continuous queries to copy data from primary to replica
+
+    3. Monitor replication status with:
+       ```sql
+       SHOW CONTINUOUS QUERIES
+       ```
+
+    ### Failover Procedure
+
+    1. Update connection strings in application to point to replica
+
+    2. Once primary is available, reverse replication direction
+
+    ## Redis Replication
+
+    Redis uses master-replica replication with persistence enabled.
+
+    ### Setup
+
+    1. Configure replica to replicate from primary
+
+    2. Enable AOF persistence on both primary and replica
+
+    3. Monitor replication with:
+       ```bash
+       redis-cli INFO replication
+       ```
+
+    ### Failover Procedure
+
+    1. Promote replica to primary:
+       ```bash
+       redis-cli CONFIG SET replicaof no one
+       ```
+
+    2. Update connection strings in application
+
+    3. Reconfigure original primary as replica of new primary
