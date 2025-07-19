@@ -19,7 +19,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install System Dependencies
+        run: |
+          # Install system dependencies including PostgreSQL development packages
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client libpq-dev
+
+      - name: Install Python Dependencies
         run: |
           # Install packages
           python -m pip install --upgrade pip
@@ -70,7 +76,13 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: Install Dependencies
+      - name: Install System Dependencies
+        run: |
+          # Install system dependencies including PostgreSQL development packages
+          sudo apt-get update
+          sudo apt-get install -y postgresql-client libpq-dev
+
+      - name: Install Python Dependencies
         run: |
           # Install packages
           python -m pip install --upgrade pip

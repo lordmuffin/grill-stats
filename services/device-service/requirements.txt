@@ -3,7 +3,10 @@ flask-cors==4.0.0
 redis==4.6.0
 python-dotenv==1.0.0
 requests==2.31.0
+# If PostgreSQL build tools are not available, you can use a pre-built binary:
+# pip install --only-binary :all: psycopg2-binary==2.9.7
 psycopg2-binary==2.9.7
 structlog==23.1.0
 PyJWT==2.8.0
-python-thermoworks-cloud==1.0.0
+# Optional dependencies
+# python-thermoworks-cloud==1.0.0  # Uncomment if available from a private repository
