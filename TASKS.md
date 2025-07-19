@@ -35,7 +35,7 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Configure automated testing pipeline
 - [x] Set up Docker image building and scanning
 - [x] Configure artifact storage for built images
-- [ ] Set up branch protection rules
+- [x] Set up branch protection rules
 - [ ] Create deployment scripts for different environments
 - [ ] Configure secret management in CI/CD
 

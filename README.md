@@ -578,6 +578,28 @@ This platform replaces the original monolithic Flask application (`app.py`) with
 3. Run tests: `make test`
 4. Submit pull request with clear description
 
+### Branch Protection Rules
+
+We implement strict branch protection rules for quality control and stability:
+
+#### Main Branch (Production)
+- Requires 2 approved reviews before merging
+- Enforces passing status checks: tests, builds, syntax checks
+- Prevents force pushes
+- Prevents branch deletion
+- Restricts merging to maintainers team
+
+#### Develop Branch (Integration)
+- Requires 1 approved review before merging
+- Enforces passing status checks: tests, builds
+- Prevents force pushes
+- Prevents branch deletion
+- Allows merging by developers team
+
+#### Feature Branches
+- Enforces passing tests before merging
+- Allows development flexibility while ensuring code quality
+
 ### Code Standards
 - **Python**: PEP 8 with black formatting
 - **Docker**: Multi-stage builds with security scanning
