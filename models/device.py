@@ -50,9 +50,14 @@ class Device:
         if not device_id:
             return False, "Device ID is required"
 
+        # First check if device_id is exactly in uppercase format
+        # If it contains lowercase letters, it should fail validation
+        if device_id != device_id.upper():
+            return False, "Device ID must be uppercase. Expected format: TW-XXX-XXX"
+
         # ThermoWorks format: TW-XXX-XXX (where X can be alphanumeric)
         pattern = r"^TW-[A-Z0-9]{3}-[A-Z0-9]{3}$"
-        if not re.match(pattern, device_id.upper()):
+        if not re.match(pattern, device_id):
             return False, "Invalid device ID format. Expected format: TW-XXX-XXX"
 
         return True, "Valid device ID format"

@@ -29,6 +29,11 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Configure VS Code workspace settings and extensions
 - [x] Document local development setup in README.md
 - [⚠️] Test every existing feature locally and refactor as necessary for passing local tests.
+  - [x] Fix Device ID validation to properly handle lowercase device IDs
+  - [ ] Fix database model circular dependencies in test execution
+  - [ ] Improve environment configuration and validation
+  - [ ] Enhance mock mode with better device simulation
+  - [ ] Fix tests to properly isolate database operations
 
 ### CI/CD Pipeline
 - [x] Configure Gitea Actions workflow for main branch
@@ -536,12 +541,12 @@ This document outlines the development tasks organized into milestones for trans
 ## Completion Tracking
 
 ### Overall Progress
-- Total Tasks: 407
-- Completed: 13
+- Total Tasks: 412
+- Completed: 14
 - In Progress: 1
 - Blocked: 0
 - At Risk: 2
-- Completion: 3.19%
+- Completion: 3.40%
 
 
 ### Milestone Status
@@ -564,7 +569,10 @@ This document outlines the development tasks organized into milestones for trans
 3. **Real-time Performance**: May need WebSocket optimization
 4. **Data Volume**: Plan for data archival strategy
 5. **Security Compliance**: Regular security audits needed
-6. **SQLAlchemy Model Architecture**: Current nested model pattern causing relationship errors
+6. **SQLAlchemy Model Architecture**: Current nested model pattern causing relationship errors. Test failures indicate foreign key relationships aren't properly defined, particularly between users and alerts tables.
+7. **Device Validation Logic**: Device ID validation has issues with case sensitivity checking, potentially allowing invalid device IDs.
+8. **Test Environment Setup**: Tests are failing due to incomplete test environment setup, particularly related to database initialization.
+9. **Mock Service Implementation**: Mock service shows warnings about devices not being found, indicating implementation gaps.
 
 ### Dependencies
 - ThermoWorks API access and documentation
@@ -575,6 +583,6 @@ This document outlines the development tasks organized into milestones for trans
 
 ---
 
-**Last Updated**: 2025-07-19
+**Last Updated**: 2025-07-19 (Updated with completed Device ID validation fix)
 **Next Review**: 2025-08-02
 **Owner**: Development Team
