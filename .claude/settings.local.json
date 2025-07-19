@@ -48,8 +48,16 @@
       "Bash(./venv/bin/pip list)",
       "Bash(./setup-venv.sh:*)",
       "Bash(pytest:*)",
-      "Bash(echo \"  # Create PR to develop branch\")"
+      "Bash(echo \"  # Create PR to develop branch\")",
+      "Bash(./venv/bin/python test_device_api.py:*)",
+      "Bash(./venv/bin/mypy --config-file mypy.ini models/device.py)",
+      "Bash(./venv/bin/mypy --config-file mypy.ini models/user.py)",
+      "Bash(./venv/bin/mypy --config-file mypy.ini models/temperature_alert.py)",
+      "Bash(./venv/bin/mypy --config-file mypy.ini models/)",
+      "Bash(cp:*)"
     ],
-    "deny": []
+    "deny": [
+      "Bash(git commit --no-verify:*)"
+    ]
   }
 }

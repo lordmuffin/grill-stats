@@ -22,7 +22,7 @@ from config.config_loader import BaseConfig, ConfigLoader, DevelopmentConfig, Do
 from config.env_validator import EnvironmentValidator, EnvVarStatus
 
 
-def test_environment_validator():
+def test_environment_validator() -> None:
     """Test the EnvironmentValidator class"""
     logger.info("Testing EnvironmentValidator...")
 
@@ -63,7 +63,7 @@ def test_environment_validator():
     logger.info("All EnvironmentValidator tests passed!")
 
 
-def test_config_loader():
+def test_config_loader() -> None:
     """Test the ConfigLoader class"""
     logger.info("Testing ConfigLoader...")
 
@@ -137,7 +137,7 @@ def test_config_loader():
     logger.info("All ConfigLoader tests passed!")
 
 
-def test_config_classes():
+def test_config_classes() -> None:
     """Test the configuration classes"""
     logger.info("Testing configuration classes...")
 
@@ -162,7 +162,7 @@ def test_config_classes():
     logger.info("All configuration class tests passed!")
 
 
-def main():
+def main() -> bool:
     """Run all tests"""
     logger.info("Starting Environment Configuration System tests...")
 
@@ -185,4 +185,3 @@ def main():
 if __name__ == "__main__":
     success = main()
     sys.exit(0 if success else 1)
-
