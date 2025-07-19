@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=42", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "grill-stats"
+version = "1.0.4"
+description = "ThermoWorks wireless thermometer monitoring platform with Home Assistant integration"
+readme = "README.md"
+authors = [
+    {name = "Grill Stats Team"}
+]
+requires-python = ">=3.11"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+]
+dependencies = [
+    "flask>=2.3.3,<3.0.0",
+    "requests==2.31.0",
+    "homeassistant-api==5.0.0",
+    "python-dotenv==1.0.0",
+    "apscheduler==3.10.4",
+    "pydantic==2.4.2",
+    "Flask-SQLAlchemy==3.1.1",
+    "Flask-Login==0.6.3",
+    "Flask-WTF==1.2.1",
+    "email-validator==2.0.0",
+    "Flask-Bcrypt==1.0.1",
+    "Flask-Migrate==4.0.5",
+    "Flask-SocketIO==5.3.6",
+    "werkzeug==2.3.7",
+    "flask-testing==0.8.1",
+    "psycopg2-binary==2.9.9",
+    "redis==5.0.1",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest==7.4.0",
+    "pact-python==1.7.0",
+    "pytest-asyncio==0.21.1",
+    "pytest-cov==4.1.0",
+    "pytest-mock==3.11.1",
+    "pytest-env==1.0.1",
+]
+bluetooth = [
+    "pybluez==0.23",
+]
+dev = [
+    "flake8>=6.0.0",
+    "black>=23.3.0",
+    "isort>=5.12.0",
+    "mypy>=1.3.0",
+]
+
+[tool.black]
+line-length = 127
+target-version = ["py311"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 127
+
+[tool.mypy]
+python_version = "3.11"
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+strict_optional = true
+warn_redundant_casts = true
+warn_return_any = true
+warn_unused_ignores = true
+warn_no_return = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_functions = "test_*"
+
