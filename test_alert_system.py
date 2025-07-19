@@ -21,7 +21,12 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
 
+from models.device import Device
+from models.grilling_session import GrillingSession
 from models.temperature_alert import AlertType, TemperatureAlert
+
+# Import models in the correct order to resolve dependencies
+from models.user import User
 from services.alert_monitor import AlertMonitor
 
 # Set up logging
@@ -48,8 +53,11 @@ def test_temperature_alert_model():
     db = SQLAlchemy(app)
 
     with app.app_context():
-        # Initialize the alert manager
+        # Initialize all model managers in the correct order
+        user_manager = User(db)
+        device_manager = Device(db)
         alert_manager = TemperatureAlert(db)
+        session_manager = GrillingSession(db)
 
         # Create tables
         db.create_all()
@@ -179,8 +187,13 @@ def test_alert_monitor():
     db = SQLAlchemy(app)
 
     with app.app_context():
-        # Initialize components
+        # Initialize all model managers in the correct order
+        user_manager = User(db)
+        device_manager = Device(db)
         alert_manager = TemperatureAlert(db)
+        session_manager = GrillingSession(db)
+
+        # Initialize alert monitor
         alert_monitor = AlertMonitor(app, alert_manager)
 
         # Create tables

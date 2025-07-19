@@ -1,50 +1,24 @@
-import os
+"""Configuration module for Grill Stats application
 
-from dotenv import load_dotenv
+This module re-exports configuration classes and loaders from the config package.
+"""
 
-load_dotenv()
+import logging
 
+from config.config_loader import load_config
+from config.env_validator import EnvironmentValidator
 
-class Config:
-    """Configuration for Flask application"""
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-    SQLALCHEMY_DATABASE_URI = "sqlite:///grill_stats.db"
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
+# Load the appropriate configuration class
+try:
+    Config = load_config()
+    logger.info(f"Loaded configuration for environment: {Config.__name__}")
+except Exception as e:
+    logger.error(f"Error loading configuration: {e}")
+    raise
 
-    # Database connection pooling and timeout settings
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        "pool_size": 10,
-        "pool_recycle": 3600,  # Recycle connections after 1 hour
-        "pool_pre_ping": True,  # Verify connections before use
-        "pool_timeout": 30,  # Wait up to 30 seconds for connection
-        "max_overflow": 20,  # Allow up to 20 overflow connections
-    }
-
-    # ThermoWorks API settings
-    THERMOWORKS_API_KEY = os.getenv("THERMOWORKS_API_KEY")
-
-    # Home Assistant settings
-    HOMEASSISTANT_URL = os.getenv("HOMEASSISTANT_URL")
-    HOMEASSISTANT_TOKEN = os.getenv("HOMEASSISTANT_TOKEN")
-
-    # Authentication settings
-    MAX_LOGIN_ATTEMPTS = 5
-
-    # Mock Mode settings (for development and testing)
-    MOCK_MODE = os.getenv("MOCK_MODE", "false").lower() in ("true", "1", "yes", "on")
-
-    @property
-    def is_mock_mode_enabled(self):
-        """Check if mock mode is enabled - only allow in development"""
-        return self.MOCK_MODE and not os.getenv("FLASK_ENV", "").lower() == "production"
-
-
-class TestConfig(Config):
-    """Test configuration"""
-
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = "postgresql://test:test@localhost:5432/grillstats_test"
-    WTF_CSRF_ENABLED = False
-    # Always enable mock mode in testing
-    MOCK_MODE = True
+# For backwards compatibility, export TestConfig
+from config.config_loader import TestingConfig as TestConfig

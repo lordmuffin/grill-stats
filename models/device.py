@@ -9,7 +9,7 @@ from sqlalchemy.orm import Query, relationship
 
 class Device:
     """Device model for ThermoWorks device management"""
-    
+
     model: Any  # Will be set to DeviceModel in __init__
     db: SQLAlchemy
 
@@ -19,7 +19,7 @@ class Device:
         # Define DeviceModel class with type annotation
         # This addresses the "db.Model is not defined" error
         DeviceModel = self.db.Model
-        
+
         class DeviceModel(DeviceModel):  # type: ignore
             __tablename__ = "devices"
 
@@ -32,8 +32,8 @@ class Device:
             created_at = Column(DateTime, default=datetime.utcnow)
             updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-            # Relationship will be established when both models are loaded
-            # user = relationship("UserModel", backref="devices")
+            # Use back_populates instead of backref for explicit relationship management
+            user = relationship("UserModel", back_populates="devices")
 
             def __repr__(self) -> str:
                 return f'<Device {self.device_id} ({self.nickname or "No nickname"})>'

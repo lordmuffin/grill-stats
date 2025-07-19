@@ -4,7 +4,6 @@ import os
 from datetime import datetime, timedelta
 
 from apscheduler.schedulers.background import BackgroundScheduler
-from dotenv import load_dotenv
 from flask import Flask, jsonify, redirect, render_template, request, url_for
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager, current_user, login_required
@@ -12,7 +11,9 @@ from flask_migrate import Migrate
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
 
+# Import configuration
 from config import Config
+from config.env_validator import EnvironmentValidator
 from homeassistant_client import HomeAssistantClient
 from thermoworks_client import ThermoWorksClient
 
@@ -22,8 +23,6 @@ try:
 except ImportError:
     requests = None
 
-load_dotenv()
-
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -32,9 +31,49 @@ import flask
 
 logger.info(f"Starting application with Flask version: {flask.__version__}")
 
+# Initialize environment validator to check configuration
+env_validator = EnvironmentValidator()
+
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+
+# Validate critical configuration on startup
+def validate_critical_config():
+    """Validate critical configuration on startup"""
+    critical_errors = []
+
+    # ThermoWorks API Key (required unless in mock mode)
+    if not app.config.get("MOCK_MODE") and not app.config.get("THERMOWORKS_API_KEY"):
+        critical_errors.append("THERMOWORKS_API_KEY is required unless MOCK_MODE is enabled")
+
+    # Home Assistant URL (required unless in mock mode)
+    if not app.config.get("MOCK_MODE") and not app.config.get("HOMEASSISTANT_URL"):
+        critical_errors.append("HOMEASSISTANT_URL is required unless MOCK_MODE is enabled")
+
+    # Home Assistant Token (required unless in mock mode)
+    if not app.config.get("MOCK_MODE") and not app.config.get("HOMEASSISTANT_TOKEN"):
+        critical_errors.append("HOMEASSISTANT_TOKEN is required unless MOCK_MODE is enabled")
+
+    # Secret Key (should not use default in production)
+    if os.getenv("FLASK_ENV") == "production" and app.config.get("SECRET_KEY") == "dev-secret-key-change-in-production":
+        critical_errors.append("Using default SECRET_KEY in production is not secure")
+
+    # Check if there are any critical errors
+    if critical_errors:
+        error_message = "\n".join([f"- {error}" for error in critical_errors])
+        logger.error(f"Critical configuration errors:\n{error_message}")
+
+        # In production, raise an exception to prevent startup
+        if os.getenv("FLASK_ENV") == "production":
+            raise ValueError(f"Critical configuration errors:\n{error_message}")
+        else:
+            logger.warning("Running with configuration warnings (allowed in development)")
+
+
+# Run validation
+validate_critical_config()
 
 # Initialize extensions
 db = SQLAlchemy(app)

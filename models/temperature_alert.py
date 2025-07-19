@@ -1,8 +1,10 @@
 import enum
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Type, Union
 
+from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Query, relationship
 
 
 class AlertType(enum.Enum):
@@ -17,10 +19,17 @@ class AlertType(enum.Enum):
 class TemperatureAlert:
     """Temperature Alert model for monitoring probe temperatures"""
 
-    def __init__(self, db):
+    model: Any  # Will be set to TemperatureAlertModel in __init__
+    db: SQLAlchemy
+
+    def __init__(self, db: SQLAlchemy) -> None:
         self.db = db
 
-        class TemperatureAlertModel(db.Model):
+        # Define TemperatureAlertModel class with type annotation
+        # This addresses the "db.Model is not defined" error
+        TemperatureAlertModel = self.db.Model
+
+        class TemperatureAlertModel(TemperatureAlertModel):  # type: ignore
             __tablename__ = "temperature_alerts"
 
             id = Column(Integer, primary_key=True)
@@ -34,7 +43,7 @@ class TemperatureAlert:
             max_temperature = Column(Float, nullable=True)  # For range alerts
             threshold_value = Column(Float, nullable=True)  # For rising/falling alerts
 
-            alert_type = Column(Enum(AlertType), nullable=False, default=AlertType.TARGET)
+            alert_type: Any = Column(Enum(AlertType), nullable=False, default=AlertType.TARGET)
             temperature_unit = Column(String(1), default="F")  # F or C
 
             # Alert state
@@ -50,14 +59,14 @@ class TemperatureAlert:
             created_at = Column(DateTime, default=datetime.utcnow)
             updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-            # Relationships - use string reference instead of direct class reference
-            # This will be resolved by SQLAlchemy at runtime
-            user = relationship("UserModel", backref="temperature_alerts")
+            # Use back_populates instead of backref for explicit relationship management
+            # This resolves circular dependencies by making relationships explicit on both sides
+            user = relationship("UserModel", back_populates="temperature_alerts")
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return f"<TemperatureAlert {self.id}: {self.name} ({self.alert_type.value})>"
 
-            def to_dict(self):
+            def to_dict(self) -> Dict[str, Any]:
                 """Convert alert to dictionary for API responses"""
                 return {
                     "id": self.id,
@@ -81,7 +90,7 @@ class TemperatureAlert:
                     "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
                 }
 
-            def should_trigger(self, current_temperature):
+            def should_trigger(self, current_temperature: Optional[float]) -> bool:
                 """Check if this alert should trigger based on current temperature"""
                 if not self.is_active or current_temperature is None:
                     return False
@@ -91,43 +100,44 @@ class TemperatureAlert:
 
                 if self.alert_type == AlertType.TARGET:
                     # Trigger when temperature reaches or exceeds target
-                    return temp >= self.target_temperature
+                    return bool(temp >= self.target_temperature)
 
                 elif self.alert_type == AlertType.RANGE:
                     # Trigger when temperature is outside the range
-                    return temp < self.min_temperature or temp > self.max_temperature
+                    return bool(temp < self.min_temperature or temp > self.max_temperature)
 
                 elif self.alert_type == AlertType.RISING:
                     # Trigger when temperature rises by threshold amount
                     if self.last_temperature is not None:
-                        return (temp - self.last_temperature) >= self.threshold_value
+                        return bool((temp - self.last_temperature) >= self.threshold_value)
                     return False
 
                 elif self.alert_type == AlertType.FALLING:
                     # Trigger when temperature falls by threshold amount
                     if self.last_temperature is not None:
-                        return (self.last_temperature - temp) >= self.threshold_value
+                        return bool((self.last_temperature - temp) >= self.threshold_value)
                     return False
 
                 return False
 
-            def update_temperature(self, current_temperature):
+            def update_temperature(self, current_temperature: float) -> None:
                 """Update the last known temperature and check time"""
-                self.last_temperature = current_temperature
-                self.last_checked_at = datetime.utcnow()
+                # Using setattr to handle SQLAlchemy column assignments
+                setattr(self, "last_temperature", current_temperature)
+                setattr(self, "last_checked_at", datetime.utcnow())
 
-            def trigger_alert(self):
+            def trigger_alert(self) -> None:
                 """Mark alert as triggered"""
-                self.triggered_at = datetime.utcnow()
-                self.notification_sent = False  # Reset to allow new notification
+                setattr(self, "triggered_at", datetime.utcnow())
+                setattr(self, "notification_sent", False)  # Reset to allow new notification
 
-            def mark_notification_sent(self):
+            def mark_notification_sent(self) -> None:
                 """Mark that notification has been sent for this trigger"""
-                self.notification_sent = True
+                setattr(self, "notification_sent", True)
 
-        self.model = TemperatureAlertModel
+        self.model = TemperatureAlertModel  # type: ignore
 
-    def create_alert(self, user_id, device_id, probe_id, alert_type, **kwargs):
+    def create_alert(self, user_id: int, device_id: str, probe_id: str, alert_type: AlertType, **kwargs: Any) -> Any:
         """Create a new temperature alert"""
         alert = self.model(
             user_id=user_id,
@@ -140,32 +150,35 @@ class TemperatureAlert:
         self.db.session.commit()
         return alert
 
-    def get_user_alerts(self, user_id, active_only=True):
+    def get_user_alerts(self, user_id: int, active_only: bool = True) -> List[Any]:
         """Get all alerts for a user"""
         query = self.model.query.filter_by(user_id=user_id)
         if active_only:
             query = query.filter_by(is_active=True)
-        return query.all()
+        result: List[Any] = query.all()
+        return result
 
-    def get_alert_by_id(self, alert_id, user_id=None):
+    def get_alert_by_id(self, alert_id: int, user_id: Optional[int] = None) -> Optional[Any]:
         """Get a specific alert by ID"""
         query = self.model.query.filter_by(id=alert_id)
         if user_id:
             query = query.filter_by(user_id=user_id)
         return query.first()
 
-    def get_alerts_for_device_probe(self, device_id, probe_id, active_only=True):
+    def get_alerts_for_device_probe(self, device_id: str, probe_id: str, active_only: bool = True) -> List[Any]:
         """Get all alerts for a specific device/probe combination"""
         query = self.model.query.filter_by(device_id=device_id, probe_id=probe_id)
         if active_only:
             query = query.filter_by(is_active=True)
-        return query.all()
+        result: List[Any] = query.all()
+        return result
 
-    def get_active_alerts(self):
+    def get_active_alerts(self) -> List[Any]:
         """Get all active alerts for monitoring"""
-        return self.model.query.filter_by(is_active=True).all()
+        result: List[Any] = self.model.query.filter_by(is_active=True).all()
+        return result
 
-    def update_alert(self, alert_id, user_id, **kwargs):
+    def update_alert(self, alert_id: int, user_id: int, **kwargs: Any) -> Optional[Any]:
         """Update an existing alert"""
         alert = self.get_alert_by_id(alert_id, user_id)
         if alert:
@@ -177,17 +190,17 @@ class TemperatureAlert:
             return alert
         return None
 
-    def delete_alert(self, alert_id, user_id):
+    def delete_alert(self, alert_id: int, user_id: int) -> bool:
         """Delete an alert (soft delete by setting is_active=False)"""
         alert = self.get_alert_by_id(alert_id, user_id)
         if alert:
-            alert.is_active = False
-            alert.updated_at = datetime.utcnow()
+            setattr(alert, "is_active", False)
+            setattr(alert, "updated_at", datetime.utcnow())
             self.db.session.commit()
             return True
         return False
 
-    def validate_alert_data(self, alert_type, **kwargs):
+    def validate_alert_data(self, alert_type: AlertType, **kwargs: Any) -> List[str]:
         """Validate alert configuration data"""
         errors = []
 

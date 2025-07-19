@@ -30,15 +30,15 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Document local development setup in README.md
 - [⚠️] Test every existing feature locally and refactor as necessary for passing local tests.
   - [x] Fix Device ID validation to properly handle lowercase device IDs
-  - [ ] Fix database model circular dependencies in test execution
-  - [ ] Improve environment configuration and validation
+  - [x] Fix database model circular dependencies in test execution
+  - [x] Improve environment configuration and validation
   - [ ] Enhance mock mode with better device simulation
   - [ ] Fix tests to properly isolate database operations
 - [⚠️] Add type annotations to model classes (high priority)
   - [x] Add type annotations to all methods in models/device.py
-  - [ ] Add type annotations to all methods in models/user.py
-  - [ ] Add type annotations to all methods in models/temperature_alert.py
-  - [x] Fix "db.Model" name-defined errors in model classes (for device.py)
+  - [x] Add type annotations to all methods in models/user.py
+  - [x] Add type annotations to all methods in models/temperature_alert.py
+  - [x] Fix "db.Model" name-defined errors in model classes (for device.py and user.py)
   - [x] Configure mypy to properly handle SQLAlchemy types
 
 ### CI/CD Pipeline
@@ -548,17 +548,17 @@ This document outlines the development tasks organized into milestones for trans
 
 ### Overall Progress
 - Total Tasks: 418
-- Completed: 16
-- In Progress: 1
+- Completed: 18
+- In Progress: 0
 - Blocked: 0
 - At Risk: 3
-- Completion: 3.83%
+- Completion: 4.31%
 
 
 ### Milestone Status
 | Milestone | Tasks | Completed | Progress |
 |-----------|-------|-----------|----------|
-| M1: Foundation | 45 | 16 | 35.6% |
+| M1: Foundation | 45 | 18 | 40.0% |
 | M2: Device Service | 40 | 0 | 0% |
 | M3: Temperature Service | 40 | 0 | 0% |
 | M4: Web UI | 48 | 0 | 0% |
@@ -590,6 +590,6 @@ This document outlines the development tasks organized into milestones for trans
 
 ---
 
-**Last Updated**: 2025-07-19 (Updated with completed Device ID validation fix and type annotations for device.py)
+**Last Updated**: 2025-07-19 (Updated with completed type annotations for device.py, user.py, and temperature_alert.py)
 **Next Review**: 2025-08-02
 **Owner**: Development Team
