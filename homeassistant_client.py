@@ -8,9 +8,9 @@ logger = logging.getLogger(__name__)
 
 
 class HomeAssistantClient:
-    def __init__(self, base_url: str = None, access_token: str = None, mock_mode: bool = False):
+    def __init__(self, base_url: Optional[str] = None, access_token: Optional[str] = None, mock_mode: bool = False):
         self.mock_mode = mock_mode
-        
+
         if mock_mode:
             logger.info("HomeAssistantClient initialized in MOCK MODE")
             self.base_url = "http://mock-homeassistant"
@@ -33,7 +33,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info("Mock Home Assistant connection test: Success")
             return True
-            
+
         try:
             response = self.session.get(f"{self.base_url}/api/")
             return response.status_code == 200
@@ -45,7 +45,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info("Mock Home Assistant get_states called")
             return []
-            
+
         try:
             response = self.session.get(f"{self.base_url}/api/states")
             response.raise_for_status()
@@ -58,7 +58,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info(f"Mock Home Assistant get_entity_state called for {entity_id}")
             return None
-            
+
         try:
             response = self.session.get(f"{self.base_url}/api/states/{entity_id}")
             if response.status_code == 404:
@@ -73,7 +73,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info(f"Mock Home Assistant set_entity_state called for {entity_id} = {state}")
             return True
-            
+
         try:
             data = {"state": state, "attributes": attributes or {}}
             response = self.session.post(f"{self.base_url}/api/states/{entity_id}", json=data)
@@ -93,7 +93,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info(f"Mock Home Assistant call_service called for {domain}.{service}")
             return True
-            
+
         try:
             data = {}
             if service_data:
@@ -118,7 +118,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info(f"Mock sensor created: {sensor_name} = {state}{unit if unit else ''}")
             return True
-            
+
         entity_id = f"sensor.{sensor_name}"
         sensor_attributes = attributes or {}
 
@@ -138,7 +138,7 @@ class HomeAssistantClient:
         if self.mock_mode:
             logger.info(f"Mock Home Assistant notification: {title if title else 'Notification'} - {message}")
             return True
-            
+
         service_data = {"message": message}
         if title:
             service_data["title"] = title

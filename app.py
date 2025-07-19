@@ -42,12 +42,11 @@ app = Flask(__name__)
 app.config.from_object(Config)
 
 # Override database settings for local development without docker
-if app.config.get("MOCK_MODE") and os.environ.get('LOCAL_DB', 'true').lower() in ('true', '1', 'yes', 'on'):
-    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grill_stats.db'
+if app.config.get("MOCK_MODE") and os.environ.get("LOCAL_DB", "true").lower() in ("true", "1", "yes", "on"):
+    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///grill_stats.db"
     logger.info(f"Using SQLite database: {app.config['SQLALCHEMY_DATABASE_URI']}")
 else:
     logger.info(f"Using database: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
-
 
 
 # Validate critical configuration on startup
@@ -1413,7 +1412,7 @@ if __name__ == "__main__":
         # Use debug=False in production deployment
         is_production = os.environ.get("FLASK_ENV") == "production"
         debug_mode = not is_production
-        port = int(os.environ.get('PORT', 5001))
+        port = int(os.environ.get("PORT", 5001))
         logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}, Port: {port}")
         logger.info("About to call app.run...")
         socketio.run(app, host="0.0.0.0", port=port, debug=debug_mode, allow_unsafe_werkzeug=True)
