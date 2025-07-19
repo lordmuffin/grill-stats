@@ -3,9 +3,15 @@ import logging
 import os
 from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Protocol, TypeVar, cast
 
 import requests
+
+class MockServiceProtocol(Protocol):
+    def get_devices(self) -> List[Dict[str, Any]]: ...
+    def get_device_status(self, device_id: str) -> Dict[str, Any]: ...
+    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict[str, Any]: ...
+    def get_historical_data(self, device_id: str, probe_id: str, start_dt: Any, end_dt: Any) -> List[Dict[str, Any]]: ...
 
 logger = logging.getLogger(__name__)
 
@@ -75,6 +81,12 @@ class ThermoworksConnectionError(ThermoworksAPIError):
 
 class ThermoworksClient:
     """ThermoWorks Cloud API Client"""
+    
+    mock_service: Optional[MockServiceProtocol]
+    session: requests.Session
+    mock_mode: bool
+    base_url: str
+    api_key: Optional[str]
 
     def __init__(
         self,
@@ -88,8 +100,8 @@ class ThermoworksClient:
         token_storage_path: Optional[str] = None,
         polling_interval: int = 60,
         auto_start_polling: bool = True,
-        **kwargs,
-    ):
+        **kwargs: Any,
+    ) -> None:
         self.api_key = api_key
         self.base_url = base_url
 
@@ -114,10 +126,10 @@ class ThermoworksClient:
             except ImportError as e:
                 logger.error("Failed to import MockDataService: %s", e)
                 self.mock_mode = False
-                self.mock_service = None  # type: ignore
+                self.mock_service = None
         else:
             logger.info("ThermoWorks client initialized in LIVE MODE")
-            self.mock_service = None  # type: ignore
+            self.mock_service = None
 
         # Initialize real session for non-mock mode
         if not self.mock_mode:
@@ -131,31 +143,36 @@ class ThermoworksClient:
 
     def get_devices(self) -> List[Dict[str, Any]]:
         if self.mock_mode and self.mock_service:
-            return self.mock_service.get_devices()
+            devices: List[Dict[str, Any]] = self.mock_service.get_devices()
+            return devices
 
         try:
             response = self.session.get(f"{self.base_url}/devices")
             response.raise_for_status()
-            return response.json()
+            result: List[Dict[str, Any]] = response.json()
+            return result
         except requests.RequestException as e:
             logger.error(f"Failed to get devices: {e}")
             return []
 
     def get_device_readings(self, device_id: str) -> Dict[str, Any]:
         if self.mock_mode and self.mock_service:
-            return self.mock_service.get_device_status(device_id)
+            readings: Dict[str, Any] = self.mock_service.get_device_status(device_id)
+            return readings
 
         try:
             response = self.session.get(f"{self.base_url}/devices/{device_id}/readings")
             response.raise_for_status()
-            return response.json()
+            result: Dict[str, Any] = response.json()
+            return result
         except requests.RequestException as e:
             logger.error(f"Failed to get readings for device {device_id}: {e}")
             return {}
 
     def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict[str, Any]:
         if self.mock_mode and self.mock_service:
-            return self.mock_service.get_temperature_data(device_id, probe_id)
+            temp_data: Dict[str, Any] = self.mock_service.get_temperature_data(device_id, probe_id)
+            return temp_data
 
         try:
             endpoint = f"{self.base_url}/devices/{device_id}/temperature"
@@ -192,7 +209,8 @@ class ThermoworksClient:
             try:
                 start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
                 end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-                return self.mock_service.get_historical_data(device_id, probe_id or "probe_1", start_dt, end_dt)
+                history_data: List[Dict[str, Any]] = self.mock_service.get_historical_data(device_id, probe_id or "probe_1", start_dt, end_dt)
+                return history_data
             except Exception as e:
                 logger.error(f"Failed to parse datetime in mock mode: {e}")
                 return []
@@ -204,7 +222,8 @@ class ThermoworksClient:
 
             response = self.session.get(f"{self.base_url}/devices/{device_id}/history", params=params)
             response.raise_for_status()
-            return response.json()
+            result: List[Dict[str, Any]] = response.json()
+            return result
         except requests.RequestException as e:
             logger.error(f"Failed to get historical data: {e}")
             return []
