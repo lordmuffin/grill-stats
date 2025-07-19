@@ -2,6 +2,29 @@
 
 This document explains how the CI/CD pipelines are set up for the Grill Stats project, using Gitea Actions for continuous integration and container image building on Kubernetes.
 
+## Recent Updates - 2025-07-19
+
+The CI/CD pipeline has been recently enhanced with the following improvements:
+
+1. **Separated Test and Build Jobs**
+   - Test job now runs all tests and code quality checks
+   - Build job runs only if tests pass successfully
+
+2. **Enhanced Code Quality Checks**
+   - Syntax checking with flake8
+   - Code style verification with black and isort
+   - Type checking with mypy
+   - Vulnerability scanning with safety
+
+3. **Comprehensive Testing**
+   - Unit tests with pytest
+   - Alert system testing
+   - Container startup verification
+
+4. **Docker Image Security**
+   - Image vulnerability scanning with Trivy
+   - Container verification testing
+
 ## Overview
 
 The Grill Stats project consists of a main application and several microservices. Each component has its own dedicated build pipeline that is triggered when changes are made to the relevant files. We also have separate pipelines for testing and end-to-end testing.

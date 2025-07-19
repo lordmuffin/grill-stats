@@ -25,16 +25,16 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Configure pre-commit hooks for code quality
 - [x] Create .env.example with all required variables
 - [x] Set up Python virtual environment configuration
-- [ ] Create docker-compose.yml for local development
+- [x] Create docker-compose.yml for local development
 - [x] Configure VS Code workspace settings and extensions
-- [ ] Document local development setup in README.md
+- [x] Document local development setup in README.md
 
 ### CI/CD Pipeline
-- [ ] Configure Gitea Actions workflow for main branch
-- [ ] Set up automated Python linting (flake8, black)
-- [ ] Configure automated testing pipeline
-- [ ] Set up Docker image building and scanning
-- [ ] Configure artifact storage for built images
+- [x] Configure Gitea Actions workflow for main branch
+- [x] Set up automated Python linting (flake8, black)
+- [x] Configure automated testing pipeline
+- [x] Set up Docker image building and scanning
+- [x] Configure artifact storage for built images
 - [ ] Set up branch protection rules
 - [ ] Create deployment scripts for different environments
 - [ ] Configure secret management in CI/CD
@@ -528,16 +528,16 @@ This document outlines the development tasks organized into milestones for trans
 
 ### Overall Progress
 - Total Tasks: 400
-- Completed: 6
+- Completed: 13
 - In Progress: 0
 - Blocked: 0
-- Completion: 1.5%
+- Completion: 3.25%
 
 
 ### Milestone Status
 | Milestone | Tasks | Completed | Progress |
 |-----------|-------|-----------|----------|
-| M1: Foundation | 32 | 6 | 18.75% |
+| M1: Foundation | 32 | 13 | 40.6% |
 | M2: Device Service | 40 | 0 | 0% |
 | M3: Temperature Service | 40 | 0 | 0% |
 | M4: Web UI | 48 | 0 | 0% |
