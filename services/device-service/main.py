@@ -22,25 +22,10 @@ import psycopg2
 import redis
 from device_manager import DeviceManager
 from dotenv import load_dotenv
-from flask import (
-    Flask,
-    Response,
-    abort,
-    jsonify,
-    redirect,
-    render_template_string,
-    request,
-    url_for,
-)
+from flask import Flask, Response, abort, jsonify, redirect, render_template_string, request, url_for
 from flask_cors import CORS
 from psycopg2.extras import RealDictCursor
-from rfx_gateway_client import (
-    GatewaySetupStatus,
-    GatewaySetupStep,
-    RFXGatewayClient,
-    RFXGatewayError,
-    WiFiNetwork,
-)
+from rfx_gateway_client import GatewaySetupStatus, GatewaySetupStep, RFXGatewayClient, RFXGatewayError, WiFiNetwork
 from rfx_gateway_routes import register_gateway_routes
 
 from thermoworks_client import (
@@ -51,6 +36,13 @@ from thermoworks_client import (
     ThermoworksClient,
     ThermoworksConnectionError,
 )
+
+# Configure logging
+logging.basicConfig(
+    level=os.environ.get("LOG_LEVEL", "INFO"),
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+)
+logger = logging.getLogger("device_service")
 
 try:
     # Try to import python-thermoworks-cloud if available
@@ -63,13 +55,6 @@ except ImportError:
 
 # Load environment variables
 load_dotenv()
-
-# Configure logging
-logging.basicConfig(
-    level=os.environ.get("LOG_LEVEL", "INFO"),
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
-logger = logging.getLogger("device_service")
 
 # Initialize Flask app
 app = Flask(__name__)
@@ -135,9 +120,7 @@ ha_token = os.environ.get("HOMEASSISTANT_TOKEN")
 
 if not ha_token:
     logger.error("HOMEASSISTANT_TOKEN environment variable is required but not set")
-    logger.error(
-        "Please ensure the Home Assistant long-lived access token is configured in secrets"
-    )
+    logger.error("Please ensure the Home Assistant long-lived access token is configured in secrets")
     raise ValueError("Missing required Home Assistant token configuration")
 
 logger.info(f"Initializing RFX Gateway client with Home Assistant URL: {ha_url}")
@@ -213,9 +196,7 @@ class TemperatureHandler:
     def __init__(self, redis_client: Optional[redis.Redis] = None):
         self.redis_client = redis_client
 
-    def handle_temperature_readings(
-        self, device: DeviceInfo, readings: List[TemperatureReading]
-    ) -> None:
+    def handle_temperature_readings(self, device: DeviceInfo, readings: List[TemperatureReading]) -> None:
         """
         Handle temperature readings from a device
 
@@ -223,9 +204,7 @@ class TemperatureHandler:
             device: Device information
             readings: List of temperature readings
         """
-        logger.info(
-            f"Received {len(readings)} temperature readings for device {device.device_id}"
-        )
+        logger.info(f"Received {len(readings)} temperature readings for device {device.device_id}")
 
         # Publish to Redis if available
         if self.redis_client:
@@ -241,18 +220,14 @@ class TemperatureHandler:
                     self.redis_client.set(key, message)
                     self.redis_client.expire(key, 3600)  # Expire after 1 hour
 
-                logger.debug(
-                    f"Published temperature readings to Redis for device {device.device_id}"
-                )
+                logger.debug(f"Published temperature readings to Redis for device {device.device_id}")
             except redis.RedisError as e:
                 logger.error(f"Failed to publish temperature readings to Redis: {e}")
 
 
 # Create temperature handler and monkey-patch the client's handler method
 temperature_handler = TemperatureHandler(redis_client)
-thermoworks_client._handle_temperature_readings = (
-    temperature_handler.handle_temperature_readings
-)
+thermoworks_client._handle_temperature_readings = temperature_handler.handle_temperature_readings
 
 
 # Register a shutdown handler to clean up resources
@@ -288,9 +263,7 @@ atexit.register(exit_handler)
 try:
     if thermoworks_client.client_id and thermoworks_client.client_secret:
         if not thermoworks_client.token:
-            logger.info(
-                "No token found, attempting client credentials authentication..."
-            )
+            logger.info("No token found, attempting client credentials authentication...")
             thermoworks_client.authenticate_with_client_credentials()
 
         # Start polling if authenticated
@@ -300,9 +273,7 @@ try:
         else:
             logger.warning("Failed to authenticate with client credentials")
     else:
-        logger.warning(
-            "ThermoWorks client ID or secret not configured, authentication will be required"
-        )
+        logger.warning("ThermoWorks client ID or secret not configured, authentication will be required")
 except Exception as e:
     logger.error(f"Error during ThermoWorks client initialization: {e}")
 
@@ -330,9 +301,7 @@ def success_response(data: Any = None, message: str = "Success") -> Dict[str, An
     return response
 
 
-def error_response(
-    message: str, status_code: int = 400, details: Any = None
-) -> Dict[str, Any]:
+def error_response(message: str, status_code: int = 400, details: Any = None) -> Dict[str, Any]:
     """
     Create an error response
 
@@ -398,10 +367,7 @@ def health_check():
         status["thermoworks_client"] = {
             "connected": thermoworks_client.connection_state["connected"],
             "authenticated": thermoworks_client.token is not None,
-            "polling_active": bool(
-                thermoworks_client._polling_thread
-                and thermoworks_client._polling_thread.is_alive()
-            ),
+            "polling_active": bool(thermoworks_client._polling_thread and thermoworks_client._polling_thread.is_alive()),
         }
 
     # Add Redis status if available
@@ -445,9 +411,7 @@ def auth_thermoworks():
     except Exception as e:
         logger.error(f"Error generating authorization URL: {e}")
         return (
-            jsonify(
-                error_response(f"Error generating authorization URL: {str(e)}", 500)
-            ),
+            jsonify(error_response(f"Error generating authorization URL: {str(e)}", 500)),
             500,
         )
 
@@ -544,9 +508,7 @@ def auth_thermoworks_status():
     except Exception as e:
         logger.error(f"Error getting authentication status: {e}")
         return (
-            jsonify(
-                error_response(f"Error getting authentication status: {str(e)}", 500)
-            ),
+            jsonify(error_response(f"Error getting authentication status: {str(e)}", 500)),
             500,
         )
 
@@ -617,9 +579,7 @@ def get_devices():
         cloud_devices = []
         if thermoworks_client.token and (force_refresh or not db_devices):
             try:
-                cloud_devices = thermoworks_client.get_devices(
-                    force_refresh=force_refresh
-                )
+                cloud_devices = thermoworks_client.get_devices(force_refresh=force_refresh)
 
                 # Sync cloud devices to database with user association
                 if device_manager:
@@ -644,14 +604,10 @@ def get_devices():
                             "last_seen": device.last_seen,
                             "status": "online" if device.is_online else "offline",
                         }
-                        device_manager.update_device_health(
-                            device.device_id, health_data
-                        )
+                        device_manager.update_device_health(device.device_id, health_data)
 
                     # Refresh database devices after sync
-                    db_devices = device_manager.get_devices(
-                        active_only=True, user_id=user_id
-                    )
+                    db_devices = device_manager.get_devices(active_only=True, user_id=user_id)
             except Exception as e:
                 logger.warning(f"Failed to sync devices from ThermoWorks Cloud: {e}")
 
@@ -665,9 +621,7 @@ def get_devices():
                 "name": device["name"],
                 "device_type": device["device_type"],
                 "model": device.get("configuration", {}).get("model", "Unknown"),
-                "firmware_version": device.get("configuration", {}).get(
-                    "firmware_version"
-                ),
+                "firmware_version": device.get("configuration", {}).get("firmware_version"),
                 "status": "offline",  # Default, will be updated if we have health data
                 "last_seen": None,
                 "battery_level": None,
@@ -697,16 +651,12 @@ def get_devices():
                         if health:
                             device_info["battery_level"] = health[0]
                             device_info["signal_strength"] = health[1]
-                            device_info["last_seen"] = (
-                                health[2].isoformat() if health[2] else None
-                            )
+                            device_info["last_seen"] = health[2].isoformat() if health[2] else None
                             device_info["status"] = health[3] or "offline"
                             device_info["is_online"] = health[3] == "online"
                     conn.close()
                 except Exception as e:
-                    logger.warning(
-                        f"Failed to get health data for device {device['device_id']}: {e}"
-                    )
+                    logger.warning(f"Failed to get health data for device {device['device_id']}: {e}")
 
             all_devices.append(device_info)
 
@@ -735,11 +685,7 @@ def get_devices():
                 {
                     "devices": all_devices,
                     "count": len(all_devices),
-                    "source": (
-                        "database"
-                        if db_devices
-                        else "cloud" if cloud_devices else "none"
-                    ),
+                    "source": ("database" if db_devices else "cloud" if cloud_devices else "none"),
                 }
             )
         )
@@ -808,10 +754,7 @@ def get_device_temperature(device_id):
         probe_id = request.args.get("probe_id")
 
         # Check Redis for cached data if available
-        if (
-            redis_client
-            and not request.args.get("force_refresh", "false").lower() == "true"
-        ):
+        if redis_client and not request.args.get("force_refresh", "false").lower() == "true":
             try:
                 # Try to get the latest reading from Redis
                 if probe_id:
@@ -851,9 +794,7 @@ def get_device_temperature(device_id):
                 logger.warning(f"Failed to get temperature from Redis: {e}")
 
         # Get temperature from API
-        readings = thermoworks_client.get_device_temperature(
-            device_id, probe_id=probe_id
-        )
+        readings = thermoworks_client.get_device_temperature(device_id, probe_id=probe_id)
 
         return jsonify(
             success_response(
@@ -865,9 +806,7 @@ def get_device_temperature(device_id):
             )
         )
     except ThermoworksAuthenticationError as e:
-        logger.error(
-            f"Authentication error getting temperature for device {device_id}: {e}"
-        )
+        logger.error(f"Authentication error getting temperature for device {device_id}: {e}")
         return jsonify(error_response(f"Authentication failed: {str(e)}", 401)), 401
     except ThermoworksAPIError as e:
         logger.error(f"API error getting temperature for device {device_id}: {e}")
@@ -924,9 +863,7 @@ def get_device_history(device_id):
             )
         )
     except ThermoworksAuthenticationError as e:
-        logger.error(
-            f"Authentication error getting history for device {device_id}: {e}"
-        )
+        logger.error(f"Authentication error getting history for device {device_id}: {e}")
         return jsonify(error_response(f"Authentication failed: {str(e)}", 401)), 401
     except ThermoworksAPIError as e:
         logger.error(f"API error getting history for device {device_id}: {e}")
@@ -1074,27 +1011,17 @@ def sync():
                             "last_seen": device.last_seen,
                             "status": "online" if device.is_online else "offline",
                         }
-                        device_manager.update_device_health(
-                            device.device_id, health_data
-                        )
+                        device_manager.update_device_health(device.device_id, health_data)
 
                         # Get temperature for each device
                         try:
-                            readings = thermoworks_client.get_device_temperature(
-                                device.device_id
-                            )
-                            logger.info(
-                                f"Synced {len(readings)} temperature readings for device {device.device_id}"
-                            )
+                            readings = thermoworks_client.get_device_temperature(device.device_id)
+                            logger.info(f"Synced {len(readings)} temperature readings for device {device.device_id}")
 
                             # Handle readings
-                            temperature_handler.handle_temperature_readings(
-                                device, readings
-                            )
+                            temperature_handler.handle_temperature_readings(device, readings)
                         except Exception as e:
-                            logger.error(
-                                f"Error syncing temperature for device {device.device_id}: {e}"
-                            )
+                            logger.error(f"Error syncing temperature for device {device.device_id}: {e}")
 
                 logger.info(f"Sync completed for user {user_id}")
 
@@ -1230,9 +1157,7 @@ def swagger_json():
                                             "data": {
                                                 "type": "object",
                                                 "properties": {
-                                                    "authorization_url": {
-                                                        "type": "string"
-                                                    },
+                                                    "authorization_url": {"type": "string"},
                                                     "state": {"type": "string"},
                                                 },
                                             },
@@ -1330,12 +1255,8 @@ def swagger_json():
                                                 "type": "object",
                                                 "properties": {
                                                     "connected": {"type": "boolean"},
-                                                    "authenticated": {
-                                                        "type": "boolean"
-                                                    },
-                                                    "polling_active": {
-                                                        "type": "boolean"
-                                                    },
+                                                    "authenticated": {"type": "boolean"},
+                                                    "polling_active": {"type": "boolean"},
                                                 },
                                             },
                                         },
@@ -1415,15 +1336,9 @@ def swagger_json():
                                                         "items": {
                                                             "type": "object",
                                                             "properties": {
-                                                                "device_id": {
-                                                                    "type": "string"
-                                                                },
-                                                                "name": {
-                                                                    "type": "string"
-                                                                },
-                                                                "model": {
-                                                                    "type": "string"
-                                                                },
+                                                                "device_id": {"type": "string"},
+                                                                "name": {"type": "string"},
+                                                                "model": {"type": "string"},
                                                             },
                                                         },
                                                     },
@@ -1473,9 +1388,7 @@ def swagger_json():
                                                     "device": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "device_id": {
-                                                                "type": "string"
-                                                            },
+                                                            "device_id": {"type": "string"},
                                                             "name": {"type": "string"},
                                                             "model": {"type": "string"},
                                                         },
@@ -1542,18 +1455,10 @@ def swagger_json():
                                                         "items": {
                                                             "type": "object",
                                                             "properties": {
-                                                                "device_id": {
-                                                                    "type": "string"
-                                                                },
-                                                                "probe_id": {
-                                                                    "type": "string"
-                                                                },
-                                                                "temperature": {
-                                                                    "type": "number"
-                                                                },
-                                                                "unit": {
-                                                                    "type": "string"
-                                                                },
+                                                                "device_id": {"type": "string"},
+                                                                "probe_id": {"type": "string"},
+                                                                "temperature": {"type": "number"},
+                                                                "unit": {"type": "string"},
                                                                 "timestamp": {
                                                                     "type": "string",
                                                                     "format": "date-time",
@@ -1634,18 +1539,10 @@ def swagger_json():
                                                         "items": {
                                                             "type": "object",
                                                             "properties": {
-                                                                "device_id": {
-                                                                    "type": "string"
-                                                                },
-                                                                "probe_id": {
-                                                                    "type": "string"
-                                                                },
-                                                                "temperature": {
-                                                                    "type": "number"
-                                                                },
-                                                                "unit": {
-                                                                    "type": "string"
-                                                                },
+                                                                "device_id": {"type": "string"},
+                                                                "probe_id": {"type": "string"},
+                                                                "temperature": {"type": "number"},
+                                                                "unit": {"type": "string"},
                                                                 "timestamp": {
                                                                     "type": "string",
                                                                     "format": "date-time",
@@ -1657,21 +1554,11 @@ def swagger_json():
                                                     "query": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "device_id": {
-                                                                "type": "string"
-                                                            },
-                                                            "probe_id": {
-                                                                "type": "string"
-                                                            },
-                                                            "start_time": {
-                                                                "type": "string"
-                                                            },
-                                                            "end_time": {
-                                                                "type": "string"
-                                                            },
-                                                            "limit": {
-                                                                "type": "integer"
-                                                            },
+                                                            "device_id": {"type": "string"},
+                                                            "probe_id": {"type": "string"},
+                                                            "start_time": {"type": "string"},
+                                                            "end_time": {"type": "string"},
+                                                            "limit": {"type": "integer"},
                                                         },
                                                     },
                                                 },
@@ -1712,15 +1599,9 @@ def swagger_json():
                                                         "items": {
                                                             "type": "object",
                                                             "properties": {
-                                                                "device_id": {
-                                                                    "type": "string"
-                                                                },
-                                                                "name": {
-                                                                    "type": "string"
-                                                                },
-                                                                "model": {
-                                                                    "type": "string"
-                                                                },
+                                                                "device_id": {"type": "string"},
+                                                                "name": {"type": "string"},
+                                                                "model": {"type": "string"},
                                                             },
                                                         },
                                                     },
@@ -1771,15 +1652,9 @@ def swagger_json():
                                                     "health": {
                                                         "type": "object",
                                                         "properties": {
-                                                            "battery_level": {
-                                                                "type": "integer"
-                                                            },
-                                                            "signal_strength": {
-                                                                "type": "integer"
-                                                            },
-                                                            "status": {
-                                                                "type": "string"
-                                                            },
+                                                            "battery_level": {"type": "integer"},
+                                                            "signal_strength": {"type": "integer"},
+                                                            "status": {"type": "string"},
                                                             "last_seen": {
                                                                 "type": "string",
                                                                 "format": "date-time",
