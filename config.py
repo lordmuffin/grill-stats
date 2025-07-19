@@ -9,7 +9,7 @@ class Config:
     """Configuration for Flask application"""
 
     SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
-    SQLALCHEMY_DATABASE_URI = os.getenv("DATABASE_URL", "sqlite:///grill_stats.db")
+    SQLALCHEMY_DATABASE_URI = "sqlite:///grill_stats.db"
     SQLALCHEMY_TRACK_MODIFICATIONS = False
 
     # Database connection pooling and timeout settings
@@ -19,10 +19,6 @@ class Config:
         "pool_pre_ping": True,  # Verify connections before use
         "pool_timeout": 30,  # Wait up to 30 seconds for connection
         "max_overflow": 20,  # Allow up to 20 overflow connections
-        "connect_args": {
-            "connect_timeout": 10,  # Connection timeout in seconds
-            "application_name": "grill-stats",
-        },
     }
 
     # ThermoWorks API settings

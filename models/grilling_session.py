@@ -32,8 +32,10 @@ class GrillingSession:
             created_at = Column(DateTime, default=datetime.utcnow)
             updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-            # Relationship to User model
-            user = relationship("User", backref="grilling_sessions")
+            # Use a string reference for the relationship to avoid circular imports
+            # This will be resolved by SQLAlchemy during mapper configuration
+            # The UserModel is defined in the User class's __init__ method as a nested class
+            user = relationship("UserModel", backref="grilling_sessions")
 
             def __repr__(self):
                 return f'<GrillingSession {self.id}: {self.name or "Unnamed"} ({self.status})>'

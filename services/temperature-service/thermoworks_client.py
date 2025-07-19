@@ -295,21 +295,20 @@ class ThermoWorksClient:
             data = response.json()
 
             # Normalize device data
-            normalized_data = {
-                "device_id": device_id,
-                "channels": []
-            }
+            normalized_data = {"device_id": device_id, "channels": []}
 
             # Extract channel data if available
             for channel in data.get("channels", []):
-                normalized_data["channels"].append({
-                    "channel_id": channel.get("id"),
-                    "channel_name": channel.get("name"),
-                    "probe_type": channel.get("type"),
-                    "temperature": channel.get("temperature"),
-                    "unit": channel.get("unit", "F"),
-                    "is_connected": channel.get("is_connected", False),
-                })
+                normalized_data["channels"].append(
+                    {
+                        "channel_id": channel.get("id"),
+                        "channel_name": channel.get("name"),
+                        "probe_type": channel.get("type"),
+                        "temperature": channel.get("temperature"),
+                        "unit": channel.get("unit", "F"),
+                        "is_connected": channel.get("is_connected", False),
+                    }
+                )
 
             logger.info(
                 "Device data retrieved from ThermoWorks",
@@ -384,7 +383,7 @@ class ThermoWorksClient:
                 "signal_strength": 0,
                 "connection_status": "error",
             }
-            
+
     def test_api_connection(self) -> bool:
         """Test ThermoWorks API connection"""
         try:

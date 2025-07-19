@@ -42,7 +42,13 @@
       "Bash(pre-commit:*)",
       "Bash(git reset:*)",
       "Bash(black:*)",
-      "Bash(isort:*)"
+      "Bash(isort:*)",
+      "Bash(pytest:*)",
+      "Bash(mypy:*)",
+      "Bash(./venv/bin/pip list)",
+      "Bash(./setup-venv.sh:*)",
+      "Bash(pytest:*)",
+      "Bash(echo \"  # Create PR to develop branch\")"
     ],
     "deny": []
   }

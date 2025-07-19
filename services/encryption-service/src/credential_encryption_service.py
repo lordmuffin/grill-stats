@@ -250,10 +250,7 @@ class CredentialEncryptionService:
                 raise ValueError("Failed to authenticate with Vault")
 
             # Log successful authentication
-            log_authentication(
-                user_id="service-account",
-                success=True
-            )
+            log_authentication(user_id="service-account", success=True)
 
         except Exception as e:
             # Log failed authentication

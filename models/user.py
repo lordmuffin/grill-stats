@@ -40,6 +40,8 @@ class User(UserMixin):
                 return str(self.id)
 
         self.model = UserModel
+        # Make UserModel accessible from outside
+        self.UserModel = UserModel
 
     def create_user(self, email, password_hash, name=None):
         """Create a new user"""

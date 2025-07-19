@@ -28,6 +28,7 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Create docker-compose.yml for local development
 - [x] Configure VS Code workspace settings and extensions
 - [x] Document local development setup in README.md
+- [⚠️] Test every existing feature locally and refactor as necessary for passing local tests.
 
 ### CI/CD Pipeline
 - [x] Configure Gitea Actions workflow for main branch
@@ -39,16 +40,6 @@ This document outlines the development tasks organized into milestones for trans
 - [ ] Create deployment scripts for different environments
 - [ ] Configure secret management in CI/CD
 
-### Kubernetes Infrastructure
-- [ ] Create base Kubernetes namespace manifests
-- [ ] Set up RBAC policies and service accounts
-- [ ] Configure NetworkPolicy for zero-trust security
-- [ ] Create ConfigMap templates for application config
-- [ ] Set up Secret management structure
-- [ ] Configure resource quotas and limits
-- [ ] Create health check and readiness probe templates
-- [ ] Set up Prometheus ServiceMonitor templates
-
 ### Database Infrastructure
 - [ ] Deploy PostgreSQL for device management
 - [ ] Deploy InfluxDB for time-series data
@@ -58,6 +49,24 @@ This document outlines the development tasks organized into milestones for trans
 - [ ] Create database initialization scripts
 - [ ] Configure connection pooling
 - [ ] Document database schemas
+- [⚠️] Refactor SQLAlchemy model architecture (critical)
+  - [ ] Separate models from manager classes
+  - [ ] Define models as top-level classes
+  - [ ] Fix circular dependency issues between models
+  - [ ] Implement proper relationship definitions
+  - [ ] Create central database initialization module
+  - [ ] Update service logic to use new model architecture
+  - [ ] Test and validate all database operations
+
+### Kubernetes Infrastructure
+- [ ] Create base Kubernetes namespace manifests
+- [ ] Set up RBAC policies and service accounts
+- [ ] Configure NetworkPolicy for zero-trust security
+- [ ] Create ConfigMap templates for application config
+- [ ] Set up Secret management structure
+- [ ] Configure resource quotas and limits
+- [ ] Create health check and readiness probe templates
+- [ ] Set up Prometheus ServiceMonitor templates
 
 ---
 
@@ -527,17 +536,18 @@ This document outlines the development tasks organized into milestones for trans
 ## Completion Tracking
 
 ### Overall Progress
-- Total Tasks: 400
+- Total Tasks: 407
 - Completed: 13
-- In Progress: 0
+- In Progress: 1
 - Blocked: 0
-- Completion: 3.25%
+- At Risk: 2
+- Completion: 3.19%
 
 
 ### Milestone Status
 | Milestone | Tasks | Completed | Progress |
 |-----------|-------|-----------|----------|
-| M1: Foundation | 32 | 13 | 40.6% |
+| M1: Foundation | 39 | 13 | 33.3% |
 | M2: Device Service | 40 | 0 | 0% |
 | M3: Temperature Service | 40 | 0 | 0% |
 | M4: Web UI | 48 | 0 | 0% |
@@ -554,6 +564,7 @@ This document outlines the development tasks organized into milestones for trans
 3. **Real-time Performance**: May need WebSocket optimization
 4. **Data Volume**: Plan for data archival strategy
 5. **Security Compliance**: Regular security audits needed
+6. **SQLAlchemy Model Architecture**: Current nested model pattern causing relationship errors
 
 ### Dependencies
 - ThermoWorks API access and documentation

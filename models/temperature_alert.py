@@ -50,7 +50,8 @@ class TemperatureAlert:
             created_at = Column(DateTime, default=datetime.utcnow)
             updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
-            # Relationships
+            # Relationships - use string reference instead of direct class reference
+            # This will be resolved by SQLAlchemy at runtime
             user = relationship("UserModel", backref="temperature_alerts")
 
             def __repr__(self):

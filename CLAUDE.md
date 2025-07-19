@@ -115,7 +115,8 @@ The project uses Gitea Actions for continuous integration:
 
 ## Deployment Notes
 - Always be able to perform local tests on my code
-- Remember we are using gitea runners on kubernetes, we can't use Docker
+- Always start a new feature branch using Git when working Task section
+- Remember for CI/CD we are using gitea runners on kubernetes, we can't use Docker commands
 - always read PLANNING.MD at the start of a new conversation
 - check TASKS.md before starting your work
 - mark completed tasks immediately
