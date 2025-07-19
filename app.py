@@ -22,6 +22,8 @@ Config = load_config()
 
 # Import requests for external API calls
 try:
+    from typing import Any, Dict, List, Optional, Union, cast
+
     import requests
 except ImportError:
     requests = None
@@ -50,7 +52,7 @@ else:
 
 
 # Validate critical configuration on startup
-def validate_critical_config():
+def validate_critical_config() -> None:
     """Validate critical configuration on startup"""
     critical_errors = []
 
@@ -148,7 +150,7 @@ scheduler = BackgroundScheduler()
 
 
 @app.teardown_appcontext
-def close_db(error):
+def close_db(error: Optional[Exception]) -> None:
     """Close database connections at the end of each request"""
     try:
         db.session.close()
@@ -157,7 +159,7 @@ def close_db(error):
 
 
 @app.teardown_request
-def teardown_request(exception):
+def teardown_request(exception: Optional[Exception]) -> None:
     """Cleanup after each request"""
     try:
         if exception:
@@ -167,7 +169,7 @@ def teardown_request(exception):
         logger.warning(f"Error in teardown_request: {e}")
 
 
-def sync_temperature_data():
+def sync_temperature_data() -> None:
     logger.info("Starting temperature data sync")
 
     try:
@@ -177,7 +179,7 @@ def sync_temperature_data():
                 devices = thermoworks_client.get_devices()
 
                 for device in devices:
-                    device_id = device.get("id")
+                    device_id = cast(str, device.get("id"))
                     device_name = device.get("name", f"thermoworks_{device_id}")
 
                     temperature_data = thermoworks_client.get_temperature_data(device_id)
@@ -210,7 +212,7 @@ def sync_temperature_data():
                         # Process temperature data through session tracker
                         try:
                             # Parse timestamp or use current time
-                            timestamp = None
+                            timestamp: Optional[datetime] = None
                             if temperature_data.get("timestamp"):
                                 timestamp = datetime.fromisoformat(temperature_data["timestamp"].replace("Z", "+00:00"))
 
@@ -221,7 +223,7 @@ def sync_temperature_data():
                             session_tracker.process_temperature_reading(
                                 device_id=device_id,
                                 temperature=float(temperature_data["temperature"]),
-                                timestamp=timestamp,
+                                timestamp=cast(datetime, timestamp),
                                 user_id=default_user_id,
                             )
                         except Exception as session_error:
@@ -245,7 +247,7 @@ def sync_temperature_data():
 
 @app.route("/api/alerts", methods=["POST"])
 @login_required
-def create_alert():
+def create_alert() -> Any:
     """Create a new temperature alert"""
     try:
         data = request.get_json()
@@ -328,7 +330,7 @@ def create_alert():
 
 @app.route("/api/alerts", methods=["GET"])
 @login_required
-def get_alerts():
+def get_alerts() -> Any:
     """Get all alerts for the current user"""
     try:
         active_only = request.args.get("active_only", "true").lower() == "true"
@@ -362,7 +364,7 @@ def get_alerts():
 
 @app.route("/api/alerts/<int:alert_id>", methods=["GET"])
 @login_required
-def get_alert(alert_id):
+def get_alert(alert_id: int) -> Any:
     """Get a specific alert by ID"""
     try:
         alert = alert_manager.get_alert_by_id(alert_id, current_user.id)
@@ -388,7 +390,7 @@ def get_alert(alert_id):
 
 @app.route("/api/alerts/<int:alert_id>", methods=["PUT"])
 @login_required
-def update_alert(alert_id):
+def update_alert(alert_id: int) -> Any:
     """Update an existing alert"""
     try:
         data = request.get_json()
@@ -452,7 +454,7 @@ def update_alert(alert_id):
 
 @app.route("/api/alerts/<int:alert_id>", methods=["DELETE"])
 @login_required
-def delete_alert(alert_id):
+def delete_alert(alert_id: int) -> Any:
     """Delete (deactivate) an alert"""
     try:
         success = alert_manager.delete_alert(alert_id, current_user.id)
@@ -472,7 +474,7 @@ def delete_alert(alert_id):
 
 @app.route("/api/alerts/types", methods=["GET"])
 @login_required
-def get_alert_types():
+def get_alert_types() -> Any:
     """Get available alert types and their descriptions"""
     alert_types = [
         {
@@ -512,7 +514,7 @@ def get_alert_types():
 
 @app.route("/api/alerts/monitor/status", methods=["GET"])
 @login_required
-def get_alert_monitor_status():
+def get_alert_monitor_status() -> Any:
     """Get status of the alert monitoring service"""
     try:
         if alert_monitor:
@@ -544,7 +546,7 @@ def get_alert_monitor_status():
 
 @app.route("/api/alerts/monitor/check", methods=["POST"])
 @login_required
-def trigger_alert_check():
+def trigger_alert_check() -> Any:
     """Trigger an immediate check of all alerts"""
     try:
         if alert_monitor:
@@ -571,7 +573,7 @@ def trigger_alert_check():
 
 @app.route("/api/notifications/latest", methods=["GET"])
 @login_required
-def get_latest_notifications():
+def get_latest_notifications() -> Any:
     """Get latest notifications for the current user"""
     try:
         if alert_monitor and alert_monitor.redis_client:
@@ -629,7 +631,7 @@ def get_latest_notifications():
 
 
 @socketio.on("connect")
-def handle_connect():
+def handle_connect() -> None:
     """Handle WebSocket connection"""
     if current_user.is_authenticated:
         user_room = f"user_{current_user.id}"
@@ -639,7 +641,7 @@ def handle_connect():
 
 
 @socketio.on("disconnect")
-def handle_disconnect():
+def handle_disconnect() -> None:
     """Handle WebSocket disconnection"""
     if current_user.is_authenticated:
         user_room = f"user_{current_user.id}"
@@ -648,7 +650,7 @@ def handle_disconnect():
 
 
 @socketio.on("join_notifications")
-def handle_join_notifications():
+def handle_join_notifications() -> None:
     """Join the user-specific notification room"""
     if current_user.is_authenticated:
         user_room = f"user_{current_user.id}"
@@ -657,7 +659,7 @@ def handle_join_notifications():
 
 
 @socketio.on("test_notification")
-def handle_test_notification():
+def handle_test_notification() -> None:
     """Send a test notification (for debugging)"""
     if current_user.is_authenticated:
         user_room = f"user_{current_user.id}"
@@ -684,7 +686,7 @@ def handle_test_notification():
 
 @app.route("/api/sessions/history", methods=["GET"])
 @login_required
-def get_session_history():
+def get_session_history() -> Any:
     """Get session history for the current user"""
     try:
         # Get query parameters
@@ -737,7 +739,7 @@ def get_session_history():
 
 @app.route("/api/sessions/<int:session_id>", methods=["GET"])
 @login_required
-def get_session(session_id):
+def get_session(session_id: int) -> Any:
     """Get a specific session by ID"""
     try:
         session = session_manager.get_session_by_id(session_id)
@@ -767,7 +769,7 @@ def get_session(session_id):
 
 @app.route("/api/sessions/<int:session_id>/name", methods=["POST"])
 @login_required
-def update_session_name(session_id):
+def update_session_name(session_id: int) -> Any:
     """Update session name"""
     try:
         data = request.get_json()
@@ -806,7 +808,7 @@ def update_session_name(session_id):
 
 @app.route("/api/sessions/active", methods=["GET"])
 @login_required
-def get_active_sessions():
+def get_active_sessions() -> Any:
     """Get currently active sessions for the user"""
     try:
         active_sessions = session_manager.get_active_sessions(user_id=current_user.id)
@@ -841,7 +843,7 @@ def get_active_sessions():
 
 @app.route("/api/sessions/start", methods=["POST"])
 @login_required
-def start_session_manually():
+def start_session_manually() -> Any:
     """Manually start a grilling session"""
     try:
         data = request.get_json()
@@ -881,7 +883,7 @@ def start_session_manually():
 
 @app.route("/api/sessions/<int:session_id>/end", methods=["POST"])
 @login_required
-def end_session_manually(session_id):
+def end_session_manually(session_id: int) -> Any:
     """Manually end a grilling session"""
     try:
         # Verify session ownership
@@ -919,7 +921,7 @@ def end_session_manually(session_id):
 
 @app.route("/api/sessions/tracker/status", methods=["GET"])
 @login_required
-def get_session_tracker_status():
+def get_session_tracker_status() -> Any:
     """Get session tracker status and device statuses"""
     try:
         # Get tracker health
@@ -946,7 +948,7 @@ def get_session_tracker_status():
 
 @app.route("/api/sessions/simulate", methods=["POST"])
 @login_required
-def simulate_session():
+def simulate_session() -> Any:
     """Simulate a grilling session for testing (mock mode only)"""
     try:
         if not app.config.get("MOCK_MODE", False):
@@ -986,24 +988,24 @@ def simulate_session():
 
 
 @app.route("/")
-def index():
+def index() -> str:
     return render_template("index.html")
 
 
 @app.route("/monitoring")
 @login_required
-def monitoring():
+def monitoring() -> str:
     """Real-time temperature monitoring dashboard"""
     return render_template("monitoring.html")
 
 
 @app.route("/health")
-def health_check():
+def health_check() -> Any:
     return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
 
 
 @app.route("/api/config")
-def get_app_config():
+def get_app_config() -> Any:
     """Get application configuration info for UI"""
     return jsonify(
         {
@@ -1016,7 +1018,7 @@ def get_app_config():
 
 @app.route("/devices")
 @login_required
-def get_devices():
+def get_devices() -> Any:
     # For HTML request, render template
     if request.headers.get("Accept", "").find("html") != -1:
         devices = thermoworks_client.get_devices()
@@ -1029,14 +1031,14 @@ def get_devices():
 
 @app.route("/devices/<device_id>/temperature")
 @login_required
-def get_device_temperature(device_id):
+def get_device_temperature(device_id: str) -> Any:
     temperature_data = thermoworks_client.get_temperature_data(device_id)
     return jsonify(temperature_data)
 
 
 @app.route("/devices/<device_id>/history")
 @login_required
-def get_device_history(device_id):
+def get_device_history(device_id: str) -> Any:
     start_time = request.args.get("start", (datetime.now() - timedelta(hours=24)).isoformat())
     end_time = request.args.get("end", datetime.now().isoformat())
 
@@ -1046,7 +1048,7 @@ def get_device_history(device_id):
 
 @app.route("/sync", methods=["POST"])
 @login_required
-def manual_sync():
+def manual_sync() -> Any:
     try:
         sync_temperature_data()
 
@@ -1072,7 +1074,7 @@ def manual_sync():
 
 @app.route("/homeassistant/test")
 @login_required
-def test_homeassistant():
+def test_homeassistant() -> Any:
     if homeassistant_client.test_connection():
         return jsonify({"status": "connected", "message": "Home Assistant connection successful"})
     else:
@@ -1084,7 +1086,7 @@ def test_homeassistant():
 
 @app.route("/api/monitoring/data")
 @login_required
-def get_monitoring_data():
+def get_monitoring_data() -> Any:
     """
     Get real-time temperature data from all connected probes
     Returns unified data from all probe sources (ThermoWorks Cloud, RFX Gateway, etc.)
@@ -1272,7 +1274,7 @@ def get_monitoring_data():
         )
 
 
-def create_tables():
+def create_tables() -> None:
     """Create database tables and add test user in development"""
     db.create_all()
 
@@ -1310,7 +1312,7 @@ def create_tables():
 
 
 # Initialize database - Flask 3.0+ compatible
-def initialize_app():
+def initialize_app() -> None:
     """Initialize application with database setup and scheduler"""
     global alert_monitor
 
@@ -1330,7 +1332,7 @@ def initialize_app():
     scheduler.add_job(func=sync_temperature_data, trigger="interval", minutes=5, id="temperature_sync")
 
     # Add session tracker maintenance jobs
-    def cleanup_session_tracker():
+    def cleanup_session_tracker() -> None:
         """Clean up inactive device tracking data"""
         try:
             with app.app_context():
@@ -1340,7 +1342,7 @@ def initialize_app():
         except Exception as e:
             logger.error(f"Error cleaning up session tracker: {e}")
 
-    def cleanup_old_sessions():
+    def cleanup_old_sessions() -> None:
         """Clean up old incomplete sessions"""
         try:
             with app.app_context():
@@ -1386,7 +1388,7 @@ except Exception as e:
 
     # We'll retry on first request if this fails
     @app.before_request
-    def retry_initialization():
+    def retry_initialization() -> None:
         """Retry initialization on first request if startup failed"""
         if not hasattr(app, "_database_initialized"):
             try:
