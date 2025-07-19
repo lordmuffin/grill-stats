@@ -181,7 +181,7 @@ This document provides a comprehensive overview of all features implemented in t
   - Device Service deployment with PostgreSQL
   - Temperature Service deployment with InfluxDB + Redis
   - Web UI deployment with Nginx
-  - API Gateway with Kong/Traefik
+  - API Gateway with Traefik
 
 ### Infrastructure Components
 
