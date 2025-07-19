@@ -1,20 +1,94 @@
 import json
 import logging
 import os
+from dataclasses import asdict, dataclass, field
 from datetime import datetime
-from typing import Dict, List, Optional
+from typing import Any, Dict, List, Optional
 
 import requests
 
 logger = logging.getLogger(__name__)
 
 
-class ThermoWorksClient:
+@dataclass
+class DeviceInfo:
+    """Class for storing device information"""
+
+    device_id: str
+    name: str
+    model: str
+    firmware_version: Optional[str] = None
+    last_seen: Optional[str] = None
+    battery_level: Optional[int] = None
+    signal_strength: Optional[int] = None
+    is_online: bool = True
+    probes: List[Dict[str, Any]] = field(default_factory=list)
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert device info to dictionary"""
+        return asdict(self)
+
+
+@dataclass
+class TemperatureReading:
+    """Class for storing temperature readings"""
+
+    device_id: str
+    probe_id: str
+    temperature: float
+    unit: str = "F"
+    timestamp: str = field(default_factory=lambda: datetime.now().isoformat())
+    battery_level: Optional[int] = None
+    signal_strength: Optional[int] = None
+
+    def to_dict(self) -> Dict[str, Any]:
+        """Convert temperature reading to dictionary"""
+        return asdict(self)
+
+
+class ThermoworksAPIError(Exception):
+    """Exception raised for ThermoWorks API errors"""
+
     def __init__(
         self,
-        api_key: str,
+        message: str,
+        status_code: Optional[int] = None,
+        response: Optional[Dict[str, Any]] = None,
+    ):
+        self.message = message
+        self.status_code = status_code
+        self.response = response
+        super().__init__(self.message)
+
+
+class ThermoworksAuthenticationError(ThermoworksAPIError):
+    """Exception raised for authentication errors"""
+
+    pass
+
+
+class ThermoworksConnectionError(ThermoworksAPIError):
+    """Exception raised for connection errors"""
+
+    pass
+
+
+class ThermoworksClient:
+    """ThermoWorks Cloud API Client"""
+
+    def __init__(
+        self,
+        api_key: Optional[str] = None,
         base_url: str = "https://api.thermoworks.com",
-        mock_mode: bool = None,
+        mock_mode: Optional[bool] = None,
+        client_id: Optional[str] = None,
+        client_secret: Optional[str] = None,
+        redirect_uri: Optional[str] = None,
+        auth_url: Optional[str] = None,
+        token_storage_path: Optional[str] = None,
+        polling_interval: int = 60,
+        auto_start_polling: bool = True,
+        **kwargs,
     ):
         self.api_key = api_key
         self.base_url = base_url
@@ -40,10 +114,10 @@ class ThermoWorksClient:
             except ImportError as e:
                 logger.error("Failed to import MockDataService: %s", e)
                 self.mock_mode = False
-                self.mock_service = None
+                self.mock_service = None  # type: ignore
         else:
             logger.info("ThermoWorks client initialized in LIVE MODE")
-            self.mock_service = None
+            self.mock_service = None  # type: ignore
 
         # Initialize real session for non-mock mode
         if not self.mock_mode:
@@ -55,7 +129,7 @@ class ThermoWorksClient:
                 }
             )
 
-    def get_devices(self) -> List[Dict]:
+    def get_devices(self) -> List[Dict[str, Any]]:
         if self.mock_mode and self.mock_service:
             return self.mock_service.get_devices()
 
@@ -67,7 +141,7 @@ class ThermoWorksClient:
             logger.error(f"Failed to get devices: {e}")
             return []
 
-    def get_device_readings(self, device_id: str) -> Dict:
+    def get_device_readings(self, device_id: str) -> Dict[str, Any]:
         if self.mock_mode and self.mock_service:
             return self.mock_service.get_device_status(device_id)
 
@@ -79,7 +153,7 @@ class ThermoWorksClient:
             logger.error(f"Failed to get readings for device {device_id}: {e}")
             return {}
 
-    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict:
+    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict[str, Any]:
         if self.mock_mode and self.mock_service:
             return self.mock_service.get_temperature_data(device_id, probe_id)
 
@@ -111,7 +185,7 @@ class ThermoWorksClient:
         start_time: str,
         end_time: str,
         probe_id: Optional[str] = None,
-    ) -> List[Dict]:
+    ) -> List[Dict[str, Any]]:
         if self.mock_mode and self.mock_service:
             from datetime import datetime
 
@@ -134,3 +208,7 @@ class ThermoWorksClient:
         except requests.RequestException as e:
             logger.error(f"Failed to get historical data: {e}")
             return []
+
+
+# Alias for backward compatibility with older code
+ThermoWorksClient = ThermoworksClient
