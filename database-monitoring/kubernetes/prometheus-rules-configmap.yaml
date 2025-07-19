@@ -1,0 +1,308 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-rules
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: prometheus
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+    prometheus: main
+    role: alert-rules
+data:
+  database-alerts.yaml: |
+    groups:
+    - name: postgres-alerts
+      rules:
+      # PostgreSQL availability alerts
+      - alert: PostgreSQLDown
+        expr: pg_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          database: postgres
+        annotations:
+          summary: "PostgreSQL instance down"
+          description: "PostgreSQL instance has been down for more than 1 minute."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-down"
+
+      # PostgreSQL replication alerts
+      - alert: PostgreSQLReplicationLag
+        expr: pg_replication_lag_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          database: postgres
+        annotations:
+          summary: "PostgreSQL replication lag"
+          description: "PostgreSQL replication lag is {{ $value }} seconds, threshold is 300 seconds."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-replication-lag"
+
+      - alert: PostgreSQLReplicationNotRunning
+        expr: pg_replication_is_replica == 1 and pg_replication_connection_count == 0
+        for: 1m
+        labels:
+          severity: critical
+          database: postgres
+        annotations:
+          summary: "PostgreSQL replication not running"
+          description: "PostgreSQL replication is not running on a configured replica."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-replication-not-running"
+
+      # PostgreSQL database size alerts
+      - alert: PostgreSQLDatabaseSize
+        expr: pg_database_size_bytes > 5 * 1024 * 1024 * 1024  # 5GB
+        for: 30m
+        labels:
+          severity: warning
+          database: postgres
+        annotations:
+          summary: "PostgreSQL database size"
+          description: "PostgreSQL database {{ $labels.datname }} size is {{ $value | humanizeBytes }}, threshold is 5GB."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-database-size"
+
+      # PostgreSQL connection alerts
+      - alert: PostgreSQLTooManyConnections
+        expr: sum(pg_stat_activity_count) by (datname) > 80
+        for: 5m
+        labels:
+          severity: warning
+          database: postgres
+        annotations:
+          summary: "PostgreSQL too many connections"
+          description: "PostgreSQL database {{ $labels.datname }} has {{ $value }} connections, threshold is 80."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-too-many-connections"
+
+      - alert: PostgreSQLHighIdleTransactions
+        expr: pg_stat_activity_max_idle_in_txn_seconds > 300
+        for: 5m
+        labels:
+          severity: warning
+          database: postgres
+        annotations:
+          summary: "PostgreSQL high idle transactions"
+          description: "PostgreSQL database {{ $labels.datname }} has idle transactions running for {{ $value }} seconds, threshold is 300 seconds."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-idle-transactions"
+
+      # PostgreSQL lock alerts
+      - alert: PostgreSQLHighLockCount
+        expr: pg_locks_count{mode="ExclusiveLock"} > 5
+        for: 5m
+        labels:
+          severity: warning
+          database: postgres
+        annotations:
+          summary: "PostgreSQL high exclusive lock count"
+          description: "PostgreSQL has {{ $value }} exclusive locks, threshold is 5."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/postgres-high-locks"
+
+      # Application-specific alerts
+      - alert: PostgreSQLLowBatteryDevices
+        expr: pg_device_health_min_battery_level < 20
+        for: 10m
+        labels:
+          severity: warning
+          database: postgres
+          application: grill-stats
+        annotations:
+          summary: "Low battery devices detected"
+          description: "Minimum device battery level is {{ $value }}%, threshold is 20%."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/low-battery-devices"
+
+      - alert: PostgreSQLOfflineDevices
+        expr: pg_device_health_offline_devices > 5
+        for: 10m
+        labels:
+          severity: warning
+          database: postgres
+          application: grill-stats
+        annotations:
+          summary: "Multiple offline devices detected"
+          description: "{{ $value }} devices are reported as offline, threshold is 5."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/offline-devices"
+
+    - name: influxdb-alerts
+      rules:
+      # InfluxDB availability alerts
+      - alert: InfluxDBDown
+        expr: influxdb_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          database: influxdb
+        annotations:
+          summary: "InfluxDB instance down"
+          description: "InfluxDB instance has been down for more than 1 minute."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/influxdb-down"
+
+      # InfluxDB query performance alerts
+      - alert: InfluxDBHighQueryResponseTime
+        expr: influxdb_http_query_request_duration_seconds{quantile="0.99"} > 1
+        for: 5m
+        labels:
+          severity: warning
+          database: influxdb
+        annotations:
+          summary: "InfluxDB high query response time"
+          description: "InfluxDB 99th percentile query response time is {{ $value }} seconds, threshold is 1 second."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/influxdb-high-query-time"
+
+      # InfluxDB write performance alerts
+      - alert: InfluxDBHighWriteResponseTime
+        expr: influxdb_http_write_request_duration_seconds{quantile="0.99"} > 0.5
+        for: 5m
+        labels:
+          severity: warning
+          database: influxdb
+        annotations:
+          summary: "InfluxDB high write response time"
+          description: "InfluxDB 99th percentile write response time is {{ $value }} seconds, threshold is 0.5 seconds."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/influxdb-high-write-time"
+
+      # InfluxDB memory alerts
+      - alert: InfluxDBHighMemoryUsage
+        expr: influxdb_cache_memory_bytes > 1024 * 1024 * 1024  # 1GB
+        for: 5m
+        labels:
+          severity: warning
+          database: influxdb
+        annotations:
+          summary: "InfluxDB high memory usage"
+          description: "InfluxDB memory usage is {{ $value | humanizeBytes }}, threshold is 1GB."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/influxdb-high-memory"
+
+      # InfluxDB write errors
+      - alert: InfluxDBWriteErrors
+        expr: increase(influxdb_write_error_count[5m]) > 0
+        for: 5m
+        labels:
+          severity: warning
+          database: influxdb
+        annotations:
+          summary: "InfluxDB write errors detected"
+          description: "InfluxDB has {{ $value }} write errors in the last 5 minutes."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/influxdb-write-errors"
+
+      # Application-specific alerts
+      - alert: InfluxDBLowTemperatureReadings
+        expr: temperature_readings_per_minute < 10
+        for: 10m
+        labels:
+          severity: warning
+          database: influxdb
+          application: grill-stats
+        annotations:
+          summary: "Low temperature reading rate"
+          description: "Only {{ $value }} temperature readings per minute received, threshold is 10."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/low-temperature-readings"
+
+      - alert: InfluxDBMissingDeviceData
+        expr: temperature_readings_24h == 0
+        for: 1h
+        labels:
+          severity: warning
+          database: influxdb
+          application: grill-stats
+        annotations:
+          summary: "Missing device data"
+          description: "Device {{ $labels.device_id }} has no temperature readings in the last 24 hours."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/missing-device-data"
+
+    - name: redis-alerts
+      rules:
+      # Redis availability alerts
+      - alert: RedisDown
+        expr: redis_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          database: redis
+        annotations:
+          summary: "Redis instance down"
+          description: "Redis instance has been down for more than 1 minute."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-down"
+
+      # Redis memory alerts
+      - alert: RedisOutOfMemory
+        expr: redis_memory_used_bytes / redis_total_system_memory_bytes * 100 > 90
+        for: 5m
+        labels:
+          severity: critical
+          database: redis
+        annotations:
+          summary: "Redis out of memory"
+          description: "Redis memory usage is {{ $value }}%, threshold is 90%."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-out-of-memory"
+
+      # Redis connection alerts
+      - alert: RedisTooManyConnections
+        expr: redis_connected_clients > 100
+        for: 5m
+        labels:
+          severity: warning
+          database: redis
+        annotations:
+          summary: "Redis too many connections"
+          description: "Redis has {{ $value }} connected clients, threshold is 100."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-too-many-connections"
+
+      # Redis replication alerts
+      - alert: RedisReplicationBroken
+        expr: redis_connected_slaves < 1 and redis_replication_role == 1
+        for: 1m
+        labels:
+          severity: critical
+          database: redis
+        annotations:
+          summary: "Redis replication broken"
+          description: "Redis master has no connected slaves."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-replication-broken"
+
+      # Redis persistence alerts
+      - alert: RedisRDBSaveError
+        expr: increase(redis_rdb_last_save_errors[5m]) > 0
+        for: 1m
+        labels:
+          severity: critical
+          database: redis
+        annotations:
+          summary: "Redis RDB save error"
+          description: "Redis has {{ $value }} RDB save errors in the last 5 minutes."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-rdb-save-error"
+
+      # Redis keyspace alerts
+      - alert: RedisKeyspaceMisses
+        expr: (redis_keyspace_misses_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100 > 50
+        for: 10m
+        labels:
+          severity: warning
+          database: redis
+        annotations:
+          summary: "Redis high keyspace miss rate"
+          description: "Redis keyspace miss rate is {{ $value }}%, threshold is 50%."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-keyspace-misses"
+
+      # Application-specific alerts
+      - alert: RedisLongSyncQueue
+        expr: queue_sync_queue_length > 100
+        for: 5m
+        labels:
+          severity: warning
+          database: redis
+          application: grill-stats
+        annotations:
+          summary: "Redis long sync queue"
+          description: "Redis sync queue has {{ $value }} items, threshold is 100."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-long-sync-queue"
+
+      - alert: RedisLongNotificationQueue
+        expr: queue_notification_queue_length > 50
+        for: 5m
+        labels:
+          severity: warning
+          database: redis
+          application: grill-stats
+        annotations:
+          summary: "Redis long notification queue"
+          description: "Redis notification queue has {{ $value }} items, threshold is 50."
+          runbook_url: "https://docs.example.com/grill-stats/runbooks/redis-long-notification-queue"

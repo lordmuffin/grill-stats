@@ -1,0 +1,44 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: grafana-datasources
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: grafana
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+data:
+  prometheus.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        access: proxy
+        url: http://prometheus.grill-stats.svc.cluster.local:9090
+        isDefault: true
+        editable: false
+        jsonData:
+          timeInterval: 15s
+          httpMethod: GET
+
+      - name: PostgreSQL
+        type: postgres
+        url: postgres.grill-stats.svc.cluster.local:5432
+        user: postgres
+        secureJsonData:
+          password: postgres
+        jsonData:
+          database: grill_stats
+          sslmode: disable
+        editable: false
+
+      - name: InfluxDB
+        type: influxdb
+        url: http://influxdb.grill-stats.svc.cluster.local:8086
+        database: grill_stats
+        user: admin
+        secureJsonData:
+          password: influx-password
+        jsonData:
+          httpMode: GET
+        editable: false

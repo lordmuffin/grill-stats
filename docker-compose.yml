@@ -54,6 +54,8 @@ services:
       - "6379:6379"
     volumes:
       - redis_data:/data
+      - ./database-backup/redis.conf:/usr/local/etc/redis/redis.conf
+    command: ["redis-server", "/usr/local/etc/redis/redis.conf"]
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -234,10 +236,53 @@ services:
     networks:
       - grill-stats-network
 
+  # Database Backup Service
+  db-backup:
+    image: postgres:15-alpine
+    volumes:
+      - ./database-backup:/scripts
+      - backups_volume:/backups
+    environment:
+      - POSTGRES_PASSWORD=postgres
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - INFLUXDB_HOST=influxdb
+      - INFLUXDB_PORT=8086
+      - INFLUXDB_DATABASE=grill_stats
+      - INFLUXDB_USERNAME=admin
+      - INFLUXDB_PASSWORD=influx-password
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - ENVIRONMENT=development
+    entrypoint: ["sh", "-c"]
+    command: >
+      "
+      mkdir -p /backups/postgres /backups/influxdb /backups/redis &&
+      echo 'Database backup service started. Ready to run backup scripts.' &&
+      echo 'Run backup scripts manually for testing:' &&
+      echo '- docker-compose exec db-backup /scripts/postgres-backup.sh' &&
+      echo '- docker-compose exec db-backup /scripts/influxdb-backup.sh' &&
+      echo '- docker-compose exec db-backup /scripts/redis-backup.sh' &&
+      tail -f /dev/null
+      "
+    depends_on:
+      postgres:
+        condition: service_healthy
+      influxdb:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - grill-stats-network
+
 volumes:
   postgres_data:
   influxdb_data:
   redis_data:
+  backups_volume:
 
 networks:
   grill-stats-network:

@@ -65,7 +65,18 @@
       "Bash(MOCK_MODE=true FLASK_ENV=development SECRET_KEY=dev-secret-key-for-local-testing-123456789 python app.py)",
       "Bash(MOCK_MODE=true FLASK_ENV=development SECRET_KEY=dev-secret-key-for-local-testing-123456789 python app.py --port 5001)",
       "Bash(MOCK_MODE=true FLASK_ENV=development LOCAL_DB=true SECRET_KEY=dev-secret-key-for-local-testing-123456789 python app.py)",
-      "Bash(echo:*)"
+      "Bash(echo:*)",
+      "Bash(pip3 install:*)",
+      "Bash(npx:*)",
+      "Bash(rm:*)",
+      "Bash(for:*)",
+      "Bash(do)",
+      "Bash(if:*)",
+      "Bash(then)",
+      "Bash(else)",
+      "Bash(fi)",
+      "Bash(done)",
+      "Bash(git rm:*)"
     ],
     "deny": [
       "Bash(git commit --no-verify:*)"

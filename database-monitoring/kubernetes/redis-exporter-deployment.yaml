@@ -1,0 +1,69 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: redis-exporter
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: redis-exporter
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: redis-exporter
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: redis-exporter
+        app.kubernetes.io/part-of: grill-stats
+        app.kubernetes.io/component: monitoring
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "9121"
+    spec:
+      containers:
+        - name: redis-exporter
+          image: oliver006/redis_exporter:v1.54.0
+          args:
+            - '--redis.addr=redis://redis.grill-stats.svc.cluster.local:6379'
+            - '--web.listen-address=:9121'
+            - '--web.telemetry-path=/metrics'
+            - '--script=/etc/redis_exporter/script.lua'
+          env:
+            - name: REDIS_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: db-credentials
+                  key: redis-password
+                  optional: true
+          ports:
+            - name: metrics
+              containerPort: 9121
+          volumeMounts:
+            - name: redis-exporter-script
+              mountPath: /etc/redis_exporter/script.lua
+              subPath: script.lua
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 100m
+              memory: 128Mi
+          livenessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+          readinessProbe:
+            httpGet:
+              path: /metrics
+              port: metrics
+            initialDelaySeconds: 10
+            timeoutSeconds: 5
+      volumes:
+        - name: redis-exporter-script
+          configMap:
+            name: redis-exporter-script

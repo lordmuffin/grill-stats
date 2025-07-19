@@ -1,0 +1,84 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgres-exporter-queries
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: postgres-exporter
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+data:
+  queries.yaml: |
+    pg_replication:
+      query: |
+        SELECT
+          CASE WHEN pg_is_in_recovery() THEN 1 ELSE 0 END as is_replica,
+          CASE WHEN pg_is_in_recovery() THEN EXTRACT(EPOCH FROM (now() - pg_last_xact_replay_timestamp())) ELSE 0 END as lag_seconds,
+          COUNT(*) as connection_count
+        FROM pg_stat_replication
+      metrics:
+        - is_replica:
+            usage: "GAUGE"
+            description: "Indicates if this PostgreSQL instance is a replica (1 for replica, 0 for primary)"
+        - lag_seconds:
+            usage: "GAUGE"
+            description: "Replication lag in seconds"
+        - connection_count:
+            usage: "GAUGE"
+            description: "Number of connections for replication"
+
+    pg_locks:
+      query: |
+        SELECT mode, count(*) as count
+        FROM pg_locks
+        GROUP BY mode
+      metrics:
+        - count:
+            usage: "GAUGE"
+            description: "Number of locks by mode"
+            labels:
+              - mode
+
+    pg_device_stats:
+      query: |
+        SELECT
+          count(*) as total_devices,
+          count(*) FILTER (WHERE is_active = true) as active_devices,
+          count(*) FILTER (WHERE is_active = false) as inactive_devices
+        FROM devices
+      metrics:
+        - total_devices:
+            usage: "GAUGE"
+            description: "Total number of devices"
+        - active_devices:
+            usage: "GAUGE"
+            description: "Number of active devices"
+        - inactive_devices:
+            usage: "GAUGE"
+            description: "Number of inactive devices"
+
+    pg_device_health:
+      query: |
+        SELECT
+          count(*) FILTER (WHERE battery_level < 20) as low_battery_devices,
+          count(*) FILTER (WHERE last_contact < NOW() - INTERVAL '1 hour') as offline_devices,
+          count(*) FILTER (WHERE last_contact >= NOW() - INTERVAL '1 hour') as online_devices,
+          COALESCE(MIN(battery_level), 0) as min_battery_level,
+          COALESCE(AVG(battery_level), 0) as avg_battery_level
+        FROM devices
+      metrics:
+        - low_battery_devices:
+            usage: "GAUGE"
+            description: "Number of devices with low battery"
+        - offline_devices:
+            usage: "GAUGE"
+            description: "Number of offline devices"
+        - online_devices:
+            usage: "GAUGE"
+            description: "Number of online devices"
+        - min_battery_level:
+            usage: "GAUGE"
+            description: "Minimum battery level across all devices"
+        - avg_battery_level:
+            usage: "GAUGE"
+            description: "Average battery level across all devices"

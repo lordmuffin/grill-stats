@@ -1,0 +1,102 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: influxdb-queries
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: influxdb-exporter
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+data:
+  custom_queries.yaml: |
+    - measurement: temperature_readings
+      query: |
+        SELECT count("value") FROM "temperature_readings" WHERE time > now() - 1h GROUP BY time(1m)
+      metrics:
+        - name: temperature_readings_per_minute
+          help: Number of temperature readings per minute
+          type: gauge
+          field: count
+
+    - measurement: temperature_readings
+      query: |
+        SELECT mean("value") FROM "temperature_readings" WHERE time > now() - 1h GROUP BY device_id
+      metrics:
+        - name: temperature_average
+          help: Average temperature per device over the last hour
+          type: gauge
+          field: mean
+          labels:
+            device_id: tag
+
+    - measurement: temperature_readings
+      query: |
+        SELECT min("value"), max("value") FROM "temperature_readings" WHERE time > now() - 1h GROUP BY device_id
+      metrics:
+        - name: temperature_min
+          help: Minimum temperature per device over the last hour
+          type: gauge
+          field: min
+          labels:
+            device_id: tag
+        - name: temperature_max
+          help: Maximum temperature per device over the last hour
+          type: gauge
+          field: max
+          labels:
+            device_id: tag
+
+    - measurement: temperature_readings
+      query: |
+        SELECT count("value") FROM "temperature_readings" WHERE time > now() - 24h GROUP BY device_id
+      metrics:
+        - name: temperature_readings_24h
+          help: Number of temperature readings per device in the last 24 hours
+          type: gauge
+          field: count
+          labels:
+            device_id: tag
+
+    - measurement: database
+      query: |
+        SHOW STATS
+      metrics:
+        - name: influxdb_cache_memory_bytes
+          help: Memory used by the cache
+          type: gauge
+          field: cache_memory_bytes
+        - name: influxdb_cache_size
+          help: Size of the cache
+          type: gauge
+          field: cache_size
+        - name: influxdb_query_req_count
+          help: Number of query requests
+          type: counter
+          field: queryReq
+
+    - measurement: database
+      query: |
+        SHOW DATABASES
+      metrics:
+        - name: influxdb_database_count
+          help: Number of databases
+          type: gauge
+          field: count
+
+    - measurement: grill_stats
+      query: |
+        SHOW MEASUREMENTS
+      metrics:
+        - name: influxdb_measurement_count
+          help: Number of measurements
+          type: gauge
+          field: count
+
+    - measurement: shard
+      query: |
+        SHOW SHARDS
+      metrics:
+        - name: influxdb_shard_count
+          help: Number of shards
+          type: gauge
+          field: count
