@@ -31,38 +31,55 @@ F = TypeVar("F", bound=Callable[..., Any])
 def init_connection_pool(app: Flask, db: SQLAlchemy) -> None:
     """
     Initialize SQLAlchemy connection pooling with optimized settings.
-    
+
     This function configures SQLAlchemy connection pooling based on
     the application configuration. It sets up event listeners for
     connection pool events to provide monitoring and logging.
-    
+
     Args:
         app: Flask application instance
         db: SQLAlchemy database instance
     """
     logger.info("Initializing database connection pool")
-    
+
     # Get pool configuration from app config or use defaults
     pool_size = app.config.get("SQLALCHEMY_POOL_SIZE", 10)
     max_overflow = app.config.get("SQLALCHEMY_MAX_OVERFLOW", 20)
     pool_recycle = app.config.get("SQLALCHEMY_POOL_RECYCLE", 3600)  # 1 hour
     pool_pre_ping = app.config.get("SQLALCHEMY_POOL_PRE_PING", True)
     pool_timeout = app.config.get("SQLALCHEMY_POOL_TIMEOUT", 30)  # 30 seconds
-    
+
+    # Configure PostgreSQL-specific settings
+    db_uri = app.config.get("SQLALCHEMY_DATABASE_URI", "")
+    is_postgres = db_uri.startswith("postgresql") or db_uri.startswith("postgres")
+
     # Update SQLAlchemy engine options
-    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    engine_options = {
         "pool_size": pool_size,
         "max_overflow": max_overflow,
         "pool_recycle": pool_recycle,
         "pool_pre_ping": pool_pre_ping,
         "pool_timeout": pool_timeout,
     }
-    
+
+    # Add PostgreSQL-specific optimizations
+    if is_postgres:
+        # Add statement timeout to prevent long-running queries
+        engine_options["connect_args"] = {"options": "-c statement_timeout=30000"}  # 30 seconds in ms
+
+        # Use prepared statements for better performance
+        engine_options["use_native_unicode"] = True
+
+        logger.info("Configuring PostgreSQL-specific connection pooling optimizations")
+
+    # Update the application configuration
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = engine_options
+
     logger.info(
         f"Connection pool settings: size={pool_size}, max_overflow={max_overflow}, "
         f"recycle={pool_recycle}s, timeout={pool_timeout}s, pre_ping={pool_pre_ping}"
     )
-    
+
     # Set up engine event listeners if we can access the engine
     if hasattr(db, "engine"):
         setup_engine_listeners(db.engine)
@@ -71,21 +88,21 @@ def init_connection_pool(app: Flask, db: SQLAlchemy) -> None:
 def setup_engine_listeners(engine: Engine) -> None:
     """
     Set up SQLAlchemy engine event listeners.
-    
+
     Args:
         engine: SQLAlchemy engine instance
     """
-    
+
     # Setup connection pool events
     @event.listens_for(engine, "connect")
     def connect(dbapi_connection: Any, connection_record: _ConnectionRecord) -> None:
         logger.debug("Database connection established")
-    
+
     @event.listens_for(engine, "checkout")
     def checkout(dbapi_connection: Any, connection_record: _ConnectionRecord, connection_proxy: Any) -> None:
         logger.debug("Database connection checked out from pool")
         connection_record.info.setdefault("checkout_time", time.time())
-    
+
     @event.listens_for(engine, "checkin")
     def checkin(dbapi_connection: Any, connection_record: _ConnectionRecord) -> None:
         logger.debug("Database connection returned to pool")
@@ -99,31 +116,41 @@ def setup_engine_listeners(engine: Engine) -> None:
 def get_pool_status(db: SQLAlchemy) -> Dict[str, Any]:
     """
     Get current database connection pool status.
-    
+
     Returns information about the current state of the database connection pool,
     including the number of used/unused connections and overflow status.
-    
+
     Args:
         db: SQLAlchemy database instance
-    
+
     Returns:
         Dictionary with pool status information
     """
     if not hasattr(db, "engine"):
         return {"error": "No database engine available"}
-    
+
     engine = db.engine
     if not hasattr(engine, "pool"):
         return {"error": "No connection pool available"}
-    
+
     pool = engine.pool
-    
-    # Extract pool metrics
+
+    # Check if it's a QueuePool (most common for PostgreSQL)
+    if hasattr(pool, "size") and callable(pool.size):
+        # Extract pool metrics using QueuePool interface
+        return {
+            "pool_size": pool.size(),
+            "checkedout": pool.checkedout(),
+            "overflow": pool.overflow(),
+            "checkedin": pool.checkedin(),
+        }
+
+    # Fallback for other pool types or newer SQLAlchemy versions
     return {
-        "pool_size": pool.size(),
-        "checked_out_connections": pool.checkedin(),
-        "overflow": pool.overflow(),
-        "checkedout": pool.checkedout(),
+        "pool_size": getattr(pool, "_pool_size", 0),
+        "overflow": getattr(pool, "_overflow", 0),
+        "timeout": getattr(pool, "_timeout", 0),
+        "recycle": getattr(pool, "_recycle", 0),
     }
 
 
@@ -131,15 +158,15 @@ def get_pool_status(db: SQLAlchemy) -> Dict[str, Any]:
 def db_transaction(db: SQLAlchemy) -> Iterator[None]:
     """
     Context manager for database transactions.
-    
+
     Handles committing or rolling back transactions automatically.
-    
+
     Args:
         db: SQLAlchemy database instance
-    
+
     Yields:
         None
-    
+
     Example:
         with db_transaction(db):
             # Database operations here
@@ -158,14 +185,14 @@ def db_transaction(db: SQLAlchemy) -> Iterator[None]:
 def measure_query_time(f: F) -> F:
     """
     Decorator to measure and log database query execution time.
-    
+
     Args:
         f: Function to decorate
-    
+
     Returns:
         Decorated function
     """
-    
+
     @wraps(f)
     def wrapper(*args: Any, **kwargs: Any) -> Any:
         start_time = time.time()
@@ -173,23 +200,23 @@ def measure_query_time(f: F) -> F:
         elapsed = time.time() - start_time
         logger.debug(f"Query {f.__name__} took {elapsed:.4f} seconds")
         return result
-    
+
     return cast(F, wrapper)
 
 
 def close_db_connections(db: SQLAlchemy) -> None:
     """
     Close all database connections in the pool.
-    
+
     This is useful during application shutdown to ensure all
     connections are properly closed.
-    
+
     Args:
         db: SQLAlchemy database instance
     """
     if hasattr(db, "engine") and hasattr(db.engine, "pool"):
         logger.info("Closing all database connections")
         db.engine.pool.dispose()
-    
+
     # Always close the session
     db.session.close()

@@ -22,6 +22,17 @@ Connection pooling is configured in `config/config_loader.py` and utilized throu
 | `SQLALCHEMY_POOL_PRE_PING` | True | Whether to check if the connection is valid before using it |
 | `SQLALCHEMY_POOL_TIMEOUT` | 30 | Number of seconds to wait for a connection to become available |
 
+### PostgreSQL-Specific Optimizations
+
+When using PostgreSQL as the database backend, the following additional optimizations are applied:
+
+| Setting | Value | Description |
+|---------|-------|-------------|
+| `statement_timeout` | 30000 | Maximum time in milliseconds that a statement can run (prevents long-running queries) |
+| `use_native_unicode` | True | Enables native Unicode support for better performance |
+
+These PostgreSQL-specific settings are automatically applied when the application detects a PostgreSQL connection string.
+
 ### Usage
 
 The connection pool is automatically initialized when the application starts. The `utils/db_utils.py` module provides functions for:
@@ -177,3 +188,21 @@ You can monitor the connection pool status through:
 4. Use `pool_pre_ping=True` to avoid stale connections
 5. Set appropriate pool size based on your application's concurrency needs
 6. Monitor connection usage to detect connection leaks
+7. For PostgreSQL, use the statement timeout to prevent long-running queries
+8. Take advantage of native Unicode support for better text handling performance
+
+## Testing Connection Pooling
+
+You can test the connection pooling implementation using the provided test script:
+
+```bash
+python test_connection_pool.py
+```
+
+This script will:
+1. Initialize the connection pool with the configured settings
+2. Execute multiple concurrent queries to test connection reuse
+3. Verify that connections are properly returned to the pool
+4. Display pool statistics throughout the test
+
+For performance testing under load, you can use tools like `ab` (Apache Benchmark) or JMeter to simulate concurrent connections and measure response times.
