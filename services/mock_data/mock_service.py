@@ -46,8 +46,8 @@ class MockDataService:
         self.historical_file = self.data_directory / "historical.json"
 
         # Internal state for temperature simulation
-        self._last_update = {}
-        self._temperature_trends = {}
+        self._last_update: Dict[str, float] = {}  # device_id -> last update timestamp
+        self._temperature_trends: Dict[str, Dict[str, Dict[str, Any]]] = {}  # device_id -> probe_id -> trend data
         self._simulation_lock = threading.Lock()
 
         # Load initial data
@@ -167,7 +167,7 @@ class MockDataService:
         # Update last update time
         self._last_update[device_id] = now
 
-        return round(new_temp, 1)
+        return float(round(new_temp, 1))
 
     def get_devices(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
@@ -428,7 +428,7 @@ class MockDataService:
             devices = self._device_data.get("devices", [])
             for device in devices:
                 if device["device_id"] == device_id:
-                    return device.get("is_online", True)
+                    return bool(device.get("is_online", True))
             return False
         except Exception as e:
             logger.error("Error checking device online status for %s: %s", device_id, e)
@@ -440,7 +440,8 @@ class MockDataService:
             devices = self._device_data.get("devices", [])
             for device in devices:
                 if device["device_id"] == device_id:
-                    return device.get("battery_level")
+                    battery = device.get("battery_level")
+                    return int(battery) if battery is not None else None
             return None
         except Exception as e:
             logger.error("Error getting battery level for %s: %s", device_id, e)
