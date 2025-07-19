@@ -153,18 +153,12 @@ class ThermoworksClient:
         """
         # OAuth2 configuration
         self.client_id = client_id or os.environ.get("THERMOWORKS_CLIENT_ID")
-        self.client_secret = client_secret or os.environ.get(
-            "THERMOWORKS_CLIENT_SECRET"
-        )
+        self.client_secret = client_secret or os.environ.get("THERMOWORKS_CLIENT_SECRET")
         self.redirect_uri = redirect_uri or os.environ.get("THERMOWORKS_REDIRECT_URI")
 
         # API endpoints
-        self.base_url = base_url or os.environ.get(
-            "THERMOWORKS_BASE_URL", "https://api.thermoworks.com/v1"
-        )
-        self.auth_url = auth_url or os.environ.get(
-            "THERMOWORKS_AUTH_URL", "https://auth.thermoworks.com"
-        )
+        self.base_url = base_url or os.environ.get("THERMOWORKS_BASE_URL", "https://api.thermoworks.com/v1")
+        self.auth_url = auth_url or os.environ.get("THERMOWORKS_AUTH_URL", "https://auth.thermoworks.com")
 
         # Mock mode configuration
         if mock_mode is None:
@@ -174,9 +168,7 @@ class ThermoworksClient:
                 "yes",
                 "on",
             )
-        self.mock_mode = (
-            mock_mode and not os.environ.get("FLASK_ENV", "").lower() == "production"
-        )
+        self.mock_mode = mock_mode and not os.environ.get("FLASK_ENV", "").lower() == "production"
 
         if self.mock_mode:
             logger.info("ThermoWorks device service client initialized in MOCK MODE")
@@ -197,9 +189,7 @@ class ThermoworksClient:
             self.mock_service = None
 
         # Token storage
-        self.token_storage_path = token_storage_path or os.path.expanduser(
-            "~/.thermoworks_token.json"
-        )
+        self.token_storage_path = token_storage_path or os.path.expanduser("~/.thermoworks_token.json")
 
         # Connection state
         self.session = requests.Session()
@@ -214,9 +204,7 @@ class ThermoworksClient:
 
         # Polling configuration
         polling_interval_env = os.environ.get("THERMOWORKS_POLLING_INTERVAL")
-        self.polling_interval = (
-            int(polling_interval_env) if polling_interval_env else polling_interval
-        )
+        self.polling_interval = int(polling_interval_env) if polling_interval_env else polling_interval
         self._polling_thread: Optional[threading.Thread] = None
         self._polling_stop_event = threading.Event()
         self._polling_lock = threading.Lock()
@@ -274,9 +262,7 @@ class ThermoworksClient:
         except Exception as e:
             logger.warning(f"Failed to save token: {e}")
 
-    def generate_authorization_url(
-        self, state: Optional[str] = None
-    ) -> Tuple[str, str]:
+    def generate_authorization_url(self, state: Optional[str] = None) -> Tuple[str, str]:
         """
         Generate an authorization URL for the OAuth2 flow
 
@@ -287,9 +273,7 @@ class ThermoworksClient:
             Tuple of (authorization_url, state)
         """
         if not self.client_id or not self.redirect_uri:
-            raise ValueError(
-                "Client ID and redirect URI are required for authorization URL generation"
-            )
+            raise ValueError("Client ID and redirect URI are required for authorization URL generation")
 
         # Generate state if not provided
         if not state:
@@ -297,11 +281,7 @@ class ThermoworksClient:
 
         # Generate PKCE code verifier and challenge
         code_verifier = secrets.token_urlsafe(64)
-        code_challenge = (
-            base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
-            .decode()
-            .rstrip("=")
-        )
+        code_challenge = base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest()).decode().rstrip("=")
 
         # Store code verifier in token storage for later use
         verifier_data = {
@@ -311,9 +291,7 @@ class ThermoworksClient:
         }
 
         try:
-            verifier_path = os.path.join(
-                os.path.dirname(self.token_storage_path), ".code_verifier.json"
-            )
+            verifier_path = os.path.join(os.path.dirname(self.token_storage_path), ".code_verifier.json")
             with open(verifier_path, "w") as f:
                 json.dump(verifier_data, f)
 
@@ -337,9 +315,7 @@ class ThermoworksClient:
         authorization_url = f"{self.auth_url}/oauth2/authorize?{urlencode(params)}"
         return authorization_url, state
 
-    def exchange_code_for_token(
-        self, code: str, state: Optional[str] = None
-    ) -> AuthToken:
+    def exchange_code_for_token(self, code: str, state: Optional[str] = None) -> AuthToken:
         """
         Exchange an authorization code for an access token
 
@@ -351,43 +327,30 @@ class ThermoworksClient:
             AuthToken object containing the access token and related information
         """
         if not self.client_id or not self.client_secret or not self.redirect_uri:
-            raise ValueError(
-                "Client ID, client secret, and redirect URI are required for token exchange"
-            )
+            raise ValueError("Client ID, client secret, and redirect URI are required for token exchange")
 
         # Validate state if provided
         if state:
             try:
-                verifier_path = os.path.join(
-                    os.path.dirname(self.token_storage_path), ".code_verifier.json"
-                )
+                verifier_path = os.path.join(os.path.dirname(self.token_storage_path), ".code_verifier.json")
                 if os.path.exists(verifier_path):
                     with open(verifier_path, "r") as f:
                         verifier_data = json.load(f)
 
                     # Check if state matches and verifier is not too old (10 minutes)
-                    if (
-                        verifier_data.get("state") != state
-                        or time.time() - verifier_data.get("created_at", 0) > 600
-                    ):
-                        raise ThermoworksAuthenticationError(
-                            "Invalid or expired state parameter"
-                        )
+                    if verifier_data.get("state") != state or time.time() - verifier_data.get("created_at", 0) > 600:
+                        raise ThermoworksAuthenticationError("Invalid or expired state parameter")
 
                     code_verifier = verifier_data.get("code_verifier")
                 else:
                     raise ThermoworksAuthenticationError("No code verifier found")
             except Exception as e:
                 logger.error(f"Failed to validate state: {e}")
-                raise ThermoworksAuthenticationError(
-                    "Failed to validate state parameter"
-                )
+                raise ThermoworksAuthenticationError("Failed to validate state parameter")
         else:
             # If no state provided, try to use the most recent code verifier
             try:
-                verifier_path = os.path.join(
-                    os.path.dirname(self.token_storage_path), ".code_verifier.json"
-                )
+                verifier_path = os.path.join(os.path.dirname(self.token_storage_path), ".code_verifier.json")
                 if os.path.exists(verifier_path):
                     with open(verifier_path, "r") as f:
                         verifier_data = json.load(f)
@@ -472,9 +435,7 @@ class ThermoworksClient:
             AuthToken object containing the access token and related information
         """
         if not self.client_id or not self.client_secret:
-            raise ValueError(
-                "Client ID and client secret are required for client credentials authentication"
-            )
+            raise ValueError("Client ID and client secret are required for client credentials authentication")
 
         # Request token
         token_url = f"{self.auth_url}/oauth2/token"
@@ -493,9 +454,7 @@ class ThermoworksClient:
             # Create token object
             self.token = AuthToken(
                 access_token=token_data["access_token"],
-                refresh_token=token_data.get(
-                    "refresh_token"
-                ),  # Usually None for client credentials
+                refresh_token=token_data.get("refresh_token"),  # Usually None for client credentials
                 token_type=token_data.get("token_type", "Bearer"),
                 expires_in=int(token_data.get("expires_in", 3600)),
                 scope=token_data.get("scope"),
@@ -527,9 +486,7 @@ class ThermoworksClient:
                 except Exception:
                     error_data = {"error": "Unknown error"}
 
-                logger.error(
-                    f"Client credentials authentication failed: {status_code} - {error_data}"
-                )
+                logger.error(f"Client credentials authentication failed: {status_code} - {error_data}")
                 raise ThermoworksAuthenticationError(
                     f"Authentication failed: {error_data.get('error_description', error_data.get('error', 'Unknown error'))}",
                     status_code=status_code,
@@ -554,9 +511,7 @@ class ThermoworksClient:
             raise ThermoworksAuthenticationError("No refresh token available")
 
         if not self.client_id or not self.client_secret:
-            raise ValueError(
-                "Client ID and client secret are required for token refresh"
-            )
+            raise ValueError("Client ID and client secret are required for token refresh")
 
         # Request new token
         token_url = f"{self.auth_url}/oauth2/token"
@@ -707,9 +662,7 @@ class ThermoworksClient:
                     logger.warning("Unauthorized response, attempting to refresh token")
                     try:
                         self._ensure_authenticated()
-                        request_headers["Authorization"] = (
-                            f"{self.token.token_type} {self.token.access_token}"
-                        )
+                        request_headers["Authorization"] = f"{self.token.token_type} {self.token.access_token}"
                         continue
                     except Exception as e:
                         logger.error(f"Token refresh failed during request: {e}")
@@ -738,18 +691,12 @@ class ThermoworksClient:
                 self.connection_state["consecutive_failures"] += 1
 
                 # Log the error
-                logger.warning(
-                    f"API request failed (attempt {attempt+1}/{retry_count}): {e}"
-                )
+                logger.warning(f"API request failed (attempt {attempt+1}/{retry_count}): {e}")
 
                 # Check if we should retry
                 if attempt < retry_count - 1:
                     # Calculate backoff time with exponential increase and jitter
-                    backoff_time = (
-                        retry_backoff
-                        * (2**attempt)
-                        * (0.5 + 0.5 * secrets.SystemRandom().random())
-                    )
+                    backoff_time = retry_backoff * (2**attempt) * (0.5 + 0.5 * secrets.SystemRandom().random())
                     logger.info(f"Retrying in {backoff_time:.2f} seconds")
                     time.sleep(backoff_time)
                 else:
@@ -764,9 +711,7 @@ class ThermoworksClient:
                                 "details": e.response.text,
                             }
 
-                        logger.error(
-                            f"API request failed: {status_code} - {error_data}"
-                        )
+                        logger.error(f"API request failed: {status_code} - {error_data}")
                         raise ThermoworksAPIError(
                             f"API request failed: {error_data.get('error_description', error_data.get('error', 'Unknown error'))}",
                             status_code=status_code,
@@ -800,9 +745,7 @@ class ThermoworksClient:
                 for device_data in mock_devices:
                     device = DeviceInfo(
                         device_id=device_data.get("device_id"),
-                        name=device_data.get(
-                            "name", f"Device {device_data.get('device_id')}"
-                        ),
+                        name=device_data.get("name", f"Device {device_data.get('device_id')}"),
                         model=device_data.get("model", "Unknown"),
                         firmware_version=device_data.get("firmware_version"),
                         last_seen=device_data.get("last_seen"),
@@ -820,9 +763,7 @@ class ThermoworksClient:
         # Check if we can use cached data
         with self._device_cache_lock:
             cache_age = time.time() - self._device_cache_timestamp
-            if (
-                not force_refresh and self._device_cache and cache_age < 300
-            ):  # 5 minutes
+            if not force_refresh and self._device_cache and cache_age < 300:  # 5 minutes
                 return list(self._device_cache.values())
 
         # Fetch devices from API
@@ -891,9 +832,7 @@ class ThermoworksClient:
         if not response:
             raise ValueError(f"Device {device_id} not found")
 
-        device_data = response.get(
-            "device", response
-        )  # Handle different response formats
+        device_data = response.get("device", response)  # Handle different response formats
 
         device = DeviceInfo(
             device_id=device_data.get("id", device_id),
@@ -913,9 +852,7 @@ class ThermoworksClient:
 
         return device
 
-    def get_device_temperature(
-        self, device_id: str, probe_id: Optional[str] = None
-    ) -> List[TemperatureReading]:
+    def get_device_temperature(self, device_id: str, probe_id: Optional[str] = None) -> List[TemperatureReading]:
         """
         Get current temperature readings for a device
 
@@ -933,9 +870,7 @@ class ThermoworksClient:
         if probe_id:
             params["probe"] = probe_id
 
-        response = self._make_api_request(
-            "GET", f"/devices/{device_id}/temperature", params=params
-        )
+        response = self._make_api_request("GET", f"/devices/{device_id}/temperature", params=params)
 
         readings = []
         for reading_data in response.get("readings", []):
@@ -950,9 +885,7 @@ class ThermoworksClient:
                 probe_id=probe,
                 temperature=float(temp),
                 unit=reading_data.get("unit", "F"),
-                timestamp=reading_data.get(
-                    "timestamp", datetime.datetime.now().isoformat()
-                ),
+                timestamp=reading_data.get("timestamp", datetime.datetime.now().isoformat()),
                 battery_level=reading_data.get("battery_level"),
                 signal_strength=reading_data.get("signal_strength"),
             )
@@ -995,9 +928,7 @@ class ThermoworksClient:
         if end_time:
             params["end"] = end_time
 
-        response = self._make_api_request(
-            "GET", f"/devices/{device_id}/history", params=params
-        )
+        response = self._make_api_request("GET", f"/devices/{device_id}/history", params=params)
 
         readings = []
         for reading_data in response.get("history", []):
@@ -1074,9 +1005,7 @@ class ThermoworksClient:
                 # Skip if not authenticated
                 if not self.token:
                     logger.warning("Not authenticated, skipping poll")
-                    if self._polling_stop_event.wait(
-                        5.0
-                    ):  # Check for stop every 5 seconds
+                    if self._polling_stop_event.wait(5.0):  # Check for stop every 5 seconds
                         break
                     continue
 
@@ -1087,9 +1016,7 @@ class ThermoworksClient:
                         self._ensure_authenticated()
                     except Exception as e:
                         logger.error(f"Failed to refresh token during polling: {e}")
-                        if self._polling_stop_event.wait(
-                            30.0
-                        ):  # Wait longer after auth failure
+                        if self._polling_stop_event.wait(30.0):  # Wait longer after auth failure
                             break
                         continue
 
@@ -1104,31 +1031,23 @@ class ThermoworksClient:
                         break
 
                     try:
-                        logger.info(
-                            f"Polling temperature for device {device.device_id}"
-                        )
+                        logger.info(f"Polling temperature for device {device.device_id}")
                         readings = self.get_device_temperature(device.device_id)
-                        logger.info(
-                            f"Got {len(readings)} temperature readings for device {device.device_id}"
-                        )
+                        logger.info(f"Got {len(readings)} temperature readings for device {device.device_id}")
 
                         # Do something with the readings (e.g., publish to a message bus)
                         # This would be implemented by subclasses or event handlers
                         self._handle_temperature_readings(device, readings)
 
                     except Exception as e:
-                        logger.error(
-                            f"Failed to get temperature for device {device.device_id}: {e}"
-                        )
+                        logger.error(f"Failed to get temperature for device {device.device_id}: {e}")
 
                     # Small delay between devices to avoid overloading the API
                     if len(devices) > 1 and not self._polling_stop_event.is_set():
                         self._polling_stop_event.wait(1.0)
 
                 # Wait for the next polling interval
-                logger.info(
-                    f"Waiting for next polling interval ({self.polling_interval}s)"
-                )
+                logger.info(f"Waiting for next polling interval ({self.polling_interval}s)")
                 if self._polling_stop_event.wait(self.polling_interval):
                     break
 
@@ -1141,9 +1060,7 @@ class ThermoworksClient:
 
         logger.info("Polling worker stopped")
 
-    def _handle_temperature_readings(
-        self, device: DeviceInfo, readings: List[TemperatureReading]
-    ) -> None:
+    def _handle_temperature_readings(self, device: DeviceInfo, readings: List[TemperatureReading]) -> None:
         """
         Handle temperature readings
 
@@ -1170,14 +1087,10 @@ class ThermoworksClient:
 
         if self.token:
             status["token_expires_at"] = self.token.created_at + self.token.expires_in
-            status["token_expires_in"] = max(
-                0, (self.token.created_at + self.token.expires_in) - time.time()
-            )
+            status["token_expires_in"] = max(0, (self.token.created_at + self.token.expires_in) - time.time())
             status["token_is_expired"] = self.token.is_expired
 
-        status["polling_active"] = bool(
-            self._polling_thread and self._polling_thread.is_alive()
-        )
+        status["polling_active"] = bool(self._polling_thread and self._polling_thread.is_alive())
 
         return status
 

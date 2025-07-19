@@ -72,9 +72,7 @@ class EnhancedContainerAgent(ContainerAgent):
         try:
             # Mock response and timing data for example purposes
             response_time_ms = 250  # Example response time in ms
-            response = (
-                self._mock_response()
-            )  # This would be a real request in production
+            response = self._mock_response()  # This would be a real request in production
 
             if response.status_code in [200, 500]:
                 success, message = evaluate_test_result(response, self.service_type)

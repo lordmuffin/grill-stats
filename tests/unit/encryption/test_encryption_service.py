@@ -60,9 +60,7 @@ class TestCredentialValidator:
     def test_validate_password_invalid(self):
         """Test invalid password validation"""
         assert CredentialValidator.validate_password("short") == False  # Too short
-        assert (
-            CredentialValidator.validate_password("onlyletters") == False
-        )  # No numbers
+        assert CredentialValidator.validate_password("onlyletters") == False  # No numbers
         assert CredentialValidator.validate_password("12345678") == False  # No letters
         assert CredentialValidator.validate_password("a" * 129) == False  # Too long
 
@@ -228,12 +226,8 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()
@@ -250,12 +244,8 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         # Mock encryption responses
         mock_client.secrets.transit.encrypt_data.side_effect = [
@@ -266,9 +256,7 @@ class TestCredentialEncryptionService:
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()
 
-            encrypted = service.encrypt_credentials(
-                email="test@example.com", password="password123", user_id="123"
-            )
+            encrypted = service.encrypt_credentials(email="test@example.com", password="password123", user_id="123")
 
             assert encrypted.encrypted_email == "vault:v1:encrypted_email"
             assert encrypted.encrypted_password == "vault:v1:encrypted_password"
@@ -281,20 +269,14 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()
 
             with pytest.raises(ValueError, match="Invalid email format"):
-                service.encrypt_credentials(
-                    email="invalid-email", password="password123", user_id="123"
-                )
+                service.encrypt_credentials(email="invalid-email", password="password123", user_id="123")
 
     @patch("credential_encryption_service.hvac.Client")
     def test_encrypt_credentials_invalid_password(self, mock_hvac_client):
@@ -302,22 +284,14 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()
 
-            with pytest.raises(
-                ValueError, match="Password does not meet security requirements"
-            ):
-                service.encrypt_credentials(
-                    email="test@example.com", password="short", user_id="123"
-                )
+            with pytest.raises(ValueError, match="Password does not meet security requirements"):
+                service.encrypt_credentials(email="test@example.com", password="short", user_id="123")
 
     @patch("credential_encryption_service.hvac.Client")
     def test_encrypt_credentials_invalid_user_id(self, mock_hvac_client):
@@ -325,20 +299,14 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()
 
             with pytest.raises(ValueError, match="Invalid user ID format"):
-                service.encrypt_credentials(
-                    email="test@example.com", password="password123", user_id="invalid"
-                )
+                service.encrypt_credentials(email="test@example.com", password="password123", user_id="invalid")
 
     @patch("credential_encryption_service.hvac.Client")
     def test_decrypt_credentials_success(self, mock_hvac_client):
@@ -346,12 +314,8 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         # Mock decryption responses
         email_b64 = base64.b64encode("test@example.com".encode()).decode()
@@ -389,12 +353,8 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()
@@ -421,16 +381,10 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
-        with patch.dict(
-            os.environ, {"VAULT_TOKEN": "test-token", "ENCRYPTION_RATE_LIMIT": "2"}
-        ):
+        with patch.dict(os.environ, {"VAULT_TOKEN": "test-token", "ENCRYPTION_RATE_LIMIT": "2"}):
             service = CredentialEncryptionService()
 
             # First two requests should work
@@ -447,21 +401,13 @@ class TestCredentialEncryptionService:
         mock_client = Mock()
         mock_hvac_client.return_value = mock_client
         mock_client.is_authenticated.return_value = True
-        mock_client.secrets.transit.read_key.return_value = {
-            "data": {"latest_version": 1}
-        }
-        mock_client.sys.list_mounted_secrets_engines.return_value = {
-            "data": {"transit/": {}}
-        }
+        mock_client.secrets.transit.read_key.return_value = {"data": {"latest_version": 1}}
+        mock_client.sys.list_mounted_secrets_engines.return_value = {"data": {"transit/": {}}}
 
         # Mock health check encryption/decryption
         test_b64 = base64.b64encode("health-check-test".encode()).decode()
-        mock_client.secrets.transit.encrypt_data.return_value = {
-            "data": {"ciphertext": "vault:v1:health_check_encrypted"}
-        }
-        mock_client.secrets.transit.decrypt_data.return_value = {
-            "data": {"plaintext": test_b64}
-        }
+        mock_client.secrets.transit.encrypt_data.return_value = {"data": {"ciphertext": "vault:v1:health_check_encrypted"}}
+        mock_client.secrets.transit.decrypt_data.return_value = {"data": {"plaintext": test_b64}}
 
         with patch.dict(os.environ, {"VAULT_TOKEN": "test-token"}):
             service = CredentialEncryptionService()

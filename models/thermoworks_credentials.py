@@ -8,16 +8,7 @@ using the encryption service for secure credential management.
 from datetime import datetime
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import JSON, Boolean, Column, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -60,9 +51,7 @@ class ThermoWorksCredentials(Base):
             "id": self.id,
             "user_id": self.user_id,
             "is_active": self.is_active,
-            "last_validated": (
-                self.last_validated.isoformat() if self.last_validated else None
-            ),
+            "last_validated": (self.last_validated.isoformat() if self.last_validated else None),
             "validation_attempts": self.validation_attempts,
             "created_at": self.created_at.isoformat(),
             "updated_at": self.updated_at.isoformat(),
@@ -93,9 +82,7 @@ class ThermoWorksCredentialManager:
             __tablename__ = "thermoworks_credentials"
 
             id = Column(Integer, primary_key=True)
-            user_id = Column(
-                Integer, ForeignKey("users.id"), nullable=False, unique=True
-            )
+            user_id = Column(Integer, ForeignKey("users.id"), nullable=False, unique=True)
 
             # Encrypted credential data
             encrypted_email = Column(Text, nullable=False)
@@ -111,9 +98,7 @@ class ThermoWorksCredentialManager:
 
             # Audit fields
             created_at = Column(DateTime, default=datetime.utcnow)
-            updated_at = Column(
-                DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-            )
+            updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
             def __repr__(self):
                 return f"<ThermoWorksCredentials user_id={self.user_id}>"
@@ -124,9 +109,7 @@ class ThermoWorksCredentialManager:
                     "id": self.id,
                     "user_id": self.user_id,
                     "is_active": self.is_active,
-                    "last_validated": (
-                        self.last_validated.isoformat() if self.last_validated else None
-                    ),
+                    "last_validated": (self.last_validated.isoformat() if self.last_validated else None),
                     "validation_attempts": self.validation_attempts,
                     "created_at": self.created_at.isoformat(),
                     "updated_at": self.updated_at.isoformat(),
@@ -140,9 +123,7 @@ class ThermoWorksCredentialManager:
 
         self.model = ThermoWorksCredentialsModel
 
-    def store_credentials(
-        self, user_id: int, email: str, password: str
-    ) -> ThermoWorksCredentials:
+    def store_credentials(self, user_id: int, email: str, password: str) -> ThermoWorksCredentials:
         """Store encrypted ThermoWorks credentials
 
         Args:
@@ -164,15 +145,9 @@ class ThermoWorksCredentialManager:
 
             if existing_credentials:
                 # Update existing credentials
-                existing_credentials.encrypted_email = (
-                    encrypted_credential.encrypted_email
-                )
-                existing_credentials.encrypted_password = (
-                    encrypted_credential.encrypted_password
-                )
-                existing_credentials.encryption_metadata = (
-                    encrypted_credential.metadata.__dict__
-                )
+                existing_credentials.encrypted_email = encrypted_credential.encrypted_email
+                existing_credentials.encrypted_password = encrypted_credential.encrypted_password
+                existing_credentials.encryption_metadata = encrypted_credential.metadata.__dict__
                 existing_credentials.updated_at = datetime.utcnow()
                 existing_credentials.validation_attempts = 0
 
@@ -206,18 +181,13 @@ class ThermoWorksCredentialManager:
         """
         try:
             # Get encrypted credentials from database
-            credentials = self.model.query.filter_by(
-                user_id=user_id, is_active=True
-            ).first()
+            credentials = self.model.query.filter_by(user_id=user_id, is_active=True).first()
 
             if not credentials:
                 return None, None
 
             # Create encrypted credential object
-            from services.encryption_service.src.credential_encryption_service import (
-                CredentialMetadata,
-                EncryptedCredential,
-            )
+            from services.encryption_service.src.credential_encryption_service import CredentialMetadata, EncryptedCredential
 
             metadata = CredentialMetadata(**credentials.encryption_metadata)
             encrypted_credential = EncryptedCredential(

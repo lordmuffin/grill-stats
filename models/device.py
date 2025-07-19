@@ -22,9 +22,7 @@ class Device:
             status = Column(String(20), default="offline")  # online, offline, error
             is_active = Column(Boolean, default=True)
             created_at = Column(DateTime, default=datetime.utcnow)
-            updated_at = Column(
-                DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-            )
+            updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
             # Relationship will be established when both models are loaded
             # user = relationship("UserModel", backref="devices")
@@ -40,12 +38,8 @@ class Device:
                     "nickname": self.nickname,
                     "status": self.status,
                     "is_active": self.is_active,
-                    "created_at": (
-                        self.created_at.isoformat() if self.created_at else None
-                    ),
-                    "updated_at": (
-                        self.updated_at.isoformat() if self.updated_at else None
-                    ),
+                    "created_at": (self.created_at.isoformat() if self.created_at else None),
+                    "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
                 }
 
         self.model = DeviceModel
@@ -71,15 +65,11 @@ class Device:
             raise ValueError(message)
 
         # Check if device already exists
-        existing_device = self.model.query.filter_by(
-            device_id=device_id.upper()
-        ).first()
+        existing_device = self.model.query.filter_by(device_id=device_id.upper()).first()
         if existing_device:
             raise ValueError(f"Device {device_id} is already registered")
 
-        device = self.model(
-            user_id=user_id, device_id=device_id.upper(), nickname=nickname
-        )
+        device = self.model(user_id=user_id, device_id=device_id.upper(), nickname=nickname)
         self.db.session.add(device)
         self.db.session.commit()
         return device
@@ -97,9 +87,7 @@ class Device:
 
     def get_user_device(self, user_id, device_id):
         """Get a specific device for a user"""
-        return self.model.query.filter_by(
-            user_id=user_id, device_id=device_id.upper(), is_active=True
-        ).first()
+        return self.model.query.filter_by(user_id=user_id, device_id=device_id.upper(), is_active=True).first()
 
     def soft_delete_device(self, user_id, device_id):
         """Soft delete a device (set is_active=False)"""

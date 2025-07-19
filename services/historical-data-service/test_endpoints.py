@@ -85,16 +85,12 @@ def test_device_history():
 
                 # Print probe details
                 for probe in history_data["probes"]:
-                    print(
-                        f"   - Probe {probe['probe_id']}: {len(probe['readings'])} readings"
-                    )
+                    print(f"   - Probe {probe['probe_id']}: {len(probe['readings'])} readings")
 
                     # Show sample reading
                     if probe["readings"]:
                         sample = probe["readings"][0]
-                        print(
-                            f"     Sample: {sample['temperature']}°{sample['unit']} at {sample['timestamp']}"
-                        )
+                        print(f"     Sample: {sample['temperature']}°{sample['unit']} at {sample['timestamp']}")
 
                 return True
             else:
@@ -129,9 +125,7 @@ def test_device_history_no_auth():
     params = {"start_time": start_time, "end_time": end_time, "limit": 100}
 
     try:
-        response = requests.get(
-            f"{BASE_URL}/api/devices/{device_id}/history", params=params, timeout=10
-        )
+        response = requests.get(f"{BASE_URL}/api/devices/{device_id}/history", params=params, timeout=10)
 
         if response.status_code == 401:
             print("✅ Authentication properly required (401 Unauthorized)")

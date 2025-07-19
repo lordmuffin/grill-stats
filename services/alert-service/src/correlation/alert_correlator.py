@@ -49,9 +49,7 @@ class AlertCorrelator:
         }
 
         # Initialize ML components
-        self.tfidf_vectorizer = TfidfVectorizer(
-            max_features=1000, stop_words="english", ngram_range=(1, 2)
-        )
+        self.tfidf_vectorizer = TfidfVectorizer(max_features=1000, stop_words="english", ngram_range=(1, 2))
 
         # Correlation patterns cache
         self.correlation_patterns = {}
@@ -82,26 +80,13 @@ class AlertCorrelator:
                 return correlations
 
             # Apply different correlation techniques
-            temporal_correlations = await self._find_temporal_correlations(
-                alert, candidates
-            )
-            spatial_correlations = await self._find_spatial_correlations(
-                alert, candidates
-            )
-            semantic_correlations = await self._find_semantic_correlations(
-                alert, candidates
-            )
-            causal_correlations = await self._find_causal_correlations(
-                alert, candidates
-            )
+            temporal_correlations = await self._find_temporal_correlations(alert, candidates)
+            spatial_correlations = await self._find_spatial_correlations(alert, candidates)
+            semantic_correlations = await self._find_semantic_correlations(alert, candidates)
+            causal_correlations = await self._find_causal_correlations(alert, candidates)
 
             # Combine and rank correlations
-            all_correlations = (
-                temporal_correlations
-                + spatial_correlations
-                + semantic_correlations
-                + causal_correlations
-            )
+            all_correlations = temporal_correlations + spatial_correlations + semantic_correlations + causal_correlations
 
             # Remove duplicates and rank by confidence
             unique_correlations = await self._deduplicate_correlations(all_correlations)
@@ -126,9 +111,7 @@ class AlertCorrelator:
 
     async def _get_correlation_candidates(self, alert: Alert) -> List[Alert]:
         """Get candidate alerts for correlation within time window."""
-        window_start = datetime.utcnow() - timedelta(
-            seconds=self.config["temporal_window"]
-        )
+        window_start = datetime.utcnow() - timedelta(seconds=self.config["temporal_window"])
 
         result = await self.db.execute(
             select(Alert)
@@ -145,9 +128,7 @@ class AlertCorrelator:
 
         return result.scalars().all()
 
-    async def _find_temporal_correlations(
-        self, alert: Alert, candidates: List[Alert]
-    ) -> List[AlertCorrelation]:
+    async def _find_temporal_correlations(self, alert: Alert, candidates: List[Alert]) -> List[AlertCorrelation]:
         """Find alerts that occurred within temporal proximity."""
         correlations = []
 
@@ -177,9 +158,7 @@ class AlertCorrelator:
 
         return correlations
 
-    async def _find_spatial_correlations(
-        self, alert: Alert, candidates: List[Alert]
-    ) -> List[AlertCorrelation]:
+    async def _find_spatial_correlations(self, alert: Alert, candidates: List[Alert]) -> List[AlertCorrelation]:
         """Find alerts from related sources/services."""
         correlations = []
 
@@ -197,9 +176,7 @@ class AlertCorrelator:
 
         return correlations
 
-    async def _calculate_spatial_similarity(
-        self, alert1: Alert, alert2: Alert
-    ) -> float:
+    async def _calculate_spatial_similarity(self, alert1: Alert, alert2: Alert) -> float:
         """Calculate spatial similarity between two alerts."""
         score = 0.0
 
@@ -229,17 +206,13 @@ class AlertCorrelator:
 
         return min(score, 1.0)
 
-    async def _find_semantic_correlations(
-        self, alert: Alert, candidates: List[Alert]
-    ) -> List[AlertCorrelation]:
+    async def _find_semantic_correlations(self, alert: Alert, candidates: List[Alert]) -> List[AlertCorrelation]:
         """Find alerts with similar content using semantic analysis."""
         correlations = []
 
         # Prepare text for analysis
         alert_text = self._prepare_alert_text(alert)
-        candidate_texts = [
-            self._prepare_alert_text(candidate) for candidate in candidates
-        ]
+        candidate_texts = [self._prepare_alert_text(candidate) for candidate in candidates]
 
         if not alert_text or not any(candidate_texts):
             return correlations
@@ -250,9 +223,7 @@ class AlertCorrelator:
             tfidf_matrix = self.tfidf_vectorizer.fit_transform(all_texts)
 
             # Calculate cosine similarity
-            similarities = cosine_similarity(
-                tfidf_matrix[0:1], tfidf_matrix[1:]
-            ).flatten()
+            similarities = cosine_similarity(tfidf_matrix[0:1], tfidf_matrix[1:]).flatten()
 
             for i, similarity in enumerate(similarities):
                 if similarity > self.config["semantic_similarity_threshold"]:
@@ -288,9 +259,7 @@ class AlertCorrelator:
 
         return " ".join(text_parts)
 
-    async def _find_causal_correlations(
-        self, alert: Alert, candidates: List[Alert]
-    ) -> List[AlertCorrelation]:
+    async def _find_causal_correlations(self, alert: Alert, candidates: List[Alert]) -> List[AlertCorrelation]:
         """Find alerts that might be causally related."""
         correlations = []
 
@@ -298,9 +267,7 @@ class AlertCorrelator:
         causal_patterns = await self._get_causal_patterns()
 
         for candidate in candidates:
-            causality_score = await self._calculate_causality_score(
-                alert, candidate, causal_patterns
-            )
+            causality_score = await self._calculate_causality_score(alert, candidate, causal_patterns)
 
             if causality_score > self.config["causality_confidence_threshold"]:
                 correlation = AlertCorrelation(
@@ -329,9 +296,7 @@ class AlertCorrelator:
             "cpu_spike": ["slow_response", "timeout_error"],
         }
 
-    async def _calculate_causality_score(
-        self, alert: Alert, candidate: Alert, patterns: Dict[str, Any]
-    ) -> float:
+    async def _calculate_causality_score(self, alert: Alert, candidate: Alert, patterns: Dict[str, Any]) -> float:
         """Calculate causality score between two alerts."""
         score = 0.0
 
@@ -398,9 +363,7 @@ class AlertCorrelator:
 
         return False
 
-    async def _deduplicate_correlations(
-        self, correlations: List[AlertCorrelation]
-    ) -> List[AlertCorrelation]:
+    async def _deduplicate_correlations(self, correlations: List[AlertCorrelation]) -> List[AlertCorrelation]:
         """Remove duplicate correlations."""
         seen = set()
         unique_correlations = []
@@ -413,38 +376,28 @@ class AlertCorrelator:
 
         return unique_correlations
 
-    async def _rank_correlations(
-        self, correlations: List[AlertCorrelation]
-    ) -> List[AlertCorrelation]:
+    async def _rank_correlations(self, correlations: List[AlertCorrelation]) -> List[AlertCorrelation]:
         """Rank correlations by confidence score."""
         return sorted(correlations, key=lambda x: x.confidence_score, reverse=True)
 
-    async def _apply_ml_filtering(
-        self, correlations: List[AlertCorrelation]
-    ) -> List[AlertCorrelation]:
+    async def _apply_ml_filtering(self, correlations: List[AlertCorrelation]) -> List[AlertCorrelation]:
         """Apply machine learning-based filtering to correlations."""
         if not correlations:
             return correlations
 
         # Update ML models if needed
-        if (datetime.utcnow() - self.last_model_update).total_seconds() > self.config[
-            "ml_model_update_interval"
-        ]:
+        if (datetime.utcnow() - self.last_model_update).total_seconds() > self.config["ml_model_update_interval"]:
             await self._update_ml_models()
 
         # Apply clustering to group related correlations
         filtered_correlations = await self._apply_clustering(correlations)
 
         # Apply confidence boosting based on historical accuracy
-        boosted_correlations = await self._apply_confidence_boosting(
-            filtered_correlations
-        )
+        boosted_correlations = await self._apply_confidence_boosting(filtered_correlations)
 
         return boosted_correlations
 
-    async def _apply_clustering(
-        self, correlations: List[AlertCorrelation]
-    ) -> List[AlertCorrelation]:
+    async def _apply_clustering(self, correlations: List[AlertCorrelation]) -> List[AlertCorrelation]:
         """Apply DBSCAN clustering to group related correlations."""
         if len(correlations) < 2:
             return correlations
@@ -474,9 +427,7 @@ class AlertCorrelator:
             for label, cluster_correlations in clusters.items():
                 if label != -1:  # Not noise
                     # Select highest confidence correlation from cluster
-                    best_correlation = max(
-                        cluster_correlations, key=lambda x: x.confidence_score
-                    )
+                    best_correlation = max(cluster_correlations, key=lambda x: x.confidence_score)
                     filtered_correlations.append(best_correlation)
                 else:
                     # Keep all noise points (isolated correlations)
@@ -488,9 +439,7 @@ class AlertCorrelator:
             logger.error(f"Error in clustering: {str(e)}")
             return correlations
 
-    async def _apply_confidence_boosting(
-        self, correlations: List[AlertCorrelation]
-    ) -> List[AlertCorrelation]:
+    async def _apply_confidence_boosting(self, correlations: List[AlertCorrelation]) -> List[AlertCorrelation]:
         """Boost confidence scores based on historical accuracy."""
         accuracy_data = await self._get_correlation_accuracy_data()
 
@@ -515,9 +464,7 @@ class AlertCorrelator:
         # Default accuracy scores
         return {"temporal": 0.8, "spatial": 0.7, "semantic": 0.6, "causal": 0.5}
 
-    async def _update_correlation_patterns(
-        self, alert: Alert, correlations: List[AlertCorrelation]
-    ):
+    async def _update_correlation_patterns(self, alert: Alert, correlations: List[AlertCorrelation]):
         """Update correlation patterns for future analysis."""
         pattern_key = f"pattern_{alert.source}_{alert.severity}"
 
@@ -529,12 +476,8 @@ class AlertCorrelator:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        await self.redis.lpush(
-            f"correlation_patterns:{pattern_key}", json.dumps(pattern_data)
-        )
-        await self.redis.ltrim(
-            f"correlation_patterns:{pattern_key}", 0, 99
-        )  # Keep last 100
+        await self.redis.lpush(f"correlation_patterns:{pattern_key}", json.dumps(pattern_data))
+        await self.redis.ltrim(f"correlation_patterns:{pattern_key}", 0, 99)  # Keep last 100
 
     async def _update_ml_models(self):
         """Update machine learning models with recent data."""
@@ -621,9 +564,7 @@ class AlertCorrelator:
 
         return intersection / union if union > 0 else 0.0
 
-    def _calculate_label_similarity(
-        self, labels1: Dict[str, str], labels2: Dict[str, str]
-    ) -> float:
+    def _calculate_label_similarity(self, labels1: Dict[str, str], labels2: Dict[str, str]) -> float:
         """Calculate similarity between label sets."""
         if not labels1 or not labels2:
             return 0.0
@@ -646,17 +587,13 @@ class AlertCorrelator:
             "correlations_found": self.correlation_metrics["correlations_found"],
             "false_positives": self.correlation_metrics["false_positives"],
             "accuracy_rate": 1
-            - (
-                self.correlation_metrics["false_positives"]
-                / max(self.correlation_metrics["correlations_found"], 1)
-            ),
+            - (self.correlation_metrics["false_positives"] / max(self.correlation_metrics["correlations_found"], 1)),
         }
 
         if processing_times:
             stats.update(
                 {
-                    "avg_processing_time": sum(processing_times)
-                    / len(processing_times),
+                    "avg_processing_time": sum(processing_times) / len(processing_times),
                     "max_processing_time": max(processing_times),
                     "min_processing_time": min(processing_times),
                 }

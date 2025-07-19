@@ -75,9 +75,7 @@ session_manager = GrillingSession(db)
 
 from services.session_tracker import SessionTracker
 
-session_tracker = SessionTracker(
-    session_manager, mock_mode=app.config.get("MOCK_MODE", False)
-)
+session_tracker = SessionTracker(session_manager, mock_mode=app.config.get("MOCK_MODE", False))
 
 # Initialize auth routes
 from auth.routes import init_auth_routes
@@ -131,14 +129,10 @@ def sync_temperature_data():
                     device_id = device.get("id")
                     device_name = device.get("name", f"thermoworks_{device_id}")
 
-                    temperature_data = thermoworks_client.get_temperature_data(
-                        device_id
-                    )
+                    temperature_data = thermoworks_client.get_temperature_data(device_id)
 
                     if temperature_data and temperature_data.get("temperature"):
-                        sensor_name = (
-                            f"thermoworks_{device_name.lower().replace(' ', '_')}"
-                        )
+                        sensor_name = f"thermoworks_{device_name.lower().replace(' ', '_')}"
 
                         attributes = {
                             "device_id": device_id,
@@ -167,9 +161,7 @@ def sync_temperature_data():
                             # Parse timestamp or use current time
                             timestamp = None
                             if temperature_data.get("timestamp"):
-                                timestamp = datetime.fromisoformat(
-                                    temperature_data["timestamp"].replace("Z", "+00:00")
-                                )
+                                timestamp = datetime.fromisoformat(temperature_data["timestamp"].replace("Z", "+00:00"))
 
                             # For now, we'll use a default user_id of 1 for auto-detected sessions
                             # In a real implementation, this would be determined by device ownership
@@ -182,9 +174,7 @@ def sync_temperature_data():
                                 user_id=default_user_id,
                             )
                         except Exception as session_error:
-                            logger.warning(
-                                f"Session tracking error for device {device_id}: {session_error}"
-                            )
+                            logger.warning(f"Session tracking error for device {device_id}: {session_error}")
 
             except Exception as e:
                 logger.error(f"Error during temperature sync: {e}")
@@ -243,9 +233,7 @@ def create_alert():
         errors = alert_manager.validate_alert_data(alert_type, **data)
         if errors:
             return (
-                jsonify(
-                    {"success": False, "message": "Validation errors", "errors": errors}
-                ),
+                jsonify({"success": False, "message": "Validation errors", "errors": errors}),
                 400,
             )
 
@@ -298,9 +286,7 @@ def get_alerts():
 
         if device_id and probe_id:
             # Get alerts for specific device/probe
-            alerts = alert_manager.get_alerts_for_device_probe(
-                device_id, probe_id, active_only
-            )
+            alerts = alert_manager.get_alerts_for_device_probe(device_id, probe_id, active_only)
         else:
             # Get all user alerts
             alerts = alert_manager.get_user_alerts(current_user.id, active_only)
@@ -513,14 +499,10 @@ def trigger_alert_check():
         if alert_monitor:
             success = alert_monitor.trigger_immediate_check()
             if success:
-                return jsonify(
-                    {"success": True, "message": "Alert check triggered successfully"}
-                )
+                return jsonify({"success": True, "message": "Alert check triggered successfully"})
             else:
                 return (
-                    jsonify(
-                        {"success": False, "message": "Failed to trigger alert check"}
-                    ),
+                    jsonify({"success": False, "message": "Failed to trigger alert check"}),
                     500,
                 )
         else:
@@ -531,9 +513,7 @@ def trigger_alert_check():
     except Exception as e:
         logger.error(f"Error triggering alert check: {e}")
         return (
-            jsonify(
-                {"success": False, "message": f"Error triggering alert check: {str(e)}"}
-            ),
+            jsonify({"success": False, "message": f"Error triggering alert check: {str(e)}"}),
             500,
         )
 
@@ -548,9 +528,7 @@ def get_latest_notifications():
                 import json
 
                 user_notifications_key = f"notifications:user:{current_user.id}:latest"
-                notifications_data = alert_monitor.redis_client.lrange(
-                    user_notifications_key, 0, -1
-                )
+                notifications_data = alert_monitor.redis_client.lrange(user_notifications_key, 0, -1)
 
                 notifications = []
                 for notification_json in notifications_data:
@@ -591,9 +569,7 @@ def get_latest_notifications():
     except Exception as e:
         logger.error(f"Error getting latest notifications: {e}")
         return (
-            jsonify(
-                {"success": False, "message": f"Error getting notifications: {str(e)}"}
-            ),
+            jsonify({"success": False, "message": f"Error getting notifications: {str(e)}"}),
             500,
         )
 
@@ -670,18 +646,14 @@ def get_session_history():
             limit = 100
 
         # Get user sessions
-        sessions = session_manager.get_user_sessions(
-            user_id=current_user.id, status=status, limit=limit, offset=offset
-        )
+        sessions = session_manager.get_user_sessions(user_id=current_user.id, status=status, limit=limit, offset=offset)
 
         # Convert to dictionaries
         sessions_data = [session.to_dict() for session in sessions]
 
         # Add additional computed fields
         for session_data in sessions_data:
-            session_obj = next(
-                (s for s in sessions if s.id == session_data["id"]), None
-            )
+            session_obj = next((s for s in sessions if s.id == session_data["id"]), None)
             if session_obj:
                 session_data["current_duration"] = session_obj.calculate_duration()
                 session_data["is_active"] = session_obj.is_active()
@@ -776,9 +748,7 @@ def update_session_name(session_id):
     except Exception as e:
         logger.error(f"Error updating session {session_id} name: {e}")
         return (
-            jsonify(
-                {"success": False, "message": f"Error updating session name: {str(e)}"}
-            ),
+            jsonify({"success": False, "message": f"Error updating session name: {str(e)}"}),
             500,
         )
 
@@ -831,9 +801,7 @@ def start_session_manually():
             return jsonify({"success": False, "message": "Device ID is required"}), 400
 
         # Start session
-        session = session_tracker.force_start_session(
-            device_id=device_id, user_id=current_user.id, session_type=session_type
-        )
+        session = session_tracker.force_start_session(device_id=device_id, user_id=current_user.id, session_type=session_type)
 
         if not session:
             return (
@@ -920,9 +888,7 @@ def get_session_tracker_status():
     except Exception as e:
         logger.error(f"Error getting session tracker status: {e}")
         return (
-            jsonify(
-                {"success": False, "message": f"Error getting tracker status: {str(e)}"}
-            ),
+            jsonify({"success": False, "message": f"Error getting tracker status: {str(e)}"}),
             500,
         )
 
@@ -948,9 +914,7 @@ def simulate_session():
         profile = data.get("profile", "grilling")  # grilling, smoking, roasting
 
         # Start simulation
-        session_tracker.simulate_temperature_data(
-            device_id=device_id, user_id=current_user.id, session_profile=profile
-        )
+        session_tracker.simulate_temperature_data(device_id=device_id, user_id=current_user.id, session_profile=profile)
 
         return jsonify(
             {
@@ -962,9 +926,7 @@ def simulate_session():
     except Exception as e:
         logger.error(f"Error starting session simulation: {e}")
         return (
-            jsonify(
-                {"success": False, "message": f"Error starting simulation: {str(e)}"}
-            ),
+            jsonify({"success": False, "message": f"Error starting simulation: {str(e)}"}),
             500,
         )
 
@@ -996,11 +958,7 @@ def get_app_config():
         {
             "mock_mode": app.config.get("MOCK_MODE", False),
             "environment": os.getenv("FLASK_ENV", "development"),
-            "version": (
-                open("VERSION").read().strip()
-                if os.path.exists("VERSION")
-                else "unknown"
-            ),
+            "version": (open("VERSION").read().strip() if os.path.exists("VERSION") else "unknown"),
         }
     )
 
@@ -1028,9 +986,7 @@ def get_device_temperature(device_id):
 @app.route("/devices/<device_id>/history")
 @login_required
 def get_device_history(device_id):
-    start_time = request.args.get(
-        "start", (datetime.now() - timedelta(hours=24)).isoformat()
-    )
+    start_time = request.args.get("start", (datetime.now() - timedelta(hours=24)).isoformat())
     end_time = request.args.get("end", datetime.now().isoformat())
 
     history = thermoworks_client.get_historical_data(device_id, start_time, end_time)
@@ -1048,9 +1004,7 @@ def manual_sync():
             return redirect(url_for("dashboard"))
         # For API request, return JSON
         else:
-            return jsonify(
-                {"status": "success", "message": "Temperature data synced successfully"}
-            )
+            return jsonify({"status": "success", "message": "Temperature data synced successfully"})
     except Exception as e:
         logger.error(f"Manual sync failed: {e}")
 
@@ -1069,14 +1023,10 @@ def manual_sync():
 @login_required
 def test_homeassistant():
     if homeassistant_client.test_connection():
-        return jsonify(
-            {"status": "connected", "message": "Home Assistant connection successful"}
-        )
+        return jsonify({"status": "connected", "message": "Home Assistant connection successful"})
     else:
         return (
-            jsonify(
-                {"status": "error", "message": "Failed to connect to Home Assistant"}
-            ),
+            jsonify({"status": "error", "message": "Failed to connect to Home Assistant"}),
             500,
         )
 
@@ -1104,9 +1054,7 @@ def get_monitoring_data():
 
                 try:
                     # Get temperature data for this device
-                    temperature_data = thermoworks_client.get_temperature_data(
-                        device_id
-                    )
+                    temperature_data = thermoworks_client.get_temperature_data(device_id)
 
                     if temperature_data and temperature_data.get("temperature"):
                         # Create a probe entry
@@ -1118,9 +1066,7 @@ def get_monitoring_data():
                             "source": "thermoworks",
                             "temperature": temperature_data.get("temperature"),
                             "unit": temperature_data.get("unit", "F"),
-                            "timestamp": temperature_data.get(
-                                "timestamp", datetime.now().isoformat()
-                            ),
+                            "timestamp": temperature_data.get("timestamp", datetime.now().isoformat()),
                             "battery_level": temperature_data.get("battery_level"),
                             "signal_strength": temperature_data.get("signal_strength"),
                             "status": "online",
@@ -1128,9 +1074,7 @@ def get_monitoring_data():
 
                         all_probes.append(probe)
                 except Exception as e:
-                    logger.error(
-                        f"Error getting temperature for ThermoWorks device {device_id}: {e}"
-                    )
+                    logger.error(f"Error getting temperature for ThermoWorks device {device_id}: {e}")
         except Exception as e:
             logger.error(f"Error fetching ThermoWorks devices: {e}")
 
@@ -1145,9 +1089,7 @@ def get_monitoring_data():
                 from services.device_service.rfx_gateway_client import RFXGatewayClient
 
                 # Try to access the device-service API (assuming it's running on standard port)
-                device_service_url = os.environ.get(
-                    "DEVICE_SERVICE_URL", "http://localhost:8080"
-                )
+                device_service_url = os.environ.get("DEVICE_SERVICE_URL", "http://localhost:8080")
 
                 # Get gateways from device service
                 response = requests.get(f"{device_service_url}/api/gateways", timeout=2)
@@ -1158,9 +1100,7 @@ def get_monitoring_data():
                     # For each gateway, get temperature readings
                     for gateway in gateways:
                         gateway_id = gateway.get("gateway_id")
-                        gateway_name = gateway.get(
-                            "name", f"RFX Gateway {gateway_id[-6:]}"
-                        )
+                        gateway_name = gateway.get("name", f"RFX Gateway {gateway_id[-6:]}")
 
                         # Only process online gateways
                         if gateway.get("online", False):
@@ -1173,16 +1113,12 @@ def get_monitoring_data():
 
                                 if temp_response.status_code == 200:
                                     temp_data = temp_response.json()
-                                    readings = temp_data.get("data", {}).get(
-                                        "readings", []
-                                    )
+                                    readings = temp_data.get("data", {}).get("readings", [])
 
                                     # Process each reading
                                     for reading in readings:
                                         probe_id = reading.get("probe_id")
-                                        probe_name = reading.get(
-                                            "name", f"Probe {probe_id}"
-                                        )
+                                        probe_name = reading.get("name", f"Probe {probe_id}")
 
                                         # Create normalized probe entry
                                         probe = {
@@ -1193,23 +1129,15 @@ def get_monitoring_data():
                                             "source": "rfx_gateway",
                                             "temperature": reading.get("temperature"),
                                             "unit": reading.get("unit", "F"),
-                                            "timestamp": reading.get(
-                                                "timestamp", datetime.now().isoformat()
-                                            ),
-                                            "battery_level": reading.get(
-                                                "battery_level"
-                                            ),
-                                            "signal_strength": reading.get(
-                                                "signal_strength"
-                                            ),
+                                            "timestamp": reading.get("timestamp", datetime.now().isoformat()),
+                                            "battery_level": reading.get("battery_level"),
+                                            "signal_strength": reading.get("signal_strength"),
                                             "status": "online",
                                         }
 
                                         all_probes.append(probe)
                             except Exception as e:
-                                logger.error(
-                                    f"Error getting temperature for RFX Gateway {gateway_id}: {e}"
-                                )
+                                logger.error(f"Error getting temperature for RFX Gateway {gateway_id}: {e}")
             except (ImportError, requests.RequestException) as e:
                 logger.warning(f"RFX Gateway service not available: {e}")
         except Exception as e:
@@ -1257,9 +1185,7 @@ def get_monitoring_data():
                                     "source": "cache",
                                     "temperature": reading.get("temperature"),
                                     "unit": reading.get("unit", "F"),
-                                    "timestamp": reading.get(
-                                        "timestamp", datetime.now().isoformat()
-                                    ),
+                                    "timestamp": reading.get("timestamp", datetime.now().isoformat()),
                                     "battery_level": reading.get("battery_level"),
                                     "signal_strength": reading.get("signal_strength"),
                                     "status": "offline",  # Mark as offline since we're using cached data
@@ -1311,9 +1237,7 @@ def create_tables():
     admin_password = os.getenv("ADMIN_PASSWORD")
     admin_name = os.getenv("ADMIN_NAME", "Administrator")
 
-    logger.info(
-        f"Admin credentials check - Email: {admin_email}, Password: {'***' if admin_password else 'None'}"
-    )
+    logger.info(f"Admin credentials check - Email: {admin_email}, Password: {'***' if admin_password else 'None'}")
 
     if admin_email and admin_password:
         try:
@@ -1352,22 +1276,16 @@ def initialize_app():
         logger.error(f"Failed to start alert monitor: {e}")
 
     # Set up the scheduler for temperature sync
-    scheduler.add_job(
-        func=sync_temperature_data, trigger="interval", minutes=5, id="temperature_sync"
-    )
+    scheduler.add_job(func=sync_temperature_data, trigger="interval", minutes=5, id="temperature_sync")
 
     # Add session tracker maintenance jobs
     def cleanup_session_tracker():
         """Clean up inactive device tracking data"""
         try:
             with app.app_context():
-                cleaned_count = session_tracker.cleanup_inactive_devices(
-                    hours_inactive=24
-                )
+                cleaned_count = session_tracker.cleanup_inactive_devices(hours_inactive=24)
                 if cleaned_count > 0:
-                    logger.info(
-                        f"Cleaned up {cleaned_count} inactive devices from session tracker"
-                    )
+                    logger.info(f"Cleaned up {cleaned_count} inactive devices from session tracker")
         except Exception as e:
             logger.error(f"Error cleaning up session tracker: {e}")
 
@@ -1425,9 +1343,7 @@ except Exception as e:
                 app._database_initialized = True
                 logger.info("Application initialization completed on first request")
             except Exception as retry_e:
-                logger.error(
-                    f"Failed to initialize application on first request: {retry_e}"
-                )
+                logger.error(f"Failed to initialize application on first request: {retry_e}")
 
 
 # This makes the app work with gunicorn in production
@@ -1445,13 +1361,9 @@ if __name__ == "__main__":
         # Use debug=False in production deployment
         is_production = os.environ.get("FLASK_ENV") == "production"
         debug_mode = not is_production
-        logger.info(
-            f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}"
-        )
+        logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}")
         logger.info("About to call app.run...")
-        socketio.run(
-            app, host="0.0.0.0", port=5000, debug=debug_mode, allow_unsafe_werkzeug=True
-        )
+        socketio.run(app, host="0.0.0.0", port=5000, debug=debug_mode, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         if alert_monitor:

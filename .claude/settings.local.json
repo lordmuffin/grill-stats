@@ -40,7 +40,9 @@
       "Bash(./TRACK1_API_CORE.sh:*)",
       "Bash(source:*)",
       "Bash(pre-commit:*)",
-      "Bash(git reset:*)"
+      "Bash(git reset:*)",
+      "Bash(black:*)",
+      "Bash(isort:*)"
     ],
     "deny": []
   }

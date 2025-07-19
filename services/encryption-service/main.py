@@ -11,16 +11,10 @@ from datetime import datetime
 
 from flask import Flask, jsonify, request
 from flask_healthz import healthz
-from src.credential_encryption_service import (
-    CredentialEncryptionService,
-    EncryptedCredential,
-    PlainCredential,
-)
+from src.credential_encryption_service import CredentialEncryptionService, EncryptedCredential, PlainCredential
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 # Initialize Flask app
@@ -84,12 +78,7 @@ def encrypt_credentials():
             return jsonify({"error": "Request must be JSON"}), 400
 
         data = request.get_json()
-        if (
-            not data
-            or "email" not in data
-            or "password" not in data
-            or "user_id" not in data
-        ):
+        if not data or "email" not in data or "password" not in data or "user_id" not in data:
             return (
                 jsonify({"error": "Missing required fields: email, password, user_id"}),
                 400,
@@ -134,16 +123,12 @@ def decrypt_credentials():
         data = request.get_json()
         if not data or "encrypted_credential" not in data or "user_id" not in data:
             return (
-                jsonify(
-                    {"error": "Missing required fields: encrypted_credential, user_id"}
-                ),
+                jsonify({"error": "Missing required fields: encrypted_credential, user_id"}),
                 400,
             )
 
         # Parse encrypted credential
-        encrypted_credential = EncryptedCredential.from_dict(
-            data["encrypted_credential"]
-        )
+        encrypted_credential = EncryptedCredential.from_dict(data["encrypted_credential"])
 
         # Decrypt credentials
         plain_credential = encryption_service.decrypt_credentials(
@@ -240,9 +225,7 @@ def get_key_info():
 def not_found(error):
     """Handle 404 errors"""
     return (
-        jsonify(
-            {"error": "Endpoint not found", "timestamp": datetime.utcnow().isoformat()}
-        ),
+        jsonify({"error": "Endpoint not found", "timestamp": datetime.utcnow().isoformat()}),
         404,
     )
 

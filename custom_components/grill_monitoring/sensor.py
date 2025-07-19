@@ -3,11 +3,7 @@
 import logging
 from typing import Any, Dict, List, Optional
 
-from homeassistant.components.sensor import (
-    SensorDeviceClass,
-    SensorEntity,
-    SensorStateClass,
-)
+from homeassistant.components.sensor import SensorDeviceClass, SensorEntity, SensorStateClass
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
@@ -136,24 +132,16 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str:
         """Return the native unit of measurement."""
-        temp_data = self.coordinator.get_temperature_data(
-            self._device_id, self._probe_id
-        )
+        temp_data = self.coordinator.get_temperature_data(self._device_id, self._probe_id)
         if temp_data:
             unit = temp_data.get("unit", "°F")
-            return (
-                UnitOfTemperature.FAHRENHEIT
-                if unit == "°F"
-                else UnitOfTemperature.CELSIUS
-            )
+            return UnitOfTemperature.FAHRENHEIT if unit == "°F" else UnitOfTemperature.CELSIUS
         return UnitOfTemperature.FAHRENHEIT
 
     @property
     def native_value(self) -> Optional[float]:
         """Return the native value of the sensor."""
-        temp_data = self.coordinator.get_temperature_data(
-            self._device_id, self._probe_id
-        )
+        temp_data = self.coordinator.get_temperature_data(self._device_id, self._probe_id)
         if temp_data:
             return temp_data.get("temperature")
         return None
@@ -168,9 +156,7 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
         if self._probe_id:
             attributes[ATTR_PROBE_ID] = self._probe_id
 
-        temp_data = self.coordinator.get_temperature_data(
-            self._device_id, self._probe_id
-        )
+        temp_data = self.coordinator.get_temperature_data(self._device_id, self._probe_id)
         if temp_data:
             attributes[ATTR_TEMPERATURE_UNIT] = temp_data.get("unit", "°F")
             if "timestamp" in temp_data:
@@ -191,8 +177,7 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
         """Return True if entity is available."""
         return (
             self.coordinator.last_update_success
-            and self.coordinator.get_temperature_data(self._device_id, self._probe_id)
-            is not None
+            and self.coordinator.get_temperature_data(self._device_id, self._probe_id) is not None
         )
 
     @property
@@ -262,10 +247,7 @@ class GrillBatterySensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return (
-            self.coordinator.last_update_success
-            and self.coordinator.get_device_health(self._device_id) is not None
-        )
+        return self.coordinator.last_update_success and self.coordinator.get_device_health(self._device_id) is not None
 
     @property
     def device_info(self) -> Dict[str, Any]:
@@ -334,10 +316,7 @@ class GrillSignalStrengthSensor(CoordinatorEntity, SensorEntity):
     @property
     def available(self) -> bool:
         """Return True if entity is available."""
-        return (
-            self.coordinator.last_update_success
-            and self.coordinator.get_device_health(self._device_id) is not None
-        )
+        return self.coordinator.last_update_success and self.coordinator.get_device_health(self._device_id) is not None
 
     @property
     def device_info(self) -> Dict[str, Any]:

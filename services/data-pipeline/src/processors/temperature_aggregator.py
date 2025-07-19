@@ -15,12 +15,7 @@ import structlog
 from prometheus_client import Counter, Gauge, Histogram
 
 from ..kafka.producer_manager import ProducerManager
-from ..schemas.events import (
-    BaseEvent,
-    TemperatureReadingEvent,
-    TemperatureValidatedEvent,
-    ValidationError,
-)
+from ..schemas.events import BaseEvent, TemperatureReadingEvent, TemperatureValidatedEvent, ValidationError
 from ..utils.config import RedisConfig
 
 logger = structlog.get_logger()
@@ -39,12 +34,8 @@ AGGREGATION_DURATION = Histogram(
     "temperature_aggregation_duration_seconds",
     "Time spent aggregating temperature data",
 )
-ACTIVE_DEVICES = Gauge(
-    "temperature_active_devices", "Number of active temperature devices"
-)
-CACHE_HIT_RATIO = Gauge(
-    "temperature_cache_hit_ratio", "Cache hit ratio for temperature data"
-)
+ACTIVE_DEVICES = Gauge("temperature_active_devices", "Number of active temperature devices")
+CACHE_HIT_RATIO = Gauge("temperature_cache_hit_ratio", "Cache hit ratio for temperature data")
 
 
 class TemperatureAggregationService:
@@ -164,14 +155,10 @@ class TemperatureAggregationService:
             )
 
             # Send validated event
-            await self.producer_manager.send_event(
-                "temperature.readings.validated", validated_event
-            )
+            await self.producer_manager.send_event("temperature.readings.validated", validated_event)
 
             # Update metrics
-            TEMPERATURE_READINGS_PROCESSED.labels(
-                device_id=device_id, status=validation_result["status"]
-            ).inc()
+            TEMPERATURE_READINGS_PROCESSED.labels(device_id=device_id, status=validation_result["status"]).inc()
 
             VALIDATION_DURATION.observe(time.time() - start_time)
 
@@ -188,14 +175,10 @@ class TemperatureAggregationService:
                 device_id=device_id,
                 error=str(e),
             )
-            TEMPERATURE_READINGS_PROCESSED.labels(
-                device_id=device_id, status="error"
-            ).inc()
+            TEMPERATURE_READINGS_PROCESSED.labels(device_id=device_id, status="error").inc()
             raise
 
-    async def _validate_temperature_reading(
-        self, event: TemperatureReadingEvent
-    ) -> Dict[str, Any]:
+    async def _validate_temperature_reading(self, event: TemperatureReadingEvent) -> Dict[str, Any]:
         """Validate a temperature reading against rules."""
         errors = []
         device_id = event.data.device_id
@@ -219,25 +202,16 @@ class TemperatureAggregationService:
             recent_readings = list(self.device_data[device_id])
             if len(recent_readings) > 0:
                 last_reading = recent_readings[-1]
-                time_diff = (
-                    event.timestamp - last_reading["timestamp"]
-                ).total_seconds() / 60.0
+                time_diff = (event.timestamp - last_reading["timestamp"]).total_seconds() / 60.0
                 if time_diff > 0:
                     temp_change = abs(temperature - last_reading["temperature"])
                     change_rate = temp_change / time_diff
 
-                    if (
-                        change_rate
-                        > self.validation_rules["rate_of_change"][
-                            "max_change_per_minute"
-                        ]
-                    ):
+                    if change_rate > self.validation_rules["rate_of_change"]["max_change_per_minute"]:
                         errors.append(
                             ValidationError(
                                 field="temperature",
-                                message=self.validation_rules["rate_of_change"][
-                                    "error_message"
-                                ],
+                                message=self.validation_rules["rate_of_change"]["error_message"],
                                 value=change_rate,
                             )
                         )
@@ -245,29 +219,19 @@ class TemperatureAggregationService:
         # Rule 3: Spike detection
         if (
             device_id in self.device_data
-            and len(self.device_data[device_id])
-            >= self.validation_rules["spike_detection"]["min_samples"]
+            and len(self.device_data[device_id]) >= self.validation_rules["spike_detection"]["min_samples"]
         ):
-            recent_temps = [
-                r["temperature"] for r in list(self.device_data[device_id])[-10:]
-            ]
+            recent_temps = [r["temperature"] for r in list(self.device_data[device_id])[-10:]]
             if recent_temps:
                 mean_temp = sum(recent_temps) / len(recent_temps)
-                std_temp = (
-                    sum((t - mean_temp) ** 2 for t in recent_temps) / len(recent_temps)
-                ) ** 0.5
-                threshold = mean_temp + (
-                    std_temp
-                    * self.validation_rules["spike_detection"]["threshold_multiplier"]
-                )
+                std_temp = (sum((t - mean_temp) ** 2 for t in recent_temps) / len(recent_temps)) ** 0.5
+                threshold = mean_temp + (std_temp * self.validation_rules["spike_detection"]["threshold_multiplier"])
 
                 if abs(temperature - mean_temp) > threshold:
                     errors.append(
                         ValidationError(
                             field="temperature",
-                            message=self.validation_rules["spike_detection"][
-                                "error_message"
-                            ],
+                            message=self.validation_rules["spike_detection"]["error_message"],
                             value=abs(temperature - mean_temp),
                         )
                     )
@@ -275,8 +239,7 @@ class TemperatureAggregationService:
         # Rule 4: Sensor health check
         if (
             event.data.battery_level is not None
-            and event.data.battery_level
-            < self.validation_rules["sensor_health"]["min_battery_level"]
+            and event.data.battery_level < self.validation_rules["sensor_health"]["min_battery_level"]
         ):
             errors.append(
                 ValidationError(
@@ -311,24 +274,18 @@ class TemperatureAggregationService:
 
                 # Store in time series (sorted set)
                 timestamp_score = event.timestamp.timestamp()
-                await self.redis_client.zadd(
-                    f"{key}:series", {json.dumps(reading_data): timestamp_score}
-                )
+                await self.redis_client.zadd(f"{key}:series", {json.dumps(reading_data): timestamp_score})
 
                 # Keep only last 24 hours
                 cutoff_time = (datetime.utcnow() - timedelta(hours=24)).timestamp()
-                await self.redis_client.zremrangebyscore(
-                    f"{key}:series", 0, cutoff_time
-                )
+                await self.redis_client.zremrangebyscore(f"{key}:series", 0, cutoff_time)
 
                 # Set expiration
                 await self.redis_client.expire(f"{key}:latest", 3600)  # 1 hour
                 await self.redis_client.expire(f"{key}:series", 86400)  # 24 hours
 
         except Exception as e:
-            logger.error(
-                "Failed to store reading in Redis", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to store reading in Redis", device_id=device_id, error=str(e))
 
         # Store in memory
         self.device_data[device_id].append(
@@ -369,9 +326,7 @@ class TemperatureAggregationService:
         # Update running average
         current_avg = stats["avg_temperature"]
         count = stats["reading_count"]
-        stats["avg_temperature"] = (
-            current_avg * (count - 1) + event.data.temperature
-        ) / count
+        stats["avg_temperature"] = (current_avg * (count - 1) + event.data.temperature) / count
 
         # Update active devices metric
         ACTIVE_DEVICES.set(len(self.device_stats))
@@ -418,9 +373,7 @@ class TemperatureAggregationService:
             now = datetime.utcnow()
             window_start = now - timedelta(minutes=self.window_size_minutes)
 
-            recent_readings = [
-                r for r in self.device_data[device_id] if r["timestamp"] >= window_start
-            ]
+            recent_readings = [r for r in self.device_data[device_id] if r["timestamp"] >= window_start]
 
             if not recent_readings:
                 return
@@ -456,9 +409,7 @@ class TemperatureAggregationService:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to aggregate device data", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to aggregate device data", device_id=device_id, error=str(e))
 
     def _calculate_temperature_trend(self, temperatures: List[float]) -> str:
         """Calculate temperature trend from a list of temperatures."""
@@ -503,11 +454,7 @@ class TemperatureAggregationService:
             for device_id in list(self.device_data.keys()):
                 original_size = len(self.device_data[device_id])
                 self.device_data[device_id] = deque(
-                    [
-                        r
-                        for r in self.device_data[device_id]
-                        if r["timestamp"] > cutoff_time
-                    ],
+                    [r for r in self.device_data[device_id] if r["timestamp"] > cutoff_time],
                     maxlen=1000,
                 )
                 cleaned_size = len(self.device_data[device_id])
@@ -524,9 +471,7 @@ class TemperatureAggregationService:
         except Exception as e:
             logger.error("Failed to cleanup old data", error=str(e))
 
-    async def get_device_history(
-        self, device_id: str, start_time: datetime, end_time: datetime
-    ) -> List[Dict[str, Any]]:
+    async def get_device_history(self, device_id: str, start_time: datetime, end_time: datetime) -> List[Dict[str, Any]]:
         """Get historical temperature data for a device."""
         try:
             # Try Redis first
@@ -535,9 +480,7 @@ class TemperatureAggregationService:
                 start_score = start_time.timestamp()
                 end_score = end_time.timestamp()
 
-                redis_data = await self.redis_client.zrangebyscore(
-                    key, start_score, end_score
-                )
+                redis_data = await self.redis_client.zrangebyscore(key, start_score, end_score)
 
                 if redis_data:
                     self.cache_hits += 1
@@ -564,9 +507,7 @@ class TemperatureAggregationService:
             return []
 
         except Exception as e:
-            logger.error(
-                "Failed to get device history", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get device history", device_id=device_id, error=str(e))
             return []
 
     async def get_device_stats(self, device_id: str) -> Dict[str, Any]:
@@ -576,19 +517,13 @@ class TemperatureAggregationService:
                 return {"error": "Device not found"}
 
             stats = self.device_stats[device_id].copy()
-            stats["last_seen"] = (
-                self.last_seen.get(device_id, "never").isoformat()
-                if device_id in self.last_seen
-                else "never"
-            )
+            stats["last_seen"] = self.last_seen.get(device_id, "never").isoformat() if device_id in self.last_seen else "never"
             stats["first_seen"] = stats["first_seen"].isoformat()
 
             return stats
 
         except Exception as e:
-            logger.error(
-                "Failed to get device stats", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get device stats", device_id=device_id, error=str(e))
             return {"error": str(e)}
 
     async def trigger_sync(self):
@@ -606,19 +541,13 @@ class TemperatureAggregationService:
         return {
             "is_running": self.is_running,
             "active_devices": len(self.device_stats),
-            "total_readings": sum(
-                stats["reading_count"] for stats in self.device_stats.values()
-            ),
+            "total_readings": sum(stats["reading_count"] for stats in self.device_stats.values()),
             "cache_hit_ratio": (
-                self.cache_hits / (self.cache_hits + self.cache_misses)
-                if (self.cache_hits + self.cache_misses) > 0
-                else 0
+                self.cache_hits / (self.cache_hits + self.cache_misses) if (self.cache_hits + self.cache_misses) > 0 else 0
             ),
             "redis_connected": self.redis_client is not None,
             "background_tasks": {
-                "aggregation": (
-                    not self.aggregation_task.done() if self.aggregation_task else False
-                ),
+                "aggregation": (not self.aggregation_task.done() if self.aggregation_task else False),
                 "cleanup": not self.cleanup_task.done() if self.cleanup_task else False,
             },
         }

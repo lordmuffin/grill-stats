@@ -61,22 +61,12 @@ class MockSessionManager:
     def update_session_stats(self, session_id, temperature_data):
         if session_id in self.sessions:
             session = self.sessions[session_id]
-            temps = (
-                [temperature_data]
-                if isinstance(temperature_data, (int, float))
-                else temperature_data
-            )
+            temps = [temperature_data] if isinstance(temperature_data, (int, float)) else temperature_data
 
             for temp in temps:
-                if (
-                    session["max_temperature"] is None
-                    or temp > session["max_temperature"]
-                ):
+                if session["max_temperature"] is None or temp > session["max_temperature"]:
                     session["max_temperature"] = temp
-                if (
-                    session["min_temperature"] is None
-                    or temp < session["min_temperature"]
-                ):
+                if session["min_temperature"] is None or temp < session["min_temperature"]:
                     session["min_temperature"] = temp
 
             print(
@@ -103,9 +93,7 @@ class TestSessionTracker:
         self.potential_starts = {}
         self.session_device_map = {}  # device_id -> session_id
 
-    def process_temperature_reading(
-        self, device_id, temperature, timestamp=None, user_id=None
-    ):
+    def process_temperature_reading(self, device_id, temperature, timestamp=None, user_id=None):
         if timestamp is None:
             timestamp = datetime.utcnow()
 
@@ -158,23 +146,13 @@ class TestSessionTracker:
                 if temp_increase >= self.TEMP_RISE_THRESHOLD:
                     # Mark as potential start
                     if device_id not in self.potential_starts:
-                        self.potential_starts[device_id] = recent_readings[0][
-                            "timestamp"
-                        ]
-                        print(
-                            f"Potential session start detected for device {device_id}"
-                        )
+                        self.potential_starts[device_id] = recent_readings[0]["timestamp"]
+                        print(f"Potential session start detected for device {device_id}")
 
                     # Confirm start if sustained
-                    time_since_potential = (
-                        datetime.utcnow() - self.potential_starts[device_id]
-                    )
-                    if time_since_potential >= timedelta(
-                        minutes=5
-                    ):  # Reduced for testing
-                        self._start_session(
-                            device_id, self.potential_starts[device_id], user_id
-                        )
+                    time_since_potential = datetime.utcnow() - self.potential_starts[device_id]
+                    if time_since_potential >= timedelta(minutes=5):  # Reduced for testing
+                        self._start_session(device_id, self.potential_starts[device_id], user_id)
         else:
             # Reset potential start if temperature drops
             self.potential_starts.pop(device_id, None)
@@ -191,9 +169,7 @@ class TestSessionTracker:
             self.session_device_map[device_id] = session["id"]
             self.potential_starts.pop(device_id, None)
 
-            print(
-                f"Session started for device {device_id}, session_id: {session['id']}"
-            )
+            print(f"Session started for device {device_id}, session_id: {session['id']}")
             return session
 
         except Exception as e:
@@ -273,17 +249,13 @@ def test_basic_session_tracking():
 
     status = tracker.get_status()
     print(f"Status after ambient readings: {status}")
-    assert (
-        status["active_sessions"] == 0
-    ), "No sessions should be active with ambient temps"
+    assert status["active_sessions"] == 0, "No sessions should be active with ambient temps"
 
     print("\n2. Testing temperature rise (session start detection)...")
     # Simulate temperature rise for session start
     for i in range(15):
         temp = ambient_temp + 20 + (i * 5)  # Rise to ~150°F above ambient
-        tracker.process_temperature_reading(
-            device_id=device_id, temperature=temp, user_id=user_id
-        )
+        tracker.process_temperature_reading(device_id=device_id, temperature=temp, user_id=user_id)
 
     status = tracker.get_status()
     print(f"Status after temperature rise: {status}")
@@ -291,18 +263,14 @@ def test_basic_session_tracking():
     print("\n3. Testing manual session management...")
     # Test manual session start
     manual_device = "manual_device_001"
-    manual_session = tracker.force_start_session(
-        device_id=manual_device, user_id=user_id, session_type="manual_test"
-    )
+    manual_session = tracker.force_start_session(device_id=manual_device, user_id=user_id, session_type="manual_test")
 
     assert manual_session is not None, "Manual session creation failed"
     assert manual_session["session_type"] == "manual_test", "Session type mismatch"
 
     # Process some temperature data for the manual session
     for i in range(5):
-        tracker.process_temperature_reading(
-            device_id=manual_device, temperature=400 + (i * 10), user_id=user_id
-        )
+        tracker.process_temperature_reading(device_id=manual_device, temperature=400 + (i * 10), user_id=user_id)
 
     # Test manual session end
     success = tracker.force_end_session(manual_device)
@@ -379,14 +347,10 @@ def test_session_detection_algorithm():
 
     if active_sessions:
         session = active_sessions[0]
-        print(
-            f"Detected session: type={session['session_type']}, max_temp={session['max_temperature']}°F"
-        )
+        print(f"Detected session: type={session['session_type']}, max_temp={session['max_temperature']}°F")
 
         if session["session_type"] == "grilling" and session["max_temperature"] > 400:
-            print(
-                "✅ Session detection algorithm correctly identified grilling session!"
-            )
+            print("✅ Session detection algorithm correctly identified grilling session!")
             return True
         else:
             print("⚠️ Session detected but classification may need tuning")

@@ -48,9 +48,7 @@ class AuthTestCase(TestCase):
 
         # Create a test user
         password_hash = generate_password_hash(self.bcrypt, "password")
-        self.test_user = self.user_manager.create_user(
-            "test@example.com", password_hash
-        )
+        self.test_user = self.user_manager.create_user("test@example.com", password_hash)
 
         # Create a locked user
         locked_user = self.user_manager.create_user("locked@example.com", password_hash)
@@ -82,18 +80,14 @@ class AuthTestCase(TestCase):
 
     def test_invalid_credentials(self):
         """Test login with invalid credentials"""
-        response = self.client.post(
-            "/login", data={"email": "test@example.com", "password": "wrong-password"}
-        )
+        response = self.client.post("/login", data={"email": "test@example.com", "password": "wrong-password"})
 
         self.assert200(response)
         self.assertIn(b"Invalid username or password", response.data)
 
     def test_nonexistent_user(self):
         """Test login with a non-existent user"""
-        response = self.client.post(
-            "/login", data={"email": "nonexistent@example.com", "password": "password"}
-        )
+        response = self.client.post("/login", data={"email": "nonexistent@example.com", "password": "password"})
 
         self.assert200(response)
         self.assertIn(b"Invalid username or password", response.data)
@@ -107,9 +101,7 @@ class AuthTestCase(TestCase):
 
     def test_locked_account(self):
         """Test login with a locked account"""
-        response = self.client.post(
-            "/login", data={"email": "locked@example.com", "password": "password"}
-        )
+        response = self.client.post("/login", data={"email": "locked@example.com", "password": "password"})
 
         self.assert200(response)
         self.assertIn(b"Your account has been locked", response.data)
@@ -117,27 +109,21 @@ class AuthTestCase(TestCase):
     def test_failed_login_counter(self):
         """Test that failed login attempts are counted"""
         # Initial login attempt with wrong password
-        self.client.post(
-            "/login", data={"email": "test@example.com", "password": "wrong-password"}
-        )
+        self.client.post("/login", data={"email": "test@example.com", "password": "wrong-password"})
 
         # Verify that failed_login_attempts has been incremented
         user = self.user_manager.get_user_by_email("test@example.com")
         self.assertEqual(user.failed_login_attempts, 1)
 
         # Another failed attempt
-        self.client.post(
-            "/login", data={"email": "test@example.com", "password": "wrong-password"}
-        )
+        self.client.post("/login", data={"email": "test@example.com", "password": "wrong-password"})
 
         # Verify counter is now 2
         user = self.user_manager.get_user_by_email("test@example.com")
         self.assertEqual(user.failed_login_attempts, 2)
 
         # Successful login should reset counter
-        self.client.post(
-            "/login", data={"email": "test@example.com", "password": "password"}
-        )
+        self.client.post("/login", data={"email": "test@example.com", "password": "password"})
 
         # Verify counter is reset
         user = self.user_manager.get_user_by_email("test@example.com")
@@ -157,9 +143,7 @@ class AuthTestCase(TestCase):
         self.assertTrue(user.is_locked)
 
         # Try to login with correct password
-        response = self.client.post(
-            "/login", data={"email": "test@example.com", "password": "password"}
-        )
+        response = self.client.post("/login", data={"email": "test@example.com", "password": "password"})
 
         # Should fail due to account being locked
         self.assertIn(b"Your account has been locked", response.data)

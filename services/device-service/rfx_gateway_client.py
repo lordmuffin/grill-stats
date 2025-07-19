@@ -21,11 +21,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import requests
-from ha_bluetooth_client import (
-    BluetoothDevice,
-    BluetoothDeviceState,
-    HomeAssistantBluetoothClient,
-)
+from ha_bluetooth_client import BluetoothDevice, BluetoothDeviceState, HomeAssistantBluetoothClient
 
 # Configure logging
 logging.basicConfig(
@@ -108,15 +104,9 @@ class RFXGatewayClient:
     """
 
     # RFX Gateway Bluetooth service and characteristic UUIDs
-    BT_SERVICE_UUID = (
-        "00001234-0000-1000-8000-00805f9b34fb"  # Example UUID - replace with actual
-    )
-    BT_CONFIG_CHAR_UUID = (
-        "00001235-0000-1000-8000-00805f9b34fb"  # Example UUID - replace with actual
-    )
-    BT_STATUS_CHAR_UUID = (
-        "00001236-0000-1000-8000-00805f9b34fb"  # Example UUID - replace with actual
-    )
+    BT_SERVICE_UUID = "00001234-0000-1000-8000-00805f9b34fb"  # Example UUID - replace with actual
+    BT_CONFIG_CHAR_UUID = "00001235-0000-1000-8000-00805f9b34fb"  # Example UUID - replace with actual
+    BT_STATUS_CHAR_UUID = "00001236-0000-1000-8000-00805f9b34fb"  # Example UUID - replace with actual
 
     def __init__(
         self,
@@ -165,9 +155,7 @@ class RFXGatewayClient:
             List of discovered gateway devices
         """
         timeout = timeout or self.max_scan_duration
-        logger.info(
-            f"Starting Bluetooth scan for RFX Gateways via Home Assistant (timeout: {timeout}s)"
-        )
+        logger.info(f"Starting Bluetooth scan for RFX Gateways via Home Assistant (timeout: {timeout}s)")
 
         discovered_devices = []
         try:
@@ -177,9 +165,7 @@ class RFXGatewayClient:
             for device in devices:
                 # Filter for RFX Gateway devices based on name
                 if "RFX" in device.name or "Gateway" in device.name:
-                    logger.info(
-                        f"Found potential RFX Gateway: {device.name} ({device.address})"
-                    )
+                    logger.info(f"Found potential RFX Gateway: {device.name} ({device.address})")
                     gateway_id = device.id
 
                     gateway_info = {
@@ -195,9 +181,7 @@ class RFXGatewayClient:
                     # Create a setup status entry for this gateway
                     with self._setup_lock:
                         if gateway_id not in self.active_setups:
-                            self.active_setups[gateway_id] = GatewaySetupStatus(
-                                gateway_id=gateway_id
-                            )
+                            self.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id)
 
             logger.info(f"Discovered {len(discovered_devices)} RFX Gateway devices")
             return discovered_devices

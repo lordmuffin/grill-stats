@@ -22,9 +22,7 @@ MESSAGES_RECEIVED = Counter(
     "Total messages received from Kafka",
     ["topic", "status"],
 )
-PROCESSING_DURATION = Histogram(
-    "kafka_processing_duration_seconds", "Time spent processing messages", ["topic"]
-)
+PROCESSING_DURATION = Histogram("kafka_processing_duration_seconds", "Time spent processing messages", ["topic"])
 CONSUMER_LAG = Gauge("kafka_consumer_lag", "Consumer lag", ["topic", "partition"])
 ACTIVE_CONSUMERS = Gauge("kafka_active_consumers", "Number of active consumers")
 
@@ -188,15 +186,11 @@ class ConsumerManager:
             try:
                 consumer.close()
             except Exception as e:
-                logger.error(
-                    "Error closing consumer", consumer_id=consumer_id, error=str(e)
-                )
+                logger.error("Error closing consumer", consumer_id=consumer_id, error=str(e))
 
             ACTIVE_CONSUMERS.dec()
 
-    async def _process_message(
-        self, consumer_id: str, msg, message_handler: Callable[[BaseEvent], None]
-    ):
+    async def _process_message(self, consumer_id: str, msg, message_handler: Callable[[BaseEvent], None]):
         """Process a single message."""
         start_time = time.time()
         topic = msg.topic()
@@ -205,9 +199,7 @@ class ConsumerManager:
             # Decode message
             value = msg.value().decode("utf-8") if msg.value() else None
             if not value:
-                logger.warning(
-                    "Empty message received", consumer_id=consumer_id, topic=topic
-                )
+                logger.warning("Empty message received", consumer_id=consumer_id, topic=topic)
                 return
 
             # Parse JSON
@@ -311,9 +303,7 @@ class ConsumerManager:
             logger.info("Consumer stopped", consumer_id=consumer_id)
 
         except Exception as e:
-            logger.error(
-                "Failed to stop consumer", consumer_id=consumer_id, error=str(e)
-            )
+            logger.error("Failed to stop consumer", consumer_id=consumer_id, error=str(e))
             raise
 
     async def stop_all(self):
@@ -336,9 +326,7 @@ class ConsumerManager:
         """Restart a specific consumer."""
         try:
             if consumer_id not in self.consumers:
-                logger.warning(
-                    "Consumer not found for restart", consumer_id=consumer_id
-                )
+                logger.warning("Consumer not found for restart", consumer_id=consumer_id)
                 return
 
             # Get current topics and handler
@@ -354,9 +342,7 @@ class ConsumerManager:
             logger.info("Consumer restarted", consumer_id=consumer_id)
 
         except Exception as e:
-            logger.error(
-                "Failed to restart consumer", consumer_id=consumer_id, error=str(e)
-            )
+            logger.error("Failed to restart consumer", consumer_id=consumer_id, error=str(e))
             raise
 
     def get_consumer_status(self, consumer_id: str) -> Dict[str, Any]:
@@ -375,9 +361,7 @@ class ConsumerManager:
             return {
                 "status": "running" if task and not task.done() else "stopped",
                 "topics": topics,
-                "assignment": [
-                    {"topic": tp.topic, "partition": tp.partition} for tp in assignment
-                ],
+                "assignment": [{"topic": tp.topic, "partition": tp.partition} for tp in assignment],
                 "task_done": task.done() if task else True,
             }
         except Exception as e:
@@ -408,20 +392,12 @@ class ConsumerManager:
             committed = consumer.committed(assignment)
 
             # Get high water marks
-            high_water_marks = (
-                consumer.get_watermark_offsets(assignment[0]) if assignment else (0, 0)
-            )
+            high_water_marks = consumer.get_watermark_offsets(assignment[0]) if assignment else (0, 0)
 
             lag_info = {}
             for tp in assignment:
-                committed_offset = (
-                    committed[tp.partition].offset
-                    if tp.partition < len(committed)
-                    else 0
-                )
-                high_water_mark = (
-                    high_water_marks[1] if len(high_water_marks) > 1 else 0
-                )
+                committed_offset = committed[tp.partition].offset if tp.partition < len(committed) else 0
+                high_water_mark = high_water_marks[1] if len(high_water_marks) > 1 else 0
                 lag = max(0, high_water_mark - committed_offset)
 
                 lag_info[f"{tp.topic}_{tp.partition}"] = {

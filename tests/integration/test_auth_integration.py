@@ -56,9 +56,7 @@ class AuthIntegrationTestCase(TestCase):
 
         # Create a test user
         password_hash = generate_password_hash(self.bcrypt, "password")
-        self.test_user = self.user_manager.create_user(
-            "test@example.com", password_hash
-        )
+        self.test_user = self.user_manager.create_user("test@example.com", password_hash)
 
     def tearDown(self):
         """Tear down the test environment"""
@@ -113,9 +111,7 @@ class AuthIntegrationTestCase(TestCase):
             self.assertNotIn("user_id", sess)
 
         # Log in
-        self.client.post(
-            "/login", data={"email": "test@example.com", "password": "password"}
-        )
+        self.client.post("/login", data={"email": "test@example.com", "password": "password"})
 
         # Check that the user_id is in the session
         with self.client.session_transaction() as sess:

@@ -13,9 +13,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List
 
 
-def generate_brisket_curve(
-    device_id: str, probe_id: str, start_time: datetime
-) -> List[Dict[str, Any]]:
+def generate_brisket_curve(device_id: str, probe_id: str, start_time: datetime) -> List[Dict[str, Any]]:
     """Generate temperature curve for a low and slow brisket cook"""
     readings = []
     current_time = start_time
@@ -56,9 +54,7 @@ def generate_brisket_curve(
     return readings
 
 
-def generate_ribs_curve(
-    device_id: str, probe_id: str, start_time: datetime
-) -> List[Dict[str, Any]]:
+def generate_ribs_curve(device_id: str, probe_id: str, start_time: datetime) -> List[Dict[str, Any]]:
     """Generate temperature curve for pork ribs"""
     readings = []
     current_time = start_time
@@ -91,9 +87,7 @@ def generate_ribs_curve(
     return readings
 
 
-def generate_chicken_curve(
-    device_id: str, probe_id: str, start_time: datetime
-) -> List[Dict[str, Any]]:
+def generate_chicken_curve(device_id: str, probe_id: str, start_time: datetime) -> List[Dict[str, Any]]:
     """Generate temperature curve for chicken breast"""
     readings = []
     current_time = start_time
@@ -146,9 +140,7 @@ def generate_ambient_curve(
             base_temp = 70 + ((target_temp - 70) * (time_ratio / 0.1))
         else:
             # Maintenance phase with controlled fluctuations
-            base_temp = (
-                target_temp + 5 * math.sin(time_ratio * 20) + random.uniform(-8, 8)
-            )
+            base_temp = target_temp + 5 * math.sin(time_ratio * 20) + random.uniform(-8, 8)
 
         # Add realistic noise for ambient readings
         actual_temp = base_temp + random.gauss(0, 3.0)
@@ -170,9 +162,7 @@ def generate_ambient_curve(
     return readings
 
 
-def generate_water_pan_curve(
-    device_id: str, probe_id: str, start_time: datetime
-) -> List[Dict[str, Any]]:
+def generate_water_pan_curve(device_id: str, probe_id: str, start_time: datetime) -> List[Dict[str, Any]]:
     """Generate temperature curve for water pan (stays around 212°F)"""
     readings = []
     current_time = start_time
@@ -215,27 +205,17 @@ def generate_complete_historical_data() -> Dict[str, Any]:
     all_readings = []
 
     # Test Signals device - ambient probe
-    all_readings.extend(
-        generate_ambient_curve("mock-signals-001", "probe_1", start_time, 225.0)
-    )
+    all_readings.extend(generate_ambient_curve("mock-signals-001", "probe_1", start_time, 225.0))
 
     # Mock BlueDOT device - brisket and pit temp
-    all_readings.extend(
-        generate_brisket_curve("mock-bluedot-002", "probe_1", start_time)
-    )
-    all_readings.extend(
-        generate_ambient_curve("mock-bluedot-002", "probe_2", start_time, 235.0)
-    )
+    all_readings.extend(generate_brisket_curve("mock-bluedot-002", "probe_1", start_time))
+    all_readings.extend(generate_ambient_curve("mock-bluedot-002", "probe_2", start_time, 235.0))
 
     # Fake NODE device - ribs, chicken, smoker air, water pan
     all_readings.extend(generate_ribs_curve("mock-node-003", "probe_1", start_time))
     all_readings.extend(generate_chicken_curve("mock-node-003", "probe_2", start_time))
-    all_readings.extend(
-        generate_ambient_curve("mock-node-003", "probe_3", start_time, 275.0)
-    )
-    all_readings.extend(
-        generate_water_pan_curve("mock-node-003", "probe_4", start_time)
-    )
+    all_readings.extend(generate_ambient_curve("mock-node-003", "probe_3", start_time, 275.0))
+    all_readings.extend(generate_water_pan_curve("mock-node-003", "probe_4", start_time))
 
     # Test DOT device - steak and grill surface (high temp)
     # Generate steak curve (similar to chicken but higher target)
@@ -325,9 +305,7 @@ if __name__ == "__main__":
     with open("historical.json", "w") as f:
         json.dump(historical_data, f, indent=2)
 
-    print(
-        f"Generated {len(historical_data['readings'])} historical temperature readings"
-    )
+    print(f"Generated {len(historical_data['readings'])} historical temperature readings")
     print(
         f"Time range: {historical_data['metadata']['time_range']['start']} to {historical_data['metadata']['time_range']['end']}"
     )

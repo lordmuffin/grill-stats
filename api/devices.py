@@ -17,9 +17,7 @@ logger = logging.getLogger(__name__)
 device_api = Blueprint("device_api", __name__, url_prefix="/api/devices")
 
 
-def create_api_response(
-    success=True, data=None, message="", errors=None, status_code=200
-):
+def create_api_response(success=True, data=None, message="", errors=None, status_code=200):
     """Create standardized API response"""
     response = {
         "success": success,
@@ -58,10 +56,7 @@ def validate_json_request(required_fields=None):
                     return create_api_response(
                         success=False,
                         message="Missing required fields",
-                        errors=[
-                            f"Missing required field: {field}"
-                            for field in missing_fields
-                        ],
+                        errors=[f"Missing required field: {field}" for field in missing_fields],
                         status_code=400,
                     )
 
@@ -131,9 +126,7 @@ def register_device():
         )
 
     # Create device
-    device = device_manager.create_device(
-        user_id=current_user.id, device_id=device_id, nickname=nickname
-    )
+    device = device_manager.create_device(user_id=current_user.id, device_id=device_id, nickname=nickname)
 
     logger.info(f"User {current_user.email} registered device {device_id}")
 
@@ -181,9 +174,7 @@ def remove_device(device_id):
 
     logger.info(f"User {current_user.email} removed device {device_id}")
 
-    return create_api_response(
-        success=True, message=f"Device {device_id} successfully removed"
-    )
+    return create_api_response(success=True, message=f"Device {device_id} successfully removed")
 
 
 @device_api.route("", methods=["GET"])

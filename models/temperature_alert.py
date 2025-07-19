@@ -1,16 +1,7 @@
 import enum
 from datetime import datetime
 
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Enum,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-)
+from sqlalchemy import Boolean, Column, DateTime, Enum, Float, ForeignKey, Integer, String
 from sqlalchemy.orm import relationship
 
 
@@ -43,27 +34,21 @@ class TemperatureAlert:
             max_temperature = Column(Float, nullable=True)  # For range alerts
             threshold_value = Column(Float, nullable=True)  # For rising/falling alerts
 
-            alert_type = Column(
-                Enum(AlertType), nullable=False, default=AlertType.TARGET
-            )
+            alert_type = Column(Enum(AlertType), nullable=False, default=AlertType.TARGET)
             temperature_unit = Column(String(1), default="F")  # F or C
 
             # Alert state
             is_active = Column(Boolean, default=True)
             triggered_at = Column(DateTime, nullable=True)
             last_checked_at = Column(DateTime, nullable=True)
-            last_temperature = Column(
-                Float, nullable=True
-            )  # Track last known temperature
+            last_temperature = Column(Float, nullable=True)  # Track last known temperature
             notification_sent = Column(Boolean, default=False)
 
             # Metadata
             name = Column(String(100), nullable=True)  # User-friendly alert name
             description = Column(String(255), nullable=True)  # Optional description
             created_at = Column(DateTime, default=datetime.utcnow)
-            updated_at = Column(
-                DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-            )
+            updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
             # Relationships
             user = relationship("UserModel", backref="temperature_alerts")
@@ -87,22 +72,12 @@ class TemperatureAlert:
                     "threshold_value": self.threshold_value,
                     "temperature_unit": self.temperature_unit,
                     "is_active": self.is_active,
-                    "triggered_at": (
-                        self.triggered_at.isoformat() if self.triggered_at else None
-                    ),
-                    "last_checked_at": (
-                        self.last_checked_at.isoformat()
-                        if self.last_checked_at
-                        else None
-                    ),
+                    "triggered_at": (self.triggered_at.isoformat() if self.triggered_at else None),
+                    "last_checked_at": (self.last_checked_at.isoformat() if self.last_checked_at else None),
                     "last_temperature": self.last_temperature,
                     "notification_sent": self.notification_sent,
-                    "created_at": (
-                        self.created_at.isoformat() if self.created_at else None
-                    ),
-                    "updated_at": (
-                        self.updated_at.isoformat() if self.updated_at else None
-                    ),
+                    "created_at": (self.created_at.isoformat() if self.created_at else None),
+                    "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
                 }
 
             def should_trigger(self, current_temperature):
@@ -216,10 +191,7 @@ class TemperatureAlert:
         errors = []
 
         if alert_type == AlertType.TARGET:
-            if (
-                "target_temperature" not in kwargs
-                or kwargs["target_temperature"] is None
-            ):
+            if "target_temperature" not in kwargs or kwargs["target_temperature"] is None:
                 errors.append("Target temperature is required for target alerts")
             elif not isinstance(kwargs["target_temperature"], (int, float)):
                 errors.append("Target temperature must be a number")
@@ -234,17 +206,12 @@ class TemperatureAlert:
                 and kwargs.get("max_temperature") is not None
                 and kwargs["min_temperature"] >= kwargs["max_temperature"]
             ):
-                errors.append(
-                    "Minimum temperature must be less than maximum temperature"
-                )
+                errors.append("Minimum temperature must be less than maximum temperature")
 
         elif alert_type in [AlertType.RISING, AlertType.FALLING]:
             if "threshold_value" not in kwargs or kwargs["threshold_value"] is None:
                 errors.append("Threshold value is required for rising/falling alerts")
-            elif (
-                not isinstance(kwargs["threshold_value"], (int, float))
-                or kwargs["threshold_value"] <= 0
-            ):
+            elif not isinstance(kwargs["threshold_value"], (int, float)) or kwargs["threshold_value"] <= 0:
                 errors.append("Threshold value must be a positive number")
 
         return errors

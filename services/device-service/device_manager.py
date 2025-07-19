@@ -232,9 +232,7 @@ class DeviceManager:
             )
             raise
 
-    def get_devices(
-        self, active_only: bool = True, user_id: Optional[int] = None
-    ) -> List[Dict]:
+    def get_devices(self, active_only: bool = True, user_id: Optional[int] = None) -> List[Dict]:
         """Get all devices, optionally filtered by user"""
         try:
             conn = self.get_connection()
@@ -382,9 +380,7 @@ class DeviceManager:
             logger.info("Device health updated", device_id=device_id)
 
         except Exception as e:
-            logger.error(
-                "Failed to update device health", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to update device health", device_id=device_id, error=str(e))
             raise
 
     def register_gateway(self, gateway_data: Dict) -> Dict:
@@ -401,9 +397,7 @@ class DeviceManager:
             # First register as a regular device
             device_data = {
                 "device_id": gateway_data["gateway_id"],
-                "name": gateway_data.get(
-                    "name", f"RFX Gateway {gateway_data['gateway_id'][-6:]}"
-                ),
+                "name": gateway_data.get("name", f"RFX Gateway {gateway_data['gateway_id'][-6:]}"),
                 "device_type": "rfx_gateway",
                 "configuration": gateway_data.get("configuration", {}),
             }
@@ -488,17 +482,10 @@ class DeviceManager:
             # Format timestamps
             for key in ["created_at", "updated_at"]:
                 if key in result["gateway_status"] and result["gateway_status"][key]:
-                    result["gateway_status"][key] = result["gateway_status"][
-                        key
-                    ].isoformat()
+                    result["gateway_status"][key] = result["gateway_status"][key].isoformat()
 
-            if (
-                "last_seen" in result["gateway_status"]
-                and result["gateway_status"]["last_seen"]
-            ):
-                result["gateway_status"]["last_seen"] = result["gateway_status"][
-                    "last_seen"
-                ].isoformat()
+            if "last_seen" in result["gateway_status"] and result["gateway_status"]["last_seen"]:
+                result["gateway_status"]["last_seen"] = result["gateway_status"]["last_seen"].isoformat()
 
             logger.info("Gateway registered", gateway_id=gateway_data["gateway_id"])
             return result
@@ -526,18 +513,14 @@ class DeviceManager:
             conn = self.get_connection()
             with conn.cursor() as cur:
                 # Check if gateway exists
-                cur.execute(
-                    "SELECT id FROM devices WHERE device_id = %s", (gateway_id,)
-                )
+                cur.execute("SELECT id FROM devices WHERE device_id = %s", (gateway_id,))
                 device_exists = cur.fetchone()
 
                 if not device_exists:
                     raise ValueError(f"Gateway {gateway_id} not found")
 
                 # Check if gateway status exists
-                cur.execute(
-                    "SELECT id FROM gateway_status WHERE gateway_id = %s", (gateway_id,)
-                )
+                cur.execute("SELECT id FROM gateway_status WHERE gateway_id = %s", (gateway_id,))
                 status_exists = cur.fetchone()
 
                 # Prepare update fields
@@ -567,9 +550,7 @@ class DeviceManager:
                             (gateway_id,),
                         )
                         result = cur.fetchone()
-                        existing_metadata = (
-                            result["metadata"] if result and result["metadata"] else {}
-                        )
+                        existing_metadata = result["metadata"] if result and result["metadata"] else {}
 
                         # Merge metadata
                         if isinstance(existing_metadata, str):
@@ -607,9 +588,7 @@ class DeviceManager:
                     """
                 else:
                     # Insert new status
-                    all_fields = ["gateway_id"] + [
-                        f.split(" = ")[0] for f in fields[:-1]
-                    ]  # Remove updated_at
+                    all_fields = ["gateway_id"] + [f.split(" = ")[0] for f in fields[:-1]]  # Remove updated_at
                     placeholders = ["%s"] * len(all_fields)
 
                     query = f"""
@@ -636,9 +615,7 @@ class DeviceManager:
             return result
 
         except Exception as e:
-            logger.error(
-                "Failed to update gateway status", gateway_id=gateway_id, error=str(e)
-            )
+            logger.error("Failed to update gateway status", gateway_id=gateway_id, error=str(e))
             raise
 
     def get_gateway_status(self, gateway_id: str) -> Optional[Dict]:
@@ -683,9 +660,7 @@ class DeviceManager:
             return None
 
         except Exception as e:
-            logger.error(
-                "Failed to get gateway status", gateway_id=gateway_id, error=str(e)
-            )
+            logger.error("Failed to get gateway status", gateway_id=gateway_id, error=str(e))
             raise
 
     def get_all_gateways(self, active_only: bool = True) -> List[Dict]:

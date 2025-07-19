@@ -88,15 +88,10 @@ class Config:
             sasl_mechanism=os.getenv("KAFKA_SASL_MECHANISM"),
             sasl_username=os.getenv("KAFKA_SASL_USERNAME"),
             sasl_password=os.getenv("KAFKA_SASL_PASSWORD"),
-            consumer_group_id=os.getenv(
-                "KAFKA_CONSUMER_GROUP_ID", "data-pipeline-group"
-            ),
+            consumer_group_id=os.getenv("KAFKA_CONSUMER_GROUP_ID", "data-pipeline-group"),
             auto_offset_reset=os.getenv("KAFKA_AUTO_OFFSET_RESET", "latest"),
-            enable_auto_commit=os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "true").lower()
-            == "true",
-            auto_commit_interval_ms=int(
-                os.getenv("KAFKA_AUTO_COMMIT_INTERVAL_MS", "5000")
-            ),
+            enable_auto_commit=os.getenv("KAFKA_ENABLE_AUTO_COMMIT", "true").lower() == "true",
+            auto_commit_interval_ms=int(os.getenv("KAFKA_AUTO_COMMIT_INTERVAL_MS", "5000")),
             session_timeout_ms=int(os.getenv("KAFKA_SESSION_TIMEOUT_MS", "30000")),
             max_poll_records=int(os.getenv("KAFKA_MAX_POLL_RECORDS", "500")),
             compression_type=os.getenv("KAFKA_COMPRESSION_TYPE", "lz4"),
@@ -113,22 +108,17 @@ class Config:
             socket_timeout=int(os.getenv("REDIS_SOCKET_TIMEOUT", "5")),
             socket_connect_timeout=int(os.getenv("REDIS_SOCKET_CONNECT_TIMEOUT", "5")),
             max_connections=int(os.getenv("REDIS_MAX_CONNECTIONS", "10")),
-            retry_on_timeout=os.getenv("REDIS_RETRY_ON_TIMEOUT", "true").lower()
-            == "true",
+            retry_on_timeout=os.getenv("REDIS_RETRY_ON_TIMEOUT", "true").lower() == "true",
             health_check_interval=int(os.getenv("REDIS_HEALTH_CHECK_INTERVAL", "30")),
         )
 
         self.processing_config = ProcessingConfig(
-            aggregation_window_seconds=int(
-                os.getenv("AGGREGATION_WINDOW_SECONDS", "300")
-            ),
+            aggregation_window_seconds=int(os.getenv("AGGREGATION_WINDOW_SECONDS", "300")),
             anomaly_threshold=float(os.getenv("ANOMALY_THRESHOLD", "0.85")),
             min_training_samples=int(os.getenv("MIN_TRAINING_SAMPLES", "100")),
             max_cache_size=int(os.getenv("MAX_CACHE_SIZE", "10000")),
             batch_processing_size=int(os.getenv("BATCH_PROCESSING_SIZE", "100")),
-            processing_timeout_seconds=int(
-                os.getenv("PROCESSING_TIMEOUT_SECONDS", "30")
-            ),
+            processing_timeout_seconds=int(os.getenv("PROCESSING_TIMEOUT_SECONDS", "30")),
             max_retries=int(os.getenv("MAX_RETRIES", "3")),
             retry_delay_seconds=int(os.getenv("RETRY_DELAY_SECONDS", "1")),
         )
@@ -176,9 +166,7 @@ class Config:
                 missing_vars.append(var)
 
         if missing_vars:
-            raise ValueError(
-                f"Missing required environment variables: {', '.join(missing_vars)}"
-            )
+            raise ValueError(f"Missing required environment variables: {', '.join(missing_vars)}")
 
     def get_kafka_producer_config(self) -> Dict:
         """Get Kafka producer configuration."""

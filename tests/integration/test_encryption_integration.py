@@ -272,9 +272,7 @@ class TestAuthServiceIntegration:
         if not self.jwt_token:
             pytest.skip("Auth service not available or login failed")
 
-        response = requests.get(
-            f"{AUTH_SERVICE_URL}/api/auth/thermoworks/status", headers=self.headers
-        )
+        response = requests.get(f"{AUTH_SERVICE_URL}/api/auth/thermoworks/status", headers=self.headers)
 
         if response.status_code == 503:
             pytest.skip("Service not available")
@@ -290,9 +288,7 @@ class TestAuthServiceIntegration:
         if not self.jwt_token:
             pytest.skip("Auth service not available or login failed")
 
-        response = requests.get(
-            f"{AUTH_SERVICE_URL}/api/auth/thermoworks/rate-limit", headers=self.headers
-        )
+        response = requests.get(f"{AUTH_SERVICE_URL}/api/auth/thermoworks/rate-limit", headers=self.headers)
 
         if response.status_code == 503:
             pytest.skip("Service not available")

@@ -55,9 +55,7 @@ class TestDeviceEndpoints:
         assert data["status"] == "error"
 
     @patch("main.device_manager")
-    def test_get_devices_with_valid_token(
-        self, mock_device_manager, client, auth_token
-    ):
+    def test_get_devices_with_valid_token(self, mock_device_manager, client, auth_token):
         """Test getting devices with valid token"""
         # Mock device manager response
         mock_device_manager.get_devices.return_value = [
@@ -80,15 +78,11 @@ class TestDeviceEndpoints:
         assert data["data"]["devices"][0]["device_id"] == "test_device_001"
 
         # Verify device manager was called with correct user_id
-        mock_device_manager.get_devices.assert_called_once_with(
-            active_only=True, user_id=1
-        )
+        mock_device_manager.get_devices.assert_called_once_with(active_only=True, user_id=1)
 
     @patch("main.device_manager")
     @patch("main.thermoworks_client")
-    def test_get_devices_with_force_refresh(
-        self, mock_thermoworks_client, mock_device_manager, client, auth_token
-    ):
+    def test_get_devices_with_force_refresh(self, mock_thermoworks_client, mock_device_manager, client, auth_token):
         """Test getting devices with force refresh"""
         # Mock ThermoWorks client
         mock_device = Mock()
@@ -136,9 +130,7 @@ class TestDeviceEndpoints:
         assert "token" in data["message"].lower()
 
     @patch("main.thermoworks_client")
-    def test_sync_without_thermoworks_auth(
-        self, mock_thermoworks_client, client, auth_token
-    ):
+    def test_sync_without_thermoworks_auth(self, mock_thermoworks_client, client, auth_token):
         """Test sync endpoint without ThermoWorks authentication"""
         mock_thermoworks_client.token = None
 
@@ -151,9 +143,7 @@ class TestDeviceEndpoints:
 
     @patch("main.device_manager")
     @patch("main.thermoworks_client")
-    def test_sync_with_auth(
-        self, mock_thermoworks_client, mock_device_manager, client, auth_token
-    ):
+    def test_sync_with_auth(self, mock_thermoworks_client, mock_device_manager, client, auth_token):
         """Test sync endpoint with valid authentication"""
         # Mock ThermoWorks client
         mock_thermoworks_client.token = Mock()

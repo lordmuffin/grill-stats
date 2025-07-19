@@ -142,9 +142,7 @@ def test_temperature_alert_model():
         logger.info("✓ Get user alerts working")
 
         # Test getting alerts for device/probe
-        device_alerts = alert_manager.get_alerts_for_device_probe(
-            "test_device_1", "probe_1"
-        )
+        device_alerts = alert_manager.get_alerts_for_device_probe("test_device_1", "probe_1")
         assert len(device_alerts) == 1
         assert device_alerts[0].id == target_alert.id
         logger.info("✓ Get device/probe alerts working")

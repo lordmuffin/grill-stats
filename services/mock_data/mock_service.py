@@ -54,9 +54,7 @@ class MockDataService:
         self._load_device_data()
         self._initialize_temperature_simulation()
 
-        logger.info(
-            "MockDataService initialized with data directory: %s", data_directory
-        )
+        logger.info("MockDataService initialized with data directory: %s", data_directory)
 
     def _load_device_data(self) -> None:
         """Load device data from JSON file"""
@@ -112,9 +110,7 @@ class MockDataService:
 
                 self._temperature_trends[device_id][probe_id] = trend
 
-    def _simulate_temperature_change(
-        self, device_id: str, probe_id: str, current_temp: float, probe_type: str
-    ) -> float:
+    def _simulate_temperature_change(self, device_id: str, probe_id: str, current_temp: float, probe_type: str) -> float:
         """
         Simulate realistic temperature changes for a probe
 
@@ -209,9 +205,7 @@ class MockDataService:
 
                         # Simulate battery drain (very slowly)
                         if random.random() < 0.01:  # 1% chance per call
-                            device_copy["battery_level"] = max(
-                                0, device_copy.get("battery_level", 100) - 1
-                            )
+                            device_copy["battery_level"] = max(0, device_copy.get("battery_level", 100) - 1)
 
                     devices.append(device_copy)
 
@@ -243,9 +237,7 @@ class MockDataService:
                         "is_online": device.get("is_online", True),
                         "battery_level": device.get("battery_level", 100),
                         "signal_strength": device.get("signal_strength", -50),
-                        "last_seen": device.get(
-                            "last_seen", datetime.utcnow().isoformat()
-                        ),
+                        "last_seen": device.get("last_seen", datetime.utcnow().isoformat()),
                         "firmware_version": device.get("firmware_version", "1.0.0"),
                         "probe_count": len(device.get("probes", [])),
                     }
@@ -257,9 +249,7 @@ class MockDataService:
             logger.error("Error getting device status for %s: %s", device_id, e)
             return {}
 
-    def get_temperature_data(
-        self, device_id: str, probe_id: Optional[str] = None
-    ) -> Dict[str, Any]:
+    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Get temperature data for a device and probe
 
@@ -318,9 +308,7 @@ class MockDataService:
             return {}
 
         except Exception as e:
-            logger.error(
-                "Error getting temperature data for %s/%s: %s", device_id, probe_id, e
-            )
+            logger.error("Error getting temperature data for %s/%s: %s", device_id, probe_id, e)
             return {}
 
     def get_historical_data(
@@ -357,18 +345,10 @@ class MockDataService:
                 # Filter data for requested device/probe
                 readings = []
                 for reading in historical_data.get("readings", []):
-                    if (
-                        reading["device_id"] == device_id
-                        and reading["probe_id"] == probe_id
-                    ):
-                        reading_time = datetime.fromisoformat(
-                            reading["timestamp"].replace("Z", "")
-                        )
+                    if reading["device_id"] == device_id and reading["probe_id"] == probe_id:
+                        reading_time = datetime.fromisoformat(reading["timestamp"].replace("Z", ""))
                         # Convert both to naive datetime for comparison
-                        if (
-                            hasattr(start_time, "tzinfo")
-                            and start_time.tzinfo is not None
-                        ):
+                        if hasattr(start_time, "tzinfo") and start_time.tzinfo is not None:
                             start_time_naive = start_time.replace(tzinfo=None)
                             end_time_naive = end_time.replace(tzinfo=None)
                         else:
@@ -380,14 +360,10 @@ class MockDataService:
                 return sorted(readings, key=lambda x: x["timestamp"])
 
             # Generate synthetic historical data if file doesn't exist
-            return self._generate_synthetic_historical_data(
-                device_id, probe_id, start_time, end_time
-            )
+            return self._generate_synthetic_historical_data(device_id, probe_id, start_time, end_time)
 
         except Exception as e:
-            logger.error(
-                "Error getting historical data for %s/%s: %s", device_id, probe_id, e
-            )
+            logger.error("Error getting historical data for %s/%s: %s", device_id, probe_id, e)
             return []
 
     def _generate_synthetic_historical_data(
@@ -413,14 +389,9 @@ class MockDataService:
         # Generate realistic cooking curve
         while current_time <= end_time:
             # Simulate gradual temperature rise for food probes
-            time_ratio = (current_time - start_time).total_seconds() / (
-                end_time - start_time
-            ).total_seconds()
+            time_ratio = (current_time - start_time).total_seconds() / (end_time - start_time).total_seconds()
 
-            if "food" in probe_id.lower() or any(
-                word in probe_id.lower()
-                for word in ["brisket", "ribs", "chicken", "steak"]
-            ):
+            if "food" in probe_id.lower() or any(word in probe_id.lower() for word in ["brisket", "ribs", "chicken", "steak"]):
                 # Food probe: gradual rise then plateau
                 if time_ratio < 0.7:
                     # Rising phase

@@ -53,9 +53,7 @@ try:
     )
     logger.info("TimescaleDB connection initialized successfully")
 except Exception as e:
-    logger.warning(
-        f"TimescaleDB connection failed: {e}, service will run in degraded mode"
-    )
+    logger.warning(f"TimescaleDB connection failed: {e}, service will run in degraded mode")
     timescale_manager = None
 
 # Register API routes

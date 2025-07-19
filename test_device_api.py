@@ -54,9 +54,7 @@ def validate_device_id_format():
                 print(f"✓ PASS: {description} - {device_id}")
                 passed += 1
             else:
-                print(
-                    f"✗ FAIL: {description} - {device_id} - Expected {expected_valid}, got {is_valid}"
-                )
+                print(f"✗ FAIL: {description} - {device_id} - Expected {expected_valid}, got {is_valid}")
                 failed += 1
         except Exception as e:
             print(f"✗ ERROR: {description} - {device_id} - Exception: {e}")
@@ -74,9 +72,7 @@ def validate_api_response_format():
     from api.devices import create_api_response
 
     # Test successful response
-    response, status_code = create_api_response(
-        success=True, data={"device_id": "TW-ABC-123"}, message="Test successful"
-    )
+    response, status_code = create_api_response(success=True, data={"device_id": "TW-ABC-123"}, message="Test successful")
 
     response_data = response.get_json()
 

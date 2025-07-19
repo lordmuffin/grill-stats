@@ -113,9 +113,7 @@ class AuditLogger:
             max_file_size: Maximum file size before rotation
             backup_count: Number of backup files to keep
         """
-        self.log_file = log_file or os.getenv(
-            "AUDIT_LOG_FILE", "/var/log/grill-stats/audit.log"
-        )
+        self.log_file = log_file or os.getenv("AUDIT_LOG_FILE", "/var/log/grill-stats/audit.log")
         self.log_level = getattr(logging, log_level.upper())
         self.enable_syslog = enable_syslog
         self.enable_remote = enable_remote
@@ -145,9 +143,7 @@ class AuditLogger:
         self.logger.handlers = []
 
         # Create formatter
-        formatter = logging.Formatter(
-            "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-        )
+        formatter = logging.Formatter("%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
         # File handler with rotation
         try:
@@ -183,9 +179,7 @@ class AuditLogger:
         """Start background tasks for remote logging"""
         if self.enable_remote and self.remote_endpoint:
             # Start buffer flush thread
-            flush_thread = threading.Thread(
-                target=self._flush_buffer_periodically, daemon=True
-            )
+            flush_thread = threading.Thread(target=self._flush_buffer_periodically, daemon=True)
             flush_thread.start()
 
     def _flush_buffer_periodically(self):
@@ -318,9 +312,7 @@ class AuditLogger:
         )
         self.log_event(event)
 
-    def log_rate_limit_exceeded(
-        self, user_id: str, ip_address: str = None, details: Dict[str, Any] = None
-    ):
+    def log_rate_limit_exceeded(self, user_id: str, ip_address: str = None, details: Dict[str, Any] = None):
         """Log rate limit exceeded event"""
         event = AuditEvent(
             event_type=AuditEventType.RATE_LIMIT_EXCEEDED,
@@ -373,9 +365,7 @@ class AuditLogger:
         )
         self.log_event(event)
 
-    def log_service_start(
-        self, service_name: str, version: str = None, details: Dict[str, Any] = None
-    ):
+    def log_service_start(self, service_name: str, version: str = None, details: Dict[str, Any] = None):
         """Log service start event"""
         event = AuditEvent(
             event_type=AuditEventType.SERVICE_START,
@@ -422,9 +412,7 @@ class AuditLogger:
         )
         self.log_event(event)
 
-    def get_audit_statistics(
-        self, start_time: datetime = None, end_time: datetime = None
-    ) -> Dict[str, Any]:
+    def get_audit_statistics(self, start_time: datetime = None, end_time: datetime = None) -> Dict[str, Any]:
         """Get audit statistics for a time period
 
         Args:
@@ -502,9 +490,7 @@ def log_credential_encrypt(
     details: Dict[str, Any] = None,
 ):
     """Convenience function for logging credential encryption"""
-    get_audit_logger().log_credential_encrypt(
-        user_id, success, duration_ms, ip_address, details
-    )
+    get_audit_logger().log_credential_encrypt(user_id, success, duration_ms, ip_address, details)
 
 
 def log_credential_decrypt(
@@ -515,9 +501,7 @@ def log_credential_decrypt(
     details: Dict[str, Any] = None,
 ):
     """Convenience function for logging credential decryption"""
-    get_audit_logger().log_credential_decrypt(
-        user_id, success, duration_ms, ip_address, details
-    )
+    get_audit_logger().log_credential_decrypt(user_id, success, duration_ms, ip_address, details)
 
 
 def log_authentication(
@@ -528,14 +512,10 @@ def log_authentication(
     error_message: str = None,
 ):
     """Convenience function for logging authentication"""
-    get_audit_logger().log_authentication(
-        user_id, success, ip_address, user_agent, error_message
-    )
+    get_audit_logger().log_authentication(user_id, success, ip_address, user_agent, error_message)
 
 
-def log_rate_limit_exceeded(
-    user_id: str, ip_address: str = None, details: Dict[str, Any] = None
-):
+def log_rate_limit_exceeded(user_id: str, ip_address: str = None, details: Dict[str, Any] = None):
     """Convenience function for logging rate limit exceeded"""
     get_audit_logger().log_rate_limit_exceeded(user_id, ip_address, details)
 
@@ -547,9 +527,7 @@ def log_security_violation(
     details: Dict[str, Any] = None,
 ):
     """Convenience function for logging security violations"""
-    get_audit_logger().log_security_violation(
-        user_id, violation_type, ip_address, details
-    )
+    get_audit_logger().log_security_violation(user_id, violation_type, ip_address, details)
 
 
 def log_key_rotation(
@@ -562,9 +540,7 @@ def log_key_rotation(
     get_audit_logger().log_key_rotation(success, key_name, new_version, details)
 
 
-def log_service_start(
-    service_name: str, version: str = None, details: Dict[str, Any] = None
-):
+def log_service_start(service_name: str, version: str = None, details: Dict[str, Any] = None):
     """Convenience function for logging service start"""
     get_audit_logger().log_service_start(service_name, version, details)
 

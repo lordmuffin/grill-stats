@@ -67,9 +67,7 @@ try:
     )
     logger.info("InfluxDB connection initialized successfully")
 except Exception as e:
-    logger.warning(
-        f"InfluxDB connection failed: {e}, service will run in degraded mode"
-    )
+    logger.warning(f"InfluxDB connection failed: {e}, service will run in degraded mode")
     temperature_manager = None
 
 # Redis client for real-time data streaming
@@ -172,9 +170,7 @@ def health_check():
         return jsonify(health_status), 200
     elif all(status in ["healthy", "unavailable"] for status in dep_statuses):
         health_status["overall_status"] = "degraded"
-        health_status["message"] = (
-            "Service operational, some dependencies unavailable (expected in test environment)"
-        )
+        health_status["message"] = "Service operational, some dependencies unavailable (expected in test environment)"
         logger.warning("Dependencies unavailable (expected in test)")
         return jsonify(health_status), 200
     else:
@@ -200,23 +196,15 @@ def get_current_temperature(device_id):
             cached_data = redis_client.get(cache_key)
             if cached_data:
                 temperature_data = json.loads(cached_data)
-                logger.info(
-                    "Temperature data retrieved from cache", device_id=device_id
-                )
-                return jsonify(
-                    {"status": "success", "data": temperature_data, "source": "cache"}
-                )
+                logger.info("Temperature data retrieved from cache", device_id=device_id)
+                return jsonify({"status": "success", "data": temperature_data, "source": "cache"})
 
             # Get from ThermoWorks API
-            temperature_data = thermoworks_client.get_temperature_data(
-                device_id, probe_id
-            )
+            temperature_data = thermoworks_client.get_temperature_data(device_id, probe_id)
 
             if temperature_data:
                 # Cache the result
-                redis_client.setex(
-                    cache_key, 30, json.dumps(temperature_data)
-                )  # Cache for 30 seconds
+                redis_client.setex(cache_key, 30, json.dumps(temperature_data))  # Cache for 30 seconds
 
                 # Store in time-series database
                 temperature_manager.store_temperature_reading(temperature_data)
@@ -229,21 +217,15 @@ def get_current_temperature(device_id):
                     device_id=device_id,
                     temperature=temperature_data.get("temperature"),
                 )
-                return jsonify(
-                    {"status": "success", "data": temperature_data, "source": "api"}
-                )
+                return jsonify({"status": "success", "data": temperature_data, "source": "api"})
             else:
                 return (
-                    jsonify(
-                        {"status": "error", "message": "No temperature data available"}
-                    ),
+                    jsonify({"status": "error", "message": "No temperature data available"}),
                     404,
                 )
 
         except Exception as e:
-            logger.error(
-                "Failed to get current temperature", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get current temperature", device_id=device_id, error=str(e))
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -305,9 +287,7 @@ def get_temperature_history(device_id):
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to get temperature history", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get temperature history", device_id=device_id, error=str(e))
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -332,15 +312,11 @@ def store_batch_temperature_data():
                     temp_reading = TemperatureReading(**reading)
                     validated_readings.append(temp_reading.dict())
                 except ValidationError as e:
-                    logger.warning(
-                        "Invalid temperature reading", reading=reading, error=str(e)
-                    )
+                    logger.warning("Invalid temperature reading", reading=reading, error=str(e))
                     continue
 
             # Store readings
-            stored_count = temperature_manager.store_batch_temperature_readings(
-                validated_readings
-            )
+            stored_count = temperature_manager.store_batch_temperature_readings(validated_readings)
 
             # Publish to real-time stream
             for reading in validated_readings:
@@ -448,12 +424,8 @@ def get_device_live_data(device_id):
                 "status": {
                     "battery_level": device_status.get("battery_level", 0),
                     "signal_strength": device_status.get("signal_strength", 0),
-                    "connection_status": device_status.get(
-                        "connection_status", "unknown"
-                    ),
-                    "last_seen": device_status.get(
-                        "last_seen", datetime.utcnow().isoformat()
-                    ),
+                    "connection_status": device_status.get("connection_status", "unknown"),
+                    "last_seen": device_status.get("last_seen", datetime.utcnow().isoformat()),
                 },
             }
 
@@ -494,9 +466,7 @@ def get_device_live_data(device_id):
             return jsonify({"status": "success", "data": live_data})
 
         except Exception as e:
-            logger.error(
-                "Failed to get live device data", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get live device data", device_id=device_id, error=str(e))
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -522,9 +492,7 @@ def get_device_channels(device_id):
                 }
                 channels.append(channel_config)
 
-            logger.info(
-                "Device channels retrieved", device_id=device_id, count=len(channels)
-            )
+            logger.info("Device channels retrieved", device_id=device_id, count=len(channels))
             return jsonify(
                 {
                     "status": "success",
@@ -537,9 +505,7 @@ def get_device_channels(device_id):
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to get device channels", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get device channels", device_id=device_id, error=str(e))
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -557,9 +523,7 @@ def get_device_status(device_id):
                 "battery_level": device_status.get("battery_level", 0),
                 "signal_strength": device_status.get("signal_strength", 0),
                 "connection_status": device_status.get("connection_status", "unknown"),
-                "last_seen": device_status.get(
-                    "last_seen", datetime.utcnow().isoformat()
-                ),
+                "last_seen": device_status.get("last_seen", datetime.utcnow().isoformat()),
                 "firmware_version": device_status.get("firmware_version", "unknown"),
                 "hardware_version": device_status.get("hardware_version", "unknown"),
                 "timestamp": datetime.utcnow().isoformat(),
@@ -577,9 +541,7 @@ def get_device_status(device_id):
             return jsonify({"status": "success", "data": status_data})
 
         except Exception as e:
-            logger.error(
-                "Failed to get device status", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get device status", device_id=device_id, error=str(e))
             return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -693,15 +655,11 @@ def get_temperature_alerts(device_id):
                 end_time=end_time,
             )
 
-            logger.info(
-                "Temperature alerts retrieved", device_id=device_id, count=len(alerts)
-            )
+            logger.info("Temperature alerts retrieved", device_id=device_id, count=len(alerts))
             return jsonify({"status": "success", "data": alerts, "count": len(alerts)})
 
         except Exception as e:
-            logger.error(
-                "Failed to get temperature alerts", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get temperature alerts", device_id=device_id, error=str(e))
             return jsonify({"status": "error", "message": str(e)}), 500
 
 

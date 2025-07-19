@@ -46,9 +46,7 @@ class SMSChannel(BaseNotificationChannel):
 
         return TwilioClient(account_sid, auth_token)
 
-    async def send(
-        self, recipient: str, subject: str, body: str, channel_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def send(self, recipient: str, subject: str, body: str, channel_config: Dict[str, Any]) -> Dict[str, Any]:
         """Send SMS notification."""
         try:
             # Parse recipients
@@ -81,17 +79,13 @@ class SMSChannel(BaseNotificationChannel):
             logger.error(f"Error sending SMS: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _send_twilio_sms(
-        self, recipients: List[str], body: str, channel_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _send_twilio_sms(self, recipients: List[str], body: str, channel_config: Dict[str, Any]) -> Dict[str, Any]:
         """Send SMS using Twilio."""
         if not self.client:
             return {"success": False, "error": "Twilio client not initialized"}
 
         try:
-            from_number = channel_config.get("from_number") or self.provider_config.get(
-                "from_number"
-            )
+            from_number = channel_config.get("from_number") or self.provider_config.get("from_number")
             if not from_number:
                 return {"success": False, "error": "From number not specified"}
 
@@ -103,9 +97,7 @@ class SMSChannel(BaseNotificationChannel):
             for recipient in recipients:
                 try:
                     # Send SMS
-                    message = self.client.messages.create(
-                        body=body, from_=from_number, to=recipient
-                    )
+                    message = self.client.messages.create(body=body, from_=from_number, to=recipient)
 
                     results.append(
                         {
@@ -118,9 +110,7 @@ class SMSChannel(BaseNotificationChannel):
 
                 except TwilioException as e:
                     logger.error(f"Twilio error for {recipient}: {str(e)}")
-                    results.append(
-                        {"recipient": recipient, "success": False, "error": str(e)}
-                    )
+                    results.append({"recipient": recipient, "success": False, "error": str(e)})
 
             success_count = sum(1 for r in results if r["success"])
 
@@ -136,13 +126,9 @@ class SMSChannel(BaseNotificationChannel):
             logger.error(f"Error in Twilio SMS sending: {str(e)}")
             return {"success": False, "error": str(e)}
 
-    async def _send_webhook_sms(
-        self, recipients: List[str], body: str, channel_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _send_webhook_sms(self, recipients: List[str], body: str, channel_config: Dict[str, Any]) -> Dict[str, Any]:
         """Send SMS using webhook."""
-        webhook_url = channel_config.get("webhook_url") or self.provider_config.get(
-            "webhook_url"
-        )
+        webhook_url = channel_config.get("webhook_url") or self.provider_config.get("webhook_url")
         if not webhook_url:
             return {"success": False, "error": "Webhook URL not specified"}
 
@@ -208,9 +194,7 @@ class SMSChannel(BaseNotificationChannel):
                 try:
                     test_result = await self._test_twilio_connection(provider_config)
                     if not test_result["success"]:
-                        errors.append(
-                            f'Twilio connection test failed: {test_result["error"]}'
-                        )
+                        errors.append(f'Twilio connection test failed: {test_result["error"]}')
                 except Exception as e:
                     errors.append(f"Twilio test error: {str(e)}")
 
@@ -250,14 +234,10 @@ class SMSChannel(BaseNotificationChannel):
         pattern = r"^\+[1-9]\d{1,14}$"
         return bool(re.match(pattern, phone_number))
 
-    async def _test_twilio_connection(
-        self, provider_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _test_twilio_connection(self, provider_config: Dict[str, Any]) -> Dict[str, Any]:
         """Test Twilio connection."""
         try:
-            client = TwilioClient(
-                provider_config["account_sid"], provider_config["auth_token"]
-            )
+            client = TwilioClient(provider_config["account_sid"], provider_config["auth_token"])
 
             # Test by fetching account info
             account = client.api.accounts(provider_config["account_sid"]).fetch()
@@ -271,9 +251,7 @@ class SMSChannel(BaseNotificationChannel):
         except TwilioException as e:
             return {"success": False, "error": str(e)}
 
-    async def _test_webhook_connection(
-        self, provider_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _test_webhook_connection(self, provider_config: Dict[str, Any]) -> Dict[str, Any]:
         """Test webhook connection."""
         try:
             webhook_url = provider_config["webhook_url"]
@@ -297,9 +275,7 @@ class SMSChannel(BaseNotificationChannel):
         except Exception as e:
             return {"success": False, "error": str(e)}
 
-    async def check_delivery_status(
-        self, notification_id: int, response_data: Dict[str, Any]
-    ) -> str:
+    async def check_delivery_status(self, notification_id: int, response_data: Dict[str, Any]) -> str:
         """Check SMS delivery status."""
         if self.provider == "twilio" and self.client:
             try:

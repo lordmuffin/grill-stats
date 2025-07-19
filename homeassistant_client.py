@@ -47,14 +47,10 @@ class HomeAssistantClient:
             logger.error(f"Failed to get state for {entity_id}: {e}")
             return None
 
-    def set_entity_state(
-        self, entity_id: str, state: str, attributes: Optional[Dict] = None
-    ) -> bool:
+    def set_entity_state(self, entity_id: str, state: str, attributes: Optional[Dict] = None) -> bool:
         try:
             data = {"state": state, "attributes": attributes or {}}
-            response = self.session.post(
-                f"{self.base_url}/api/states/{entity_id}", json=data
-            )
+            response = self.session.post(f"{self.base_url}/api/states/{entity_id}", json=data)
             response.raise_for_status()
             return True
         except requests.RequestException as e:
@@ -75,9 +71,7 @@ class HomeAssistantClient:
             if target:
                 data["target"] = target
 
-            response = self.session.post(
-                f"{self.base_url}/api/services/{domain}/{service}", json=data
-            )
+            response = self.session.post(f"{self.base_url}/api/services/{domain}/{service}", json=data)
             response.raise_for_status()
             return True
         except requests.RequestException as e:
@@ -100,9 +94,7 @@ class HomeAssistantClient:
         sensor_attributes.update(
             {
                 "friendly_name": sensor_name.replace("_", " ").title(),
-                "device_class": (
-                    "temperature" if unit in ["°F", "°C", "F", "C"] else None
-                ),
+                "device_class": ("temperature" if unit in ["°F", "°C", "F", "C"] else None),
             }
         )
 

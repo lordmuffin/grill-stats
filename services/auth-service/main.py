@@ -20,21 +20,11 @@ from urllib.parse import urlencode
 import jwt
 import psycopg2
 import redis
-from credential_integration import (
-    CredentialIntegrationService,
-    DatabaseCredentialManager,
-)
+from credential_integration import CredentialIntegrationService, DatabaseCredentialManager
 from dotenv import load_dotenv
 from flask import Flask, Response, jsonify, redirect, request, session, url_for
 from flask_cors import CORS
-from flask_login import (
-    LoginManager,
-    UserMixin,
-    current_user,
-    login_required,
-    login_user,
-    logout_user,
-)
+from flask_login import LoginManager, UserMixin, current_user, login_required, login_user, logout_user
 from psycopg2.extras import RealDictCursor
 from werkzeug.security import check_password_hash, generate_password_hash
 
@@ -258,9 +248,7 @@ class DatabaseManager:
             )
         return None
 
-    def update_thermoworks_tokens(
-        self, user_id, access_token, refresh_token=None, expires_at=None
-    ):
+    def update_thermoworks_tokens(self, user_id, access_token, refresh_token=None, expires_at=None):
         """Update ThermoWorks tokens for user"""
         try:
             conn = self._get_connection()
@@ -376,9 +364,7 @@ class DatabaseManager:
             conn = self._get_connection()
             cursor = conn.cursor()
 
-            cursor.execute(
-                "DELETE FROM user_sessions WHERE session_token = %s", (session_token,)
-            )
+            cursor.execute("DELETE FROM user_sessions WHERE session_token = %s", (session_token,))
             conn.commit()
             return True
         except Exception as e:
@@ -403,9 +389,7 @@ db_manager = DatabaseManager(DATABASE_CONFIG)
 # Initialize credential integration service
 try:
     credential_service = CredentialIntegrationService()
-    credential_manager = DatabaseCredentialManager(
-        db_manager._get_connection(), credential_service
-    )
+    credential_manager = DatabaseCredentialManager(db_manager._get_connection(), credential_service)
     logger.info("Credential integration service initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize credential integration service: {e}")
@@ -519,9 +503,7 @@ def login():
         if not check_rate_limit(email, ip_address):
             db_manager.record_login_attempt(email, ip_address, success=False)
             return (
-                jsonify(
-                    error_response("Too many failed attempts. Please try again later.")
-                ),
+                jsonify(error_response("Too many failed attempts. Please try again later.")),
                 429,
             )
 
@@ -552,8 +534,7 @@ def login():
                     user.id,
                     auth_response["access_token"],
                     auth_response.get("refresh_token"),
-                    datetime.utcnow()
-                    + timedelta(seconds=auth_response.get("expires_in", 3600)),
+                    datetime.utcnow() + timedelta(seconds=auth_response.get("expires_in", 3600)),
                 )
             else:
                 db_manager.record_login_attempt(email, ip_address, success=False)
@@ -569,9 +550,7 @@ def login():
             return jsonify(error_response("Account is deactivated")), 401
 
         # Create session
-        session_token = db_manager.create_session(
-            user.id, ip_address, request.headers.get("User-Agent", "")
-        )
+        session_token = db_manager.create_session(user.id, ip_address, request.headers.get("User-Agent", ""))
 
         if not session_token:
             return jsonify(error_response("Failed to create session")), 500
@@ -692,11 +671,7 @@ def get_current_user():
         if not user:
             return jsonify(error_response("User not found")), 404
 
-        return jsonify(
-            success_response(
-                {"user": {"id": user.id, "email": user.email, "name": user.name}}
-            )
-        )
+        return jsonify(success_response({"user": {"id": user.id, "email": user.email, "name": user.name}}))
 
     except Exception as e:
         logger.error(f"Get current user error: {e}")
@@ -745,21 +720,15 @@ def connect_thermoworks():
 
         try:
             # First, validate credentials with ThermoWorks API
-            auth_response = authenticate_thermoworks_user(
-                thermoworks_email, thermoworks_password
-            )
+            auth_response = authenticate_thermoworks_user(thermoworks_email, thermoworks_password)
 
             if auth_response and auth_response.get("access_token"):
                 # Store encrypted credentials after successful validation
-                success = credential_manager.store_encrypted_credentials(
-                    user_id, thermoworks_email, thermoworks_password
-                )
+                success = credential_manager.store_encrypted_credentials(user_id, thermoworks_email, thermoworks_password)
 
                 if not success:
                     return (
-                        jsonify(
-                            error_response("Failed to store encrypted credentials")
-                        ),
+                        jsonify(error_response("Failed to store encrypted credentials")),
                         500,
                     )
 
@@ -768,8 +737,7 @@ def connect_thermoworks():
                     user_id,
                     auth_response["access_token"],
                     auth_response.get("refresh_token"),
-                    datetime.utcnow()
-                    + timedelta(seconds=auth_response.get("expires_in", 3600)),
+                    datetime.utcnow() + timedelta(seconds=auth_response.get("expires_in", 3600)),
                 )
 
                 # Mark credentials as validated
@@ -843,9 +811,7 @@ def get_user_sessions():
 
         sessions = cursor.fetchall()
 
-        return jsonify(
-            success_response({"sessions": [dict(session) for session in sessions]})
-        )
+        return jsonify(success_response({"sessions": [dict(session) for session in sessions]}))
 
     except Exception as e:
         logger.error(f"Get sessions error: {e}")
@@ -942,26 +908,16 @@ def get_thermoworks_status():
                     "encrypted": True,
                     "is_active": credential_info["is_active"],
                     "last_validated": (
-                        credential_info["last_validated"].isoformat()
-                        if credential_info["last_validated"]
-                        else None
+                        credential_info["last_validated"].isoformat() if credential_info["last_validated"] else None
                     ),
                     "validation_attempts": credential_info["validation_attempts"],
                     "created_at": credential_info["created_at"].isoformat(),
                     "updated_at": credential_info["updated_at"].isoformat(),
                     "encryption_info": {
-                        "algorithm": credential_info["encryption_metadata"].get(
-                            "algorithm"
-                        ),
-                        "key_version": credential_info["encryption_metadata"].get(
-                            "key_version"
-                        ),
-                        "encrypted_at": credential_info["encryption_metadata"].get(
-                            "encrypted_at"
-                        ),
-                        "access_count": credential_info["encryption_metadata"].get(
-                            "access_count", 0
-                        ),
+                        "algorithm": credential_info["encryption_metadata"].get("algorithm"),
+                        "key_version": credential_info["encryption_metadata"].get("key_version"),
+                        "encrypted_at": credential_info["encryption_metadata"].get("encrypted_at"),
+                        "access_count": credential_info["encryption_metadata"].get("access_count", 0),
                     },
                 }
             )
@@ -997,11 +953,7 @@ def disconnect_thermoworks():
         # Clear OAuth tokens from users table
         db_manager.update_thermoworks_tokens(user_id, None, None, None)
 
-        return jsonify(
-            success_response(
-                message="ThermoWorks account disconnected and credentials deleted successfully"
-            )
-        )
+        return jsonify(success_response(message="ThermoWorks account disconnected and credentials deleted successfully"))
 
     except Exception as e:
         logger.error(f"Disconnect ThermoWorks error: {e}")
@@ -1024,9 +976,7 @@ def get_thermoworks_rate_limit():
         # Get rate limit information
         rate_limit_info = credential_service.check_rate_limit(user_id)
 
-        return jsonify(
-            success_response({"rate_limit": rate_limit_info, "user_id": user_id})
-        )
+        return jsonify(success_response({"rate_limit": rate_limit_info, "user_id": user_id}))
 
     except Exception as e:
         logger.error(f"Get rate limit error: {e}")

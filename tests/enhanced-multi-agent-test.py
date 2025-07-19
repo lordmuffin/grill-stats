@@ -198,9 +198,7 @@ class EnhancedContainerAgent:
     async def test_health_endpoint(self) -> Dict:
         """Enhanced health endpoint testing"""
         try:
-            self.logger.info(
-                f"🔍 Testing enhanced health endpoint: http://localhost:{self.port}/health"
-            )
+            self.logger.info(f"🔍 Testing enhanced health endpoint: http://localhost:{self.port}/health")
 
             start_time = time.time()
 
@@ -208,25 +206,17 @@ class EnhancedContainerAgent:
             max_retries = 15
             for attempt in range(max_retries):
                 try:
-                    response = requests.get(
-                        f"http://localhost:{self.port}/health", timeout=15
-                    )
+                    response = requests.get(f"http://localhost:{self.port}/health", timeout=15)
 
                     response_time_ms = (time.time() - start_time) * 1000
 
                     # Use enhanced evaluation
-                    success, health_status, evaluation_message = (
-                        evaluate_health_response(response, self.service_type)
-                    )
+                    success, health_status, evaluation_message = evaluate_health_response(response, self.service_type)
 
                     if success:
-                        self.logger.info(
-                            f"✅ Health check evaluation: {evaluation_message}"
-                        )
+                        self.logger.info(f"✅ Health check evaluation: {evaluation_message}")
                     else:
-                        self.logger.warning(
-                            f"⚠️  Health check evaluation: {evaluation_message}"
-                        )
+                        self.logger.warning(f"⚠️  Health check evaluation: {evaluation_message}")
 
                     try:
                         response_data = response.json()
@@ -244,9 +234,7 @@ class EnhancedContainerAgent:
 
                 except requests.exceptions.ConnectionError:
                     if attempt < max_retries - 1:
-                        self.logger.info(
-                            f"⏳ Waiting for service to start... (attempt {attempt + 1}/{max_retries})"
-                        )
+                        self.logger.info(f"⏳ Waiting for service to start... (attempt {attempt + 1}/{max_retries})")
                         await asyncio.sleep(3)
                         continue
                     else:
@@ -510,13 +498,9 @@ class EnhancedMultiAgentTestOrchestrator:
             "summary": {
                 "builds_successful": sum(1 for r in self.results if r.build_success),
                 "containers_started": sum(1 for r in self.results if r.start_success),
-                "health_checks_passed": sum(
-                    1 for r in self.results if r.health_check_success
-                ),
+                "health_checks_passed": sum(1 for r in self.results if r.health_check_success),
                 "avg_response_time_ms": (
-                    sum(r.response_time_ms for r in self.results) / len(self.results)
-                    if self.results
-                    else 0
+                    sum(r.response_time_ms for r in self.results) / len(self.results) if self.results else 0
                 ),
                 "health_status_distribution": {},
             },
@@ -565,15 +549,9 @@ class EnhancedMultiAgentTestOrchestrator:
         summary = report["summary"]
         print("📊 ENHANCED SUMMARY")
         print("-" * 40)
-        print(
-            f"✅ Builds Successful: {summary['builds_successful']}/{report['total_agents']}"
-        )
-        print(
-            f"🚀 Containers Started: {summary['containers_started']}/{report['total_agents']}"
-        )
-        print(
-            f"💚 Health Checks Passed: {summary['health_checks_passed']}/{report['total_agents']}"
-        )
+        print(f"✅ Builds Successful: {summary['builds_successful']}/{report['total_agents']}")
+        print(f"🚀 Containers Started: {summary['containers_started']}/{report['total_agents']}")
+        print(f"💚 Health Checks Passed: {summary['health_checks_passed']}/{report['total_agents']}")
         print(f"⚡ Average Response Time: {summary['avg_response_time_ms']:.2f}ms")
 
         print("\n🏥 Health Status Distribution:")
@@ -620,13 +598,9 @@ class EnhancedMultiAgentTestOrchestrator:
         if all_builds_passed and all_containers_started and all_health_passed:
             print("🎉 OVERALL STATUS: ALL ENHANCED TESTS PASSED!")
         elif all_builds_passed and all_containers_started:
-            print(
-                "⚠️  OVERALL STATUS: ARCHITECTURE VALIDATED - SERVICES OPERATIONAL WITH EXPECTED DEPENDENCY ISSUES"
-            )
+            print("⚠️  OVERALL STATUS: ARCHITECTURE VALIDATED - SERVICES OPERATIONAL WITH EXPECTED DEPENDENCY ISSUES")
         elif all_builds_passed:
-            print(
-                "🔧 OVERALL STATUS: BUILDS SUCCESSFUL - CONTAINER RUNTIME ISSUES DETECTED"
-            )
+            print("🔧 OVERALL STATUS: BUILDS SUCCESSFUL - CONTAINER RUNTIME ISSUES DETECTED")
         else:
             print("❌ OVERALL STATUS: BUILD FAILURES DETECTED")
 
@@ -659,9 +633,7 @@ async def main():
 
 if __name__ == "__main__":
     print("🚀 Starting Enhanced Multi-Agent Container Testing System")
-    print(
-        "This will test all three containerized services with improved error tolerance"
-    )
+    print("This will test all three containerized services with improved error tolerance")
     print("-" * 70)
 
     try:

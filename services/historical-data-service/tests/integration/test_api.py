@@ -31,9 +31,7 @@ def test_store_temperature_reading(client, monkeypatch):
     def mock_store_temperature_reading(self, reading):
         return True
 
-    monkeypatch.setattr(
-        TimescaleManager, "store_temperature_reading", mock_store_temperature_reading
-    )
+    monkeypatch.setattr(TimescaleManager, "store_temperature_reading", mock_store_temperature_reading)
 
     # Test data
     data = {
@@ -48,9 +46,7 @@ def test_store_temperature_reading(client, monkeypatch):
         "metadata": {"position": "center"},
     }
 
-    response = client.post(
-        "/api/temperature", data=json.dumps(data), content_type="application/json"
-    )
+    response = client.post("/api/temperature", data=json.dumps(data), content_type="application/json")
 
     assert response.status_code == 200
 
@@ -64,9 +60,7 @@ def test_store_temperature_reading_invalid_data(client):
     # Missing required field (temperature)
     data = {"device_id": "test_device_001"}
 
-    response = client.post(
-        "/api/temperature", data=json.dumps(data), content_type="application/json"
-    )
+    response = client.post("/api/temperature", data=json.dumps(data), content_type="application/json")
 
     assert response.status_code == 400
 
@@ -104,9 +98,7 @@ def test_store_batch_temperature_readings(client, monkeypatch):
         ]
     }
 
-    response = client.post(
-        "/api/temperature/batch", data=json.dumps(data), content_type="application/json"
-    )
+    response = client.post("/api/temperature/batch", data=json.dumps(data), content_type="application/json")
 
     assert response.status_code == 200
 
@@ -138,14 +130,10 @@ def test_get_temperature_history(client, monkeypatch):
     def mock_get_temperature_history(self, **kwargs):
         return sample_history
 
-    monkeypatch.setattr(
-        TimescaleManager, "get_temperature_history", mock_get_temperature_history
-    )
+    monkeypatch.setattr(TimescaleManager, "get_temperature_history", mock_get_temperature_history)
 
     # Test the endpoint
-    response = client.get(
-        "/api/temperature/history?device_id=test_device_001&probe_id=test_probe_001"
-    )
+    response = client.get("/api/temperature/history?device_id=test_device_001&probe_id=test_probe_001")
 
     assert response.status_code == 200
 
@@ -173,14 +161,10 @@ def test_get_temperature_statistics(client, monkeypatch):
     def mock_get_temperature_statistics(self, **kwargs):
         return sample_stats
 
-    monkeypatch.setattr(
-        TimescaleManager, "get_temperature_statistics", mock_get_temperature_statistics
-    )
+    monkeypatch.setattr(TimescaleManager, "get_temperature_statistics", mock_get_temperature_statistics)
 
     # Test the endpoint
-    response = client.get(
-        "/api/temperature/statistics?device_id=test_device_001&probe_id=test_probe_001"
-    )
+    response = client.get("/api/temperature/statistics?device_id=test_device_001&probe_id=test_probe_001")
 
     assert response.status_code == 200
 

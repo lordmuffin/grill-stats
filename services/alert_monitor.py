@@ -128,21 +128,15 @@ class AlertMonitor:
                     if current_temp is not None:
                         self._check_alerts_for_temperature(alerts, current_temp)
                     else:
-                        logger.debug(
-                            f"No temperature data available for {device_id}/{probe_id}"
-                        )
+                        logger.debug(f"No temperature data available for {device_id}/{probe_id}")
 
                 except Exception as e:
-                    logger.error(
-                        f"Error checking alerts for {device_id}/{probe_id}: {e}"
-                    )
+                    logger.error(f"Error checking alerts for {device_id}/{probe_id}: {e}")
 
         except Exception as e:
             logger.error(f"Error in _check_all_alerts: {e}")
 
-    def _get_current_temperature(
-        self, device_id: str, probe_id: str
-    ) -> Optional[float]:
+    def _get_current_temperature(self, device_id: str, probe_id: str) -> Optional[float]:
         """Get current temperature for a specific device/probe"""
         try:
             # First try to get from Redis cache (fastest)
@@ -156,26 +150,18 @@ class AlertMonitor:
                         # Check if data is recent (within last 5 minutes)
                         timestamp = data.get("timestamp")
                         if timestamp:
-                            data_time = datetime.fromisoformat(
-                                timestamp.replace("Z", "+00:00")
-                            )
-                            if (
-                                datetime.utcnow() - data_time.replace(tzinfo=None)
-                            ) < timedelta(minutes=5):
+                            data_time = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
+                            if (datetime.utcnow() - data_time.replace(tzinfo=None)) < timedelta(minutes=5):
                                 temperature = data.get("temperature")
                                 if temperature is not None:
-                                    logger.debug(
-                                        f"Got cached temperature for {device_id}/{probe_id}: {temperature}"
-                                    )
+                                    logger.debug(f"Got cached temperature for {device_id}/{probe_id}: {temperature}")
                                     return float(temperature)
                     except (json.JSONDecodeError, ValueError, KeyError) as e:
                         logger.debug(f"Error parsing cached temperature data: {e}")
 
             # Try device service API
             try:
-                device_service_url = self.app.config.get(
-                    "DEVICE_SERVICE_URL", "http://localhost:8080"
-                )
+                device_service_url = self.app.config.get("DEVICE_SERVICE_URL", "http://localhost:8080")
                 response = requests.get(
                     f"{device_service_url}/api/devices/{device_id}/probes/{probe_id}/temperature",
                     timeout=2,
@@ -185,9 +171,7 @@ class AlertMonitor:
                     data = response.json()
                     if data.get("success") and "temperature" in data.get("data", {}):
                         temperature = data["data"]["temperature"]
-                        logger.debug(
-                            f"Got temperature from device service for {device_id}/{probe_id}: {temperature}"
-                        )
+                        logger.debug(f"Got temperature from device service for {device_id}/{probe_id}: {temperature}")
                         return float(temperature)
 
             except requests.RequestException as e:
@@ -205,9 +189,7 @@ class AlertMonitor:
                 temp_data = thermoworks_client.get_temperature_data(device_id)
                 if temp_data and "temperature" in temp_data:
                     temperature = temp_data["temperature"]
-                    logger.debug(
-                        f"Got temperature from ThermoWorks for {device_id}: {temperature}"
-                    )
+                    logger.debug(f"Got temperature from ThermoWorks for {device_id}: {temperature}")
                     return float(temperature)
 
             except Exception as e:
@@ -277,9 +259,7 @@ class AlertMonitor:
                 "min_temperature": alert.min_temperature,
                 "max_temperature": alert.max_temperature,
                 "threshold_value": alert.threshold_value,
-                "triggered_at": (
-                    alert.triggered_at.isoformat() if alert.triggered_at else None
-                ),
+                "triggered_at": (alert.triggered_at.isoformat() if alert.triggered_at else None),
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
@@ -299,12 +279,8 @@ class AlertMonitor:
             if self.socketio:
                 try:
                     user_room = f"user_{alert.user_id}"
-                    self.socketio.emit(
-                        "notification", notification_data, room=user_room
-                    )
-                    logger.info(
-                        f"Real-time notification sent via WebSocket to user {alert.user_id}"
-                    )
+                    self.socketio.emit("notification", notification_data, room=user_room)
+                    logger.info(f"Real-time notification sent via WebSocket to user {alert.user_id}")
                 except Exception as e:
                     logger.error(f"Error sending WebSocket notification: {e}")
 
@@ -319,18 +295,10 @@ class AlertMonitor:
                     )
 
                     # Also update a user-specific latest notifications list
-                    user_notifications_key = (
-                        f"notifications:user:{alert.user_id}:latest"
-                    )
-                    self.redis_client.lpush(
-                        user_notifications_key, json.dumps(notification_data)
-                    )
-                    self.redis_client.ltrim(
-                        user_notifications_key, 0, 9
-                    )  # Keep only latest 10
-                    self.redis_client.expire(
-                        user_notifications_key, timedelta(hours=24)
-                    )
+                    user_notifications_key = f"notifications:user:{alert.user_id}:latest"
+                    self.redis_client.lpush(user_notifications_key, json.dumps(notification_data))
+                    self.redis_client.ltrim(user_notifications_key, 0, 9)  # Keep only latest 10
+                    self.redis_client.expire(user_notifications_key, timedelta(hours=24))
 
                 except Exception as e:
                     logger.error(f"Error caching notification: {e}")
@@ -366,14 +334,10 @@ class AlertMonitor:
         """Get current status of the alert monitoring service"""
         return {
             "running": self.running,
-            "last_check_time": (
-                self.last_check_time.isoformat() if self.last_check_time else None
-            ),
+            "last_check_time": (self.last_check_time.isoformat() if self.last_check_time else None),
             "check_interval": self.check_interval,
             "redis_available": self.redis_client is not None,
-            "active_alerts_count": (
-                len(self.alert_manager.get_active_alerts()) if self.running else 0
-            ),
+            "active_alerts_count": (len(self.alert_manager.get_active_alerts()) if self.running else 0),
         }
 
     def trigger_immediate_check(self):

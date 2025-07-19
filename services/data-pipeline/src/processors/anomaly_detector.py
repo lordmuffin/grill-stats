@@ -45,16 +45,10 @@ ANOMALIES_DETECTED = Counter(
     "Total anomalies detected",
     ["device_id", "anomaly_type"],
 )
-DETECTION_DURATION = Histogram(
-    "anomaly_detection_duration_seconds", "Time spent on anomaly detection"
-)
+DETECTION_DURATION = Histogram("anomaly_detection_duration_seconds", "Time spent on anomaly detection")
 MODEL_ACCURACY = Gauge("anomaly_model_accuracy", "Anomaly detection model accuracy")
-TRAINING_DURATION = Histogram(
-    "anomaly_model_training_duration_seconds", "Time spent training anomaly models"
-)
-ACTIVE_MODELS = Gauge(
-    "anomaly_active_models", "Number of active anomaly detection models"
-)
+TRAINING_DURATION = Histogram("anomaly_model_training_duration_seconds", "Time spent training anomaly models")
+ACTIVE_MODELS = Gauge("anomaly_active_models", "Number of active anomaly detection models")
 
 
 class AnomalyDetector:
@@ -71,9 +65,7 @@ class AnomalyDetector:
         self.model_types = ["isolation_forest", "autoencoder", "lof", "knn"]
 
         # Data storage
-        self.device_features: Dict[str, deque] = defaultdict(
-            lambda: deque(maxlen=10000)
-        )
+        self.device_features: Dict[str, deque] = defaultdict(lambda: deque(maxlen=10000))
         self.anomaly_history: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
         self.model_performance: Dict[str, Dict[str, float]] = defaultdict(dict)
 
@@ -131,9 +123,7 @@ class AnomalyDetector:
     async def process_validated_reading(self, event: BaseEvent):
         """Process validated temperature reading for anomaly detection."""
         if not isinstance(event, TemperatureValidatedEvent):
-            logger.warning(
-                "Received non-validated reading event", event_type=type(event).__name__
-            )
+            logger.warning("Received non-validated reading event", event_type=type(event).__name__)
             return
 
         start_time = time.time()
@@ -159,9 +149,7 @@ class AnomalyDetector:
                 anomaly_event = await self._create_anomaly_event(event, anomaly_result)
 
                 # Send anomaly event
-                await self.producer_manager.send_event(
-                    "anomalies.detected", anomaly_event
-                )
+                await self.producer_manager.send_event("anomalies.detected", anomaly_event)
 
                 # Check if alert should be triggered
                 if anomaly_result["severity"] in [
@@ -169,9 +157,7 @@ class AnomalyDetector:
                     SeverityLevel.CRITICAL,
                 ]:
                     alert_event = await self._create_alert_event(anomaly_event)
-                    await self.producer_manager.send_event(
-                        "alerts.triggered", alert_event
-                    )
+                    await self.producer_manager.send_event("alerts.triggered", alert_event)
 
                 # Update anomaly history
                 self.anomaly_history[device_id].append(
@@ -184,9 +170,7 @@ class AnomalyDetector:
                 )
 
                 # Update metrics
-                ANOMALIES_DETECTED.labels(
-                    device_id=device_id, anomaly_type=anomaly_result["anomaly_type"]
-                ).inc()
+                ANOMALIES_DETECTED.labels(device_id=device_id, anomaly_type=anomaly_result["anomaly_type"]).inc()
 
             # Update detection duration metric
             DETECTION_DURATION.observe(time.time() - start_time)
@@ -199,9 +183,7 @@ class AnomalyDetector:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to process validated reading", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to process validated reading", device_id=device_id, error=str(e))
             raise
 
     def _extract_features(self, event: TemperatureValidatedEvent) -> Dict[str, float]:
@@ -219,9 +201,7 @@ class AnomalyDetector:
         # Add derived features
         device_id = event.data.device_id
         if device_id in self.device_features and self.device_features[device_id]:
-            recent_features = list(self.device_features[device_id])[
-                -self.feature_window_size :
-            ]
+            recent_features = list(self.device_features[device_id])[-self.feature_window_size :]
 
             if len(recent_features) > 1:
                 # Temperature statistics
@@ -236,34 +216,24 @@ class AnomalyDetector:
                 if len(recent_temps) >= 2:
                     features["temp_derivative"] = recent_temps[-1] - recent_temps[-2]
                     if len(recent_temps) >= 3:
-                        features["temp_second_derivative"] = (
-                            recent_temps[-1] - recent_temps[-2]
-                        ) - (recent_temps[-2] - recent_temps[-3])
+                        features["temp_second_derivative"] = (recent_temps[-1] - recent_temps[-2]) - (
+                            recent_temps[-2] - recent_temps[-3]
+                        )
 
                 # Battery trend
-                recent_battery = [
-                    f["battery_level"]
-                    for f in recent_features
-                    if f["battery_level"] > 0
-                ]
+                recent_battery = [f["battery_level"] for f in recent_features if f["battery_level"] > 0]
                 if len(recent_battery) >= 2:
                     features["battery_trend"] = recent_battery[-1] - recent_battery[0]
 
                 # Signal strength statistics
-                recent_signal = [
-                    f["signal_strength"]
-                    for f in recent_features
-                    if f["signal_strength"] != 0
-                ]
+                recent_signal = [f["signal_strength"] for f in recent_features if f["signal_strength"] != 0]
                 if len(recent_signal) >= 2:
                     features["signal_mean"] = np.mean(recent_signal)
                     features["signal_std"] = np.std(recent_signal)
 
         return features
 
-    async def _detect_anomalies(
-        self, device_id: str, features: Dict[str, float]
-    ) -> Dict[str, Any]:
+    async def _detect_anomalies(self, device_id: str, features: Dict[str, float]) -> Dict[str, Any]:
         """Detect anomalies using trained models."""
         try:
             if device_id not in self.models:
@@ -323,13 +293,9 @@ class AnomalyDetector:
                         score = model.decision_function(feature_vector_scaled)[0]
                         anomaly_score = 1 - ((score + 1) / 2)  # Convert to 0-1 scale
                     elif model_type == "autoencoder":
-                        anomaly_score = model.decision_function(feature_vector_scaled)[
-                            0
-                        ]
+                        anomaly_score = model.decision_function(feature_vector_scaled)[0]
                     elif model_type in ["lof", "knn"]:
-                        anomaly_score = model.decision_function(feature_vector_scaled)[
-                            0
-                        ]
+                        anomaly_score = model.decision_function(feature_vector_scaled)[0]
                     else:
                         continue
 
@@ -370,9 +336,7 @@ class AnomalyDetector:
             }
 
         except Exception as e:
-            logger.error(
-                "Failed to detect anomalies", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to detect anomalies", device_id=device_id, error=str(e))
             return {
                 "is_anomaly": False,
                 "confidence": 0.0,
@@ -381,9 +345,7 @@ class AnomalyDetector:
                 "model_scores": {},
             }
 
-    def _determine_anomaly_type(
-        self, features: Dict[str, float], model_scores: Dict[str, float]
-    ) -> str:
+    def _determine_anomaly_type(self, features: Dict[str, float], model_scores: Dict[str, float]) -> str:
         """Determine the type of anomaly detected."""
         # Rule-based anomaly type classification
         temp = features.get("temperature", 0)
@@ -452,13 +414,10 @@ class AnomalyDetector:
             device_id=device_id,
             temperature_reading=original_event.data,
             anomaly_details=anomaly_details,
-            detection_time_ms=(time.time() * 1000)
-            - (original_event.timestamp.timestamp() * 1000),
+            detection_time_ms=(time.time() * 1000) - (original_event.timestamp.timestamp() * 1000),
         )
 
-    async def _create_alert_event(
-        self, anomaly_event: AnomalyDetectedEvent
-    ) -> AlertTriggeredEvent:
+    async def _create_alert_event(self, anomaly_event: AnomalyDetectedEvent) -> AlertTriggeredEvent:
         """Create an alert triggered event."""
         device_id = anomaly_event.device_id
         severity = anomaly_event.anomaly_details.severity
@@ -514,15 +473,10 @@ class AnomalyDetector:
     async def _calculate_expected_range(self, device_id: str) -> Dict[str, float]:
         """Calculate expected temperature range for a device."""
         try:
-            if (
-                device_id not in self.device_features
-                or not self.device_features[device_id]
-            ):
+            if device_id not in self.device_features or not self.device_features[device_id]:
                 return {"min": 0.0, "max": 500.0}
 
-            recent_features = list(self.device_features[device_id])[
-                -100:
-            ]  # Last 100 readings
+            recent_features = list(self.device_features[device_id])[-100:]  # Last 100 readings
             temperatures = [f["temperature"] for f in recent_features]
 
             if not temperatures:
@@ -537,23 +491,16 @@ class AnomalyDetector:
             }
 
         except Exception as e:
-            logger.error(
-                "Failed to calculate expected range", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to calculate expected range", device_id=device_id, error=str(e))
             return {"min": 0.0, "max": 500.0}
 
     async def _get_historical_stats(self, device_id: str) -> Dict[str, Any]:
         """Get historical statistics for a device."""
         try:
-            if (
-                device_id not in self.device_features
-                or not self.device_features[device_id]
-            ):
+            if device_id not in self.device_features or not self.device_features[device_id]:
                 return {}
 
-            recent_features = list(self.device_features[device_id])[
-                -1000:
-            ]  # Last 1000 readings
+            recent_features = list(self.device_features[device_id])[-1000:]  # Last 1000 readings
             temperatures = [f["temperature"] for f in recent_features]
 
             if not temperatures:
@@ -575,9 +522,7 @@ class AnomalyDetector:
             }
 
         except Exception as e:
-            logger.error(
-                "Failed to get historical stats", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to get historical stats", device_id=device_id, error=str(e))
             return {}
 
     async def _training_loop(self):
@@ -656,9 +601,7 @@ class AnomalyDetector:
 
             # Isolation Forest
             try:
-                iso_forest = IsolationForest(
-                    contamination=0.1, random_state=42, n_jobs=-1
-                )
+                iso_forest = IsolationForest(contamination=0.1, random_state=42, n_jobs=-1)
                 iso_forest.fit(X_scaled)
                 models["isolation_forest"] = iso_forest
             except Exception as e:
@@ -691,9 +634,7 @@ class AnomalyDetector:
                     autoencoder.fit(X_scaled)
                     models["autoencoder"] = autoencoder
                 except Exception as e:
-                    logger.warning(
-                        "Failed to train AutoEncoder", device_id=device_id, error=str(e)
-                    )
+                    logger.warning("Failed to train AutoEncoder", device_id=device_id, error=str(e))
 
             # Store models
             self.models[device_id] = models
@@ -712,9 +653,7 @@ class AnomalyDetector:
             )
 
         except Exception as e:
-            logger.error(
-                "Failed to train device models", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to train device models", device_id=device_id, error=str(e))
             raise
 
     async def _save_models(self, device_id: str):
@@ -728,9 +667,7 @@ class AnomalyDetector:
             for model_type, model in self.models[device_id].items():
                 models_data[model_type] = pickle.dumps(model)
 
-            await self.redis_client.hset(
-                f"anomaly_models:{device_id}", mapping=models_data
-            )
+            await self.redis_client.hset(f"anomaly_models:{device_id}", mapping=models_data)
 
             # Save scaler
             if device_id in self.scalers:
@@ -738,15 +675,11 @@ class AnomalyDetector:
                 await self.redis_client.set(f"anomaly_scaler:{device_id}", scaler_data)
 
             # Set expiration
-            await self.redis_client.expire(
-                f"anomaly_models:{device_id}", 86400 * 7
-            )  # 7 days
+            await self.redis_client.expire(f"anomaly_models:{device_id}", 86400 * 7)  # 7 days
             await self.redis_client.expire(f"anomaly_scaler:{device_id}", 86400 * 7)
 
         except Exception as e:
-            logger.error(
-                "Failed to save models to Redis", device_id=device_id, error=str(e)
-            )
+            logger.error("Failed to save models to Redis", device_id=device_id, error=str(e))
 
     async def _load_models(self):
         """Load existing models from Redis."""
@@ -772,9 +705,7 @@ class AnomalyDetector:
                     self.models[device_id] = models
 
                     # Load scaler
-                    scaler_data = await self.redis_client.get(
-                        f"anomaly_scaler:{device_id}"
-                    )
+                    scaler_data = await self.redis_client.get(f"anomaly_scaler:{device_id}")
                     if scaler_data:
                         self.scalers[device_id] = pickle.loads(scaler_data)
 
@@ -815,9 +746,7 @@ class AnomalyDetector:
             for device_id in list(self.anomaly_history.keys()):
                 original_count = len(self.anomaly_history[device_id])
                 self.anomaly_history[device_id] = [
-                    anomaly
-                    for anomaly in self.anomaly_history[device_id]
-                    if anomaly["timestamp"] > cutoff_time
+                    anomaly for anomaly in self.anomaly_history[device_id] if anomaly["timestamp"] > cutoff_time
                 ]
                 cleaned_count = len(self.anomaly_history[device_id])
 
@@ -835,11 +764,7 @@ class AnomalyDetector:
         """Manually retrain models."""
         try:
             if device_id:
-                if (
-                    device_id in self.device_features
-                    and len(self.device_features[device_id])
-                    >= self.min_training_samples
-                ):
+                if device_id in self.device_features and len(self.device_features[device_id]) >= self.min_training_samples:
                     await self._train_device_models(device_id)
                     return {"status": "retraining_completed", "device_id": device_id}
                 else:
@@ -849,9 +774,7 @@ class AnomalyDetector:
                 return {"status": "retraining_all_completed"}
 
         except Exception as e:
-            logger.error(
-                "Manual model retraining failed", device_id=device_id, error=str(e)
-            )
+            logger.error("Manual model retraining failed", device_id=device_id, error=str(e))
             return {"status": "retraining_failed", "error": str(e)}
 
     def get_status(self) -> Dict[str, Any]:
@@ -860,19 +783,13 @@ class AnomalyDetector:
             "is_running": self.is_running,
             "active_models": len(self.models),
             "devices_monitored": len(self.device_features),
-            "total_anomalies": sum(
-                len(anomalies) for anomalies in self.anomaly_history.values()
-            ),
+            "total_anomalies": sum(len(anomalies) for anomalies in self.anomaly_history.values()),
             "model_types": self.model_types,
             "anomaly_threshold": self.anomaly_threshold,
             "min_training_samples": self.min_training_samples,
             "background_tasks": {
-                "training": (
-                    not self.training_task.done() if self.training_task else False
-                ),
-                "maintenance": (
-                    not self.maintenance_task.done() if self.maintenance_task else False
-                ),
+                "training": (not self.training_task.done() if self.training_task else False),
+                "maintenance": (not self.maintenance_task.done() if self.maintenance_task else False),
             },
         }
 

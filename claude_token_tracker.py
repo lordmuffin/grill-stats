@@ -78,9 +78,7 @@ else:
 
 def parse_args():
     """Parse command line arguments."""
-    parser = argparse.ArgumentParser(
-        description="Track Claude Pro token usage and limits"
-    )
+    parser = argparse.ArgumentParser(description="Track Claude Pro token usage and limits")
     parser.add_argument(
         "--api-key",
         help="Your Anthropic API key (can also be set via ANTHROPIC_API_KEY environment variable)",
@@ -137,9 +135,7 @@ def check_api_key_validity(api_key):
             console.print("[bold red]Error:[/bold red] Invalid API key.")
             return False
         else:
-            console.print(
-                f"[bold red]Error:[/bold red] Unexpected response: {response.status_code}"
-            )
+            console.print(f"[bold red]Error:[/bold red] Unexpected response: {response.status_code}")
             console.print(response.text)
             return False
     except Exception as e:
@@ -160,18 +156,14 @@ def get_rate_limit_info(api_key, model, sample=False):
     try:
         if sample:
             # Make a real API call to get rate limit headers
-            console.print(
-                "[yellow]Running a sample message to check rate limits...[/yellow]"
-            )
+            console.print("[yellow]Running a sample message to check rate limits...[/yellow]")
             response = requests.post(
                 "https://api.anthropic.com/v1/messages",
                 headers=headers,
                 json={
                     "model": model,
                     "max_tokens": 10,
-                    "messages": [
-                        {"role": "user", "content": "Hello, what time is it?"}
-                    ],
+                    "messages": [{"role": "user", "content": "Hello, what time is it?"}],
                 },
             )
         else:
@@ -209,9 +201,7 @@ def display_usage_info(api_key, model, rate_limit_info, verbose):
         console.print("===== Claude Pro Token Usage Tracker =====")
 
     console.print(f"[bold]Model:[/bold] {model}")
-    console.print(
-        f"[bold]Current time:[/bold] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
-    )
+    console.print(f"[bold]Current time:[/bold] {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
 
     # Display rate limit information
     if rate_limit_info:
@@ -222,9 +212,7 @@ def display_usage_info(api_key, model, rate_limit_info, verbose):
 
             for key, value in rate_limit_info.items():
                 # Format the key for better readability
-                formatted_key = (
-                    key.replace("anthropic-ratelimit-", "").replace("-", " ").title()
-                )
+                formatted_key = key.replace("anthropic-ratelimit-", "").replace("-", " ").title()
                 table.add_row(formatted_key, value)
 
             console.print(table)
@@ -233,9 +221,7 @@ def display_usage_info(api_key, model, rate_limit_info, verbose):
             console.print("-----------------------")
             for key, value in rate_limit_info.items():
                 # Format the key for better readability
-                formatted_key = (
-                    key.replace("anthropic-ratelimit-", "").replace("-", " ").title()
-                )
+                formatted_key = key.replace("anthropic-ratelimit-", "").replace("-", " ").title()
                 console.print(f"{formatted_key}: {value}")
 
         # Display reset times in a more user-friendly format
@@ -256,12 +242,8 @@ def display_usage_info(api_key, model, rate_limit_info, verbose):
 
     console.print("\n[bold]Usage Notes:[/bold]")
     console.print("• Claude Pro typically has a 5-hour rolling window for rate limits")
-    console.print(
-        "• The displayed limits are for the most restrictive limit currently in effect"
-    )
-    console.print(
-        "• For detailed usage, visit the Anthropic Console: https://console.anthropic.com"
-    )
+    console.print("• The displayed limits are for the most restrictive limit currently in effect")
+    console.print("• For detailed usage, visit the Anthropic Console: https://console.anthropic.com")
 
     if verbose:
         console.print("\n[bold]API Key Information:[/bold]")

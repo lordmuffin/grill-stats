@@ -2,16 +2,7 @@ import json
 from datetime import datetime, timedelta
 
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    ForeignKey,
-    Integer,
-    Numeric,
-    String,
-    Text,
-)
+from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, Numeric, String, Text
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.orm import relationship
 
@@ -31,21 +22,15 @@ class GrillingSession:
             start_time = Column(DateTime, nullable=False)
             end_time = Column(DateTime, nullable=True)
             devices_used = Column(Text, nullable=True)  # JSON array of device IDs
-            status = Column(
-                String(20), default="active"
-            )  # 'active', 'completed', 'cancelled'
+            status = Column(String(20), default="active")  # 'active', 'completed', 'cancelled'
             max_temperature = Column(Numeric(5, 2), nullable=True)
             min_temperature = Column(Numeric(5, 2), nullable=True)
             avg_temperature = Column(Numeric(5, 2), nullable=True)
             duration_minutes = Column(Integer, nullable=True)
-            session_type = Column(
-                String(50), nullable=True
-            )  # 'smoking', 'grilling', 'roasting', etc.
+            session_type = Column(String(50), nullable=True)  # 'smoking', 'grilling', 'roasting', etc.
             notes = Column(Text, nullable=True)
             created_at = Column(DateTime, default=datetime.utcnow)
-            updated_at = Column(
-                DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
-            )
+            updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
 
             # Relationship to User model
             user = relationship("User", backref="grilling_sessions")
@@ -59,9 +44,7 @@ class GrillingSession:
                 if self.devices_used:
                     try:
                         devices_list = (
-                            json.loads(self.devices_used)
-                            if isinstance(self.devices_used, str)
-                            else self.devices_used
+                            json.loads(self.devices_used) if isinstance(self.devices_used, str) else self.devices_used
                         )
                     except json.JSONDecodeError:
                         devices_list = []
@@ -70,30 +53,18 @@ class GrillingSession:
                     "id": self.id,
                     "user_id": self.user_id,
                     "name": self.name,
-                    "start_time": (
-                        self.start_time.isoformat() if self.start_time else None
-                    ),
+                    "start_time": (self.start_time.isoformat() if self.start_time else None),
                     "end_time": self.end_time.isoformat() if self.end_time else None,
                     "devices_used": devices_list,
                     "status": self.status,
-                    "max_temperature": (
-                        float(self.max_temperature) if self.max_temperature else None
-                    ),
-                    "min_temperature": (
-                        float(self.min_temperature) if self.min_temperature else None
-                    ),
-                    "avg_temperature": (
-                        float(self.avg_temperature) if self.avg_temperature else None
-                    ),
+                    "max_temperature": (float(self.max_temperature) if self.max_temperature else None),
+                    "min_temperature": (float(self.min_temperature) if self.min_temperature else None),
+                    "avg_temperature": (float(self.avg_temperature) if self.avg_temperature else None),
                     "duration_minutes": self.duration_minutes,
                     "session_type": self.session_type,
                     "notes": self.notes,
-                    "created_at": (
-                        self.created_at.isoformat() if self.created_at else None
-                    ),
-                    "updated_at": (
-                        self.updated_at.isoformat() if self.updated_at else None
-                    ),
+                    "created_at": (self.created_at.isoformat() if self.created_at else None),
+                    "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
                 }
 
             def calculate_duration(self):
@@ -115,11 +86,7 @@ class GrillingSession:
                 """Get list of device IDs used in session"""
                 if self.devices_used:
                     try:
-                        return (
-                            json.loads(self.devices_used)
-                            if isinstance(self.devices_used, str)
-                            else self.devices_used
-                        )
+                        return json.loads(self.devices_used) if isinstance(self.devices_used, str) else self.devices_used
                     except json.JSONDecodeError:
                         return []
                 return []
@@ -172,12 +139,7 @@ class GrillingSession:
         if status:
             query = query.filter_by(status=status)
 
-        return (
-            query.order_by(self.model.start_time.desc())
-            .limit(limit)
-            .offset(offset)
-            .all()
-        )
+        return query.order_by(self.model.start_time.desc()).limit(limit).offset(offset).all()
 
     def get_active_sessions(self, user_id=None):
         """Get currently active sessions"""
@@ -263,18 +225,12 @@ class GrillingSession:
 
         if temps:
             # Update temperature statistics
-            current_max = (
-                float(session.max_temperature) if session.max_temperature else temps[0]
-            )
-            current_min = (
-                float(session.min_temperature) if session.min_temperature else temps[0]
-            )
+            current_max = float(session.max_temperature) if session.max_temperature else temps[0]
+            current_min = float(session.min_temperature) if session.min_temperature else temps[0]
 
             session.max_temperature = max(current_max, max(temps))
             session.min_temperature = min(current_min, min(temps))
-            session.avg_temperature = (
-                float(session.avg_temperature or 0) + sum(temps)
-            ) / (len(temps) + 1)
+            session.avg_temperature = (float(session.avg_temperature or 0) + sum(temps)) / (len(temps) + 1)
             session.updated_at = datetime.utcnow()
 
             self.db.session.commit()
@@ -318,9 +274,7 @@ class GrillingSession:
         cutoff_date = datetime.utcnow() - timedelta(days=days_old)
 
         # Find incomplete sessions older than cutoff
-        old_sessions = self.model.query.filter(
-            self.model.status == "active", self.model.start_time < cutoff_date
-        ).all()
+        old_sessions = self.model.query.filter(self.model.status == "active", self.model.start_time < cutoff_date).all()
 
         cleaned_count = 0
         for session in old_sessions:

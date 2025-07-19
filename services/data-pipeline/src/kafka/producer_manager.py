@@ -18,12 +18,8 @@ from ..utils.config import KafkaConfig
 logger = structlog.get_logger()
 
 # Prometheus metrics
-MESSAGES_SENT = Counter(
-    "kafka_messages_sent_total", "Total messages sent to Kafka", ["topic", "status"]
-)
-SEND_DURATION = Histogram(
-    "kafka_send_duration_seconds", "Time spent sending messages to Kafka", ["topic"]
-)
+MESSAGES_SENT = Counter("kafka_messages_sent_total", "Total messages sent to Kafka", ["topic", "status"])
+SEND_DURATION = Histogram("kafka_send_duration_seconds", "Time spent sending messages to Kafka", ["topic"])
 PRODUCER_QUEUE_SIZE = Gauge("kafka_producer_queue_size", "Current producer queue size")
 
 
@@ -160,9 +156,7 @@ class ProducerManager:
             SEND_DURATION.labels(topic=topic).observe(duration)
             PRODUCER_QUEUE_SIZE.set(len(self.producer))
 
-            logger.debug(
-                "Message sent to Kafka", topic=topic, key=key, duration=duration
-            )
+            logger.debug("Message sent to Kafka", topic=topic, key=key, duration=duration)
 
         except Exception as e:
             logger.error("Failed to send message to Kafka", topic=topic, error=str(e))
@@ -183,9 +177,7 @@ class ProducerManager:
             )
             MESSAGES_SENT.labels(topic=msg.topic(), status="success").inc()
 
-    async def create_topics(
-        self, topics: List[str], num_partitions: int = 3, replication_factor: int = 1
-    ):
+    async def create_topics(self, topics: List[str], num_partitions: int = 3, replication_factor: int = 1):
         """Create Kafka topics if they don't exist."""
         try:
             if not self.admin_client:
@@ -193,11 +185,7 @@ class ProducerManager:
 
             # Check which topics already exist
             existing_topics = set(self.admin_client.list_topics().topics.keys())
-            topics_to_create = [
-                topic
-                for topic in topics
-                if topic not in existing_topics and topic not in self.topics_created
-            ]
+            topics_to_create = [topic for topic in topics if topic not in existing_topics and topic not in self.topics_created]
 
             if not topics_to_create:
                 logger.debug("All topics already exist")
@@ -227,9 +215,7 @@ class ProducerManager:
                         logger.debug("Topic already exists", topic=topic)
                         self.topics_created.add(topic)
                     else:
-                        logger.error(
-                            "Failed to create topic", topic=topic, error=str(e)
-                        )
+                        logger.error("Failed to create topic", topic=topic, error=str(e))
                         raise
 
         except Exception as e:
@@ -270,9 +256,7 @@ class ProducerManager:
             # Add to send queue
             await self.send_queue.put((topic, key, value, headers))
 
-            logger.debug(
-                "Event queued for sending", topic=topic, event_id=event.event_id
-            )
+            logger.debug("Event queued for sending", topic=topic, event_id=event.event_id)
 
         except Exception as e:
             logger.error(
@@ -302,9 +286,7 @@ class ProducerManager:
             logger.debug("Raw message queued for sending", topic=topic, key=key)
 
         except Exception as e:
-            logger.error(
-                "Failed to queue raw message", topic=topic, key=key, error=str(e)
-            )
+            logger.error("Failed to queue raw message", topic=topic, key=key, error=str(e))
             raise
 
     async def send_batch(
@@ -324,9 +306,7 @@ class ProducerManager:
 
                 await self.send_event(topic, event, key, headers)
 
-            logger.info(
-                "Batch events queued for sending", topic=topic, count=len(events)
-            )
+            logger.info("Batch events queued for sending", topic=topic, count=len(events))
 
         except Exception as e:
             logger.error(

@@ -14,9 +14,7 @@ from unittest.mock import MagicMock, Mock, patch
 # Add the services directory to the path
 sys.path.insert(
     0,
-    os.path.join(
-        os.path.dirname(__file__), "..", "..", "services", "temperature-service"
-    ),
+    os.path.join(os.path.dirname(__file__), "..", "..", "services", "temperature-service"),
 )
 
 from main import app
@@ -236,9 +234,7 @@ class TestLiveDataDatabase(unittest.TestCase):
 
         # Verify key tables exist in schema
         self.assertIn("CREATE TABLE IF NOT EXISTS device_channels", schema_content)
-        self.assertIn(
-            "CREATE TABLE IF NOT EXISTS live_temperature_readings", schema_content
-        )
+        self.assertIn("CREATE TABLE IF NOT EXISTS live_temperature_readings", schema_content)
         self.assertIn("CREATE TABLE IF NOT EXISTS device_status_log", schema_content)
         self.assertIn("CREATE TABLE IF NOT EXISTS temperature_alerts", schema_content)
 
@@ -258,9 +254,7 @@ class TestLiveDataDatabase(unittest.TestCase):
         # Verify views exist
         self.assertIn("CREATE OR REPLACE VIEW current_device_status", schema_content)
         self.assertIn("CREATE OR REPLACE VIEW live_device_data_summary", schema_content)
-        self.assertIn(
-            "CREATE OR REPLACE VIEW current_channel_temperatures", schema_content
-        )
+        self.assertIn("CREATE OR REPLACE VIEW current_channel_temperatures", schema_content)
 
     def test_temperature_reading_validation(self):
         """Test temperature reading validation constraints"""
@@ -281,9 +275,7 @@ class TestLiveDataDatabase(unittest.TestCase):
         # Invalid temperature should fail
         invalid_reading = valid_reading.copy()
         invalid_reading["temperature"] = 2000  # Too high
-        self.assertGreater(
-            invalid_reading["temperature"], 1000
-        )  # Would fail DB constraint
+        self.assertGreater(invalid_reading["temperature"], 1000)  # Would fail DB constraint
 
     def test_device_status_validation(self):
         """Test device status validation constraints"""
@@ -299,9 +291,7 @@ class TestLiveDataDatabase(unittest.TestCase):
         self.assertLessEqual(valid_status["battery_level"], 100)
         self.assertGreaterEqual(valid_status["signal_strength"], 0)
         self.assertLessEqual(valid_status["signal_strength"], 100)
-        self.assertIn(
-            valid_status["connection_status"], ["online", "offline", "error", "unknown"]
-        )
+        self.assertIn(valid_status["connection_status"], ["online", "offline", "error", "unknown"])
 
 
 class TestLiveDataIntegration(unittest.TestCase):

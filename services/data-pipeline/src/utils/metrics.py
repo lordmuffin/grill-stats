@@ -8,16 +8,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 import structlog
-from prometheus_client import (
-    CONTENT_TYPE_LATEST,
-    CollectorRegistry,
-    Counter,
-    Gauge,
-    Histogram,
-    Info,
-    Summary,
-    generate_latest,
-)
+from prometheus_client import CONTENT_TYPE_LATEST, CollectorRegistry, Counter, Gauge, Histogram, Info, Summary, generate_latest
 
 logger = structlog.get_logger()
 
@@ -258,33 +249,21 @@ class MetricsCollector:
         """Record a Kafka message production."""
         self.kafka_messages_produced.labels(topic=topic, status=status).inc()
 
-    def record_kafka_message_consumed(
-        self, topic: str, consumer_group: str, status: str = "success"
-    ):
+    def record_kafka_message_consumed(self, topic: str, consumer_group: str, status: str = "success"):
         """Record a Kafka message consumption."""
-        self.kafka_messages_consumed.labels(
-            topic=topic, consumer_group=consumer_group, status=status
-        ).inc()
+        self.kafka_messages_consumed.labels(topic=topic, consumer_group=consumer_group, status=status).inc()
 
     def record_kafka_produce_duration(self, topic: str, duration: float):
         """Record Kafka production duration."""
         self.kafka_produce_duration.labels(topic=topic).observe(duration)
 
-    def record_kafka_consume_duration(
-        self, topic: str, consumer_group: str, duration: float
-    ):
+    def record_kafka_consume_duration(self, topic: str, consumer_group: str, duration: float):
         """Record Kafka consumption duration."""
-        self.kafka_consume_duration.labels(
-            topic=topic, consumer_group=consumer_group
-        ).observe(duration)
+        self.kafka_consume_duration.labels(topic=topic, consumer_group=consumer_group).observe(duration)
 
-    def record_processing_duration(
-        self, processor: str, event_type: str, duration: float
-    ):
+    def record_processing_duration(self, processor: str, event_type: str, duration: float):
         """Record event processing duration."""
-        self.processing_duration.labels(
-            processor=processor, event_type=event_type
-        ).observe(duration)
+        self.processing_duration.labels(processor=processor, event_type=event_type).observe(duration)
 
     def record_processing_error(self, processor: str, error_type: str):
         """Record a processing error."""
@@ -292,9 +271,7 @@ class MetricsCollector:
 
     def record_event_processed(self, processor: str, event_type: str, status: str):
         """Record an event processing completion."""
-        self.events_processed.labels(
-            processor=processor, event_type=event_type, status=status
-        ).inc()
+        self.events_processed.labels(processor=processor, event_type=event_type, status=status).inc()
 
     def record_temperature_reading(
         self,
@@ -305,83 +282,53 @@ class MetricsCollector:
         validation_status: str = "valid",
     ):
         """Record a temperature reading."""
-        self.temperature_readings.labels(
-            device_id=device_id, validation_status=validation_status
-        ).inc()
+        self.temperature_readings.labels(device_id=device_id, validation_status=validation_status).inc()
 
-        self.temperature_current.labels(
-            device_id=device_id, device_name=device_name, location=location
-        ).set(temperature)
+        self.temperature_current.labels(device_id=device_id, device_name=device_name, location=location).set(temperature)
 
     def record_temperature_validation_duration(self, device_id: str, duration: float):
         """Record temperature validation duration."""
-        self.temperature_validation_duration.labels(device_id=device_id).observe(
-            duration
-        )
+        self.temperature_validation_duration.labels(device_id=device_id).observe(duration)
 
     def record_anomaly_detected(self, device_id: str, anomaly_type: str, severity: str):
         """Record an anomaly detection."""
-        self.anomalies_detected.labels(
-            device_id=device_id, anomaly_type=anomaly_type, severity=severity
-        ).inc()
+        self.anomalies_detected.labels(device_id=device_id, anomaly_type=anomaly_type, severity=severity).inc()
 
-    def record_anomaly_detection_duration(
-        self, device_id: str, model_type: str, duration: float
-    ):
+    def record_anomaly_detection_duration(self, device_id: str, model_type: str, duration: float):
         """Record anomaly detection duration."""
-        self.anomaly_detection_duration.labels(
-            device_id=device_id, model_type=model_type
-        ).observe(duration)
+        self.anomaly_detection_duration.labels(device_id=device_id, model_type=model_type).observe(duration)
 
-    def record_anomaly_model_accuracy(
-        self, device_id: str, model_type: str, accuracy: float
-    ):
+    def record_anomaly_model_accuracy(self, device_id: str, model_type: str, accuracy: float):
         """Record anomaly model accuracy."""
-        self.anomaly_model_accuracy.labels(
-            device_id=device_id, model_type=model_type
-        ).set(accuracy)
+        self.anomaly_model_accuracy.labels(device_id=device_id, model_type=model_type).set(accuracy)
 
     def record_alert_triggered(self, device_id: str, alert_type: str, severity: str):
         """Record an alert trigger."""
-        self.alerts_triggered.labels(
-            device_id=device_id, alert_type=alert_type, severity=severity
-        ).inc()
+        self.alerts_triggered.labels(device_id=device_id, alert_type=alert_type, severity=severity).inc()
 
-    def record_alert_resolved(
-        self, device_id: str, alert_type: str, resolution_type: str
-    ):
+    def record_alert_resolved(self, device_id: str, alert_type: str, resolution_type: str):
         """Record an alert resolution."""
-        self.alerts_resolved.labels(
-            device_id=device_id, alert_type=alert_type, resolution_type=resolution_type
-        ).inc()
+        self.alerts_resolved.labels(device_id=device_id, alert_type=alert_type, resolution_type=resolution_type).inc()
 
     def record_cache_operation(self, operation: str, cache_type: str, status: str):
         """Record a cache operation."""
-        self.cache_operations.labels(
-            operation=operation, cache_type=cache_type, status=status
-        ).inc()
+        self.cache_operations.labels(operation=operation, cache_type=cache_type, status=status).inc()
 
     def record_cache_hit_ratio(self, cache_type: str, ratio: float):
         """Record cache hit ratio."""
         self.cache_hit_ratio.labels(cache_type=cache_type).set(ratio)
 
-    def record_homeassistant_update(
-        self, entity_type: str, status: str, duration: float = None
-    ):
+    def record_homeassistant_update(self, entity_type: str, status: str, duration: float = None):
         """Record a Home Assistant update."""
         self.homeassistant_updates.labels(entity_type=entity_type, status=status).inc()
 
         if duration is not None:
-            self.homeassistant_update_duration.labels(entity_type=entity_type).observe(
-                duration
-            )
+            self.homeassistant_update_duration.labels(entity_type=entity_type).observe(duration)
 
     def record_health_check(self, component: str, status: str, is_healthy: bool):
         """Record a health check."""
         self.health_checks.labels(component=component, status=status).inc()
-        self.component_status.labels(component=component, instance="default").set(
-            1 if is_healthy else 0
-        )
+        self.component_status.labels(component=component, instance="default").set(1 if is_healthy else 0)
 
     def record_active_devices(self, count: int):
         """Record active device count."""
@@ -418,22 +365,14 @@ class MetricsCollector:
     def record_performance_metric(self, component: str, metric_name: str, value: float):
         """Record a performance metric."""
         key = f"{component}_{metric_name}"
-        self.performance_history[key].append(
-            {"timestamp": datetime.utcnow(), "value": value}
-        )
+        self.performance_history[key].append({"timestamp": datetime.utcnow(), "value": value})
 
-    def get_performance_history(
-        self, component: str, metric_name: str, duration_minutes: int = 60
-    ) -> List[Dict[str, Any]]:
+    def get_performance_history(self, component: str, metric_name: str, duration_minutes: int = 60) -> List[Dict[str, Any]]:
         """Get performance history for a component."""
         key = f"{component}_{metric_name}"
         cutoff_time = datetime.utcnow() - timedelta(minutes=duration_minutes)
 
-        return [
-            entry
-            for entry in self.performance_history[key]
-            if entry["timestamp"] > cutoff_time
-        ]
+        return [entry for entry in self.performance_history[key] if entry["timestamp"] > cutoff_time]
 
     def get_custom_metrics_summary(self) -> Dict[str, Any]:
         """Get summary of custom metrics."""
@@ -461,9 +400,7 @@ class MetricsCollector:
         return {
             "uptime_seconds": time.time() - self.start_time,
             "custom_metrics": self.get_custom_metrics_summary(),
-            "performance_components": list(
-                set(key.split("_")[0] for key in self.performance_history.keys())
-            ),
+            "performance_components": list(set(key.split("_")[0] for key in self.performance_history.keys())),
         }
 
     def export_metrics(self) -> str:
@@ -488,8 +425,7 @@ class MetricsCollector:
 
             return {
                 "status": "healthy",
-                "metrics_collected": len(self.custom_counters)
-                + len(self.custom_gauges),
+                "metrics_collected": len(self.custom_counters) + len(self.custom_gauges),
                 "uptime_seconds": time.time() - self.start_time,
             }
         except Exception as e:

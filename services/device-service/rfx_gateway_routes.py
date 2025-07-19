@@ -18,9 +18,7 @@ logger = logging.getLogger("rfx_gateway_routes")
 rfx_gateway_bp = Blueprint("rfx_gateway", __name__, url_prefix="/api/gateways")
 
 
-def register_gateway_routes(
-    app, rfx_gateway_client: RFXGatewayClient, thermoworks_client: Any
-):
+def register_gateway_routes(app, rfx_gateway_client: RFXGatewayClient, thermoworks_client: Any):
     """
     Register RFX Gateway routes with the Flask app
 
@@ -52,9 +50,7 @@ def success_response(data: Any = None, message: str = "Success") -> Dict[str, An
 
 
 # Error response helper
-def error_response(
-    message: str, status_code: int = 400, details: Any = None
-) -> Dict[str, Any]:
+def error_response(message: str, status_code: int = 400, details: Any = None) -> Dict[str, Any]:
     """Create an error response"""
     response = {
         "status": "error",
@@ -240,9 +236,7 @@ def configure_wifi(gateway_id):
             return jsonify(error_response("SSID and password are required", 400)), 400
 
         # Configure Wi-Fi
-        success = rfx_gateway_bp.rfx_gateway_client.configure_wifi(
-            gateway_id, ssid, password, security_type
-        )
+        success = rfx_gateway_bp.rfx_gateway_client.configure_wifi(gateway_id, ssid, password, security_type)
 
         if success:
             return jsonify(
@@ -281,9 +275,7 @@ def link_to_account(gateway_id):
             return jsonify(error_response("Not authenticated", 401)), 401
 
         # Link gateway to account
-        success = rfx_gateway_bp.rfx_gateway_client.link_to_thermoworks_account(
-            gateway_id
-        )
+        success = rfx_gateway_bp.rfx_gateway_client.link_to_thermoworks_account(gateway_id)
 
         if success:
             return jsonify(
@@ -294,11 +286,7 @@ def link_to_account(gateway_id):
             )
         else:
             return (
-                jsonify(
-                    error_response(
-                        "Failed to link gateway to ThermoWorks Cloud account", 400
-                    )
-                ),
+                jsonify(error_response("Failed to link gateway to ThermoWorks Cloud account", 400)),
                 400,
             )
     except RFXGatewayError as e:
@@ -359,9 +347,7 @@ def get_setup_status(gateway_id):
         # Get setup status
         status = rfx_gateway_bp.rfx_gateway_client.get_setup_status(gateway_id)
 
-        return jsonify(
-            success_response({"gateway_id": gateway_id, "setup_status": status})
-        )
+        return jsonify(success_response({"gateway_id": gateway_id, "setup_status": status}))
     except RFXGatewayError as e:
         logger.error(f"Error getting setup status for gateway {gateway_id}: {e}")
         return (
@@ -391,11 +377,7 @@ def cancel_setup(gateway_id):
         # Cancel setup
         rfx_gateway_bp.rfx_gateway_client.cancel_setup(gateway_id)
 
-        return jsonify(
-            success_response(
-                {"cancelled": True, "gateway_id": gateway_id}, "Gateway setup cancelled"
-            )
-        )
+        return jsonify(success_response({"cancelled": True, "gateway_id": gateway_id}, "Gateway setup cancelled"))
     except Exception as e:
         logger.error(f"Error cancelling setup for gateway {gateway_id}: {e}")
         return jsonify(error_response(f"Error cancelling setup: {str(e)}", 500)), 500

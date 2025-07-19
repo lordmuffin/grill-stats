@@ -28,9 +28,7 @@ class ThermoWorksClient:
                 "on",
             )
 
-        self.mock_mode = (
-            mock_mode and not os.getenv("FLASK_ENV", "").lower() == "production"
-        )
+        self.mock_mode = mock_mode and not os.getenv("FLASK_ENV", "").lower() == "production"
 
         if self.mock_mode:
             logger.info("ThermoWorks client initialized in MOCK MODE")
@@ -81,9 +79,7 @@ class ThermoWorksClient:
             logger.error(f"Failed to get readings for device {device_id}: {e}")
             return {}
 
-    def get_temperature_data(
-        self, device_id: str, probe_id: Optional[str] = None
-    ) -> Dict:
+    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict:
         if self.mock_mode and self.mock_service:
             return self.mock_service.get_temperature_data(device_id, probe_id)
 
@@ -122,9 +118,7 @@ class ThermoWorksClient:
             try:
                 start_dt = datetime.fromisoformat(start_time.replace("Z", "+00:00"))
                 end_dt = datetime.fromisoformat(end_time.replace("Z", "+00:00"))
-                return self.mock_service.get_historical_data(
-                    device_id, probe_id or "probe_1", start_dt, end_dt
-                )
+                return self.mock_service.get_historical_data(device_id, probe_id or "probe_1", start_dt, end_dt)
             except Exception as e:
                 logger.error(f"Failed to parse datetime in mock mode: {e}")
                 return []
@@ -134,9 +128,7 @@ class ThermoWorksClient:
             if probe_id:
                 params["probe_id"] = probe_id
 
-            response = self.session.get(
-                f"{self.base_url}/devices/{device_id}/history", params=params
-            )
+            response = self.session.get(f"{self.base_url}/devices/{device_id}/history", params=params)
             response.raise_for_status()
             return response.json()
         except requests.RequestException as e:

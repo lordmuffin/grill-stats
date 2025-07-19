@@ -54,9 +54,7 @@ class SessionTrackingTest:
         with app.app_context():
             try:
                 # Remove test sessions
-                test_sessions = session_manager.model.query.filter_by(
-                    user_id=self.test_user_id
-                ).all()
+                test_sessions = session_manager.model.query.filter_by(user_id=self.test_user_id).all()
                 for session in test_sessions:
                     db.session.delete(session)
                 db.session.commit()
@@ -102,9 +100,7 @@ class SessionTrackingTest:
 
                 # Test session ending
                 ended_session = session_manager.end_session(session.id)
-                assert (
-                    ended_session.status == "completed"
-                ), "Session should be completed"
+                assert ended_session.status == "completed", "Session should be completed"
                 assert ended_session.end_time is not None, "End time should be set"
 
                 logger.info("✓ GrillingSession model tests passed")
@@ -144,18 +140,14 @@ class SessionTrackingTest:
 
                 # Check device status
                 status = test_tracker.get_session_status(device_id)
-                assert not status[
-                    "is_active"
-                ], "Should not be active with ambient temps"
+                assert not status["is_active"], "Should not be active with ambient temps"
 
                 # Simulate temperature rise (session start)
                 high_temp = base_temp + 50  # 50°F rise should trigger start detection
 
                 for i in range(15):  # Process enough readings to trigger start
                     temp = base_temp + 20 + (i * 2)  # Gradual rise
-                    test_tracker.process_temperature_reading(
-                        device_id=device_id, temperature=temp, user_id=self.test_user_id
-                    )
+                    test_tracker.process_temperature_reading(device_id=device_id, temperature=temp, user_id=self.test_user_id)
                     time.sleep(0.1)  # Small delay
 
                 # Check if potential start is detected
@@ -170,9 +162,7 @@ class SessionTrackingTest:
                 )
 
                 assert manual_session is not None, "Manual session creation failed"
-                assert (
-                    manual_session.session_type == "manual_test"
-                ), "Session type mismatch"
+                assert manual_session.session_type == "manual_test", "Session type mismatch"
 
                 # Test manual session end
                 success = test_tracker.force_end_session("manual_test_device")
@@ -241,22 +231,13 @@ class SessionTrackingTest:
                 logger.info(f"Algorithm test status: {status}")
 
                 # Verify session creation
-                active_sessions = session_manager.get_active_sessions(
-                    user_id=self.test_user_id
-                )
-                session_found = any(
-                    device_id in session.get_device_list()
-                    for session in active_sessions
-                )
+                active_sessions = session_manager.get_active_sessions(user_id=self.test_user_id)
+                session_found = any(device_id in session.get_device_list() for session in active_sessions)
 
                 if session_found:
-                    logger.info(
-                        "✓ Session detection algorithm correctly identified grilling session"
-                    )
+                    logger.info("✓ Session detection algorithm correctly identified grilling session")
                 else:
-                    logger.warning(
-                        "⚠ Session detection algorithm did not detect session (may need tuning)"
-                    )
+                    logger.warning("⚠ Session detection algorithm did not detect session (may need tuning)")
 
                 logger.info("✓ Session detection algorithm tests completed")
                 return True
@@ -332,9 +313,7 @@ class SessionTrackingTest:
 
                     # Check if session was created
                     status = session_tracker.get_session_status(device_id)
-                    logger.info(
-                        f"Simulation status for {profile}: tracked={status['recent_readings'] > 0}"
-                    )
+                    logger.info(f"Simulation status for {profile}: tracked={status['recent_readings'] > 0}")
 
                 logger.info("✓ Session simulation tests completed")
                 return True
@@ -392,13 +371,9 @@ class SessionTrackingTest:
         logger.info(f"TOTAL: {passed}/{total} tests passed")
 
         if passed == total:
-            logger.info(
-                "🎉 ALL TESTS PASSED! Session tracking system is working correctly."
-            )
+            logger.info("🎉 ALL TESTS PASSED! Session tracking system is working correctly.")
         else:
-            logger.error(
-                f"❌ {total - passed} tests failed. Please review the errors above."
-            )
+            logger.error(f"❌ {total - passed} tests failed. Please review the errors above.")
 
         return passed == total
 

@@ -153,9 +153,7 @@ def validate_react_components():
 
 def validate_database_migration():
     """Validate database migration script exists"""
-    return validate_file_exists(
-        "database-init/add_temperature_alerts_table.sql", "Database Migration Script"
-    )
+    return validate_file_exists("database-init/add_temperature_alerts_table.sql", "Database Migration Script")
 
 
 def validate_dependencies():

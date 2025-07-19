@@ -64,9 +64,7 @@ class RateLimiter:
         with self.lock:
             # Clean old requests
             self.requests[identifier] = [
-                req_time
-                for req_time in self.requests[identifier]
-                if current_time - req_time < self.window_seconds
+                req_time for req_time in self.requests[identifier] if current_time - req_time < self.window_seconds
             ]
 
             # Check if under limit
@@ -84,9 +82,7 @@ class RateLimiter:
         with self.lock:
             # Clean old requests
             self.requests[identifier] = [
-                req_time
-                for req_time in self.requests[identifier]
-                if current_time - req_time < self.window_seconds
+                req_time for req_time in self.requests[identifier] if current_time - req_time < self.window_seconds
             ]
 
             return max(0, self.max_requests - len(self.requests[identifier]))
@@ -237,9 +233,7 @@ class CredentialEncryptionService:
                         jwt_token = f.read().strip()
 
                     # Authenticate with Vault using Kubernetes auth
-                    auth_response = self.vault_client.auth.kubernetes.login(
-                        role="grill-stats-role", jwt=jwt_token
-                    )
+                    auth_response = self.vault_client.auth.kubernetes.login(role="grill-stats-role", jwt=jwt_token)
 
                     self.vault_client.token = auth_response["auth"]["client_token"]
 
@@ -247,13 +241,9 @@ class CredentialEncryptionService:
                     self.token_renewable = auth_response["auth"]["renewable"]
                     self.token_lease_duration = auth_response["auth"]["lease_duration"]
 
-                    logger.info(
-                        "Authenticated with Vault using Kubernetes service account"
-                    )
+                    logger.info("Authenticated with Vault using Kubernetes service account")
                 else:
-                    raise ValueError(
-                        "No Vault token provided and Kubernetes service account not available"
-                    )
+                    raise ValueError("No Vault token provided and Kubernetes service account not available")
 
             # Verify authentication
             if not self.vault_client.is_authenticated():
@@ -271,9 +261,7 @@ class CredentialEncryptionService:
 
         except Exception as e:
             # Log failed authentication
-            log_authentication(
-                user_id="service-account", success=False, error_message=str(e)
-            )
+            log_authentication(user_id="service-account", success=False, error_message=str(e))
 
             logger.error(f"Failed to authenticate with Vault: {e}")
             raise
@@ -287,9 +275,7 @@ class CredentialEncryptionService:
                 raise ValueError(f"Transit engine not mounted at {self.transit_path}")
 
             # Check if encryption key exists
-            key_info = self.vault_client.secrets.transit.read_key(
-                name=self.transit_key_name, mount_point=self.transit_path
-            )
+            key_info = self.vault_client.secrets.transit.read_key(name=self.transit_key_name, mount_point=self.transit_path)
 
             if not key_info:
                 raise ValueError(f"Encryption key {self.transit_key_name} not found")
@@ -300,9 +286,7 @@ class CredentialEncryptionService:
             logger.error(f"Failed to verify transit engine: {e}")
             raise
 
-    def encrypt_credentials(
-        self, email: str, password: str, user_id: str
-    ) -> EncryptedCredential:
+    def encrypt_credentials(self, email: str, password: str, user_id: str) -> EncryptedCredential:
         """Encrypt ThermoWorks credentials
 
         Args:
@@ -318,38 +302,26 @@ class CredentialEncryptionService:
         try:
             # Validate inputs
             if not self.validator.validate_user_id(user_id):
-                log_security_violation(
-                    user_id, "invalid_user_id", details={"provided_user_id": user_id}
-                )
+                log_security_violation(user_id, "invalid_user_id", details={"provided_user_id": user_id})
                 raise ValueError("Invalid user ID format")
 
             if not self.validator.validate_email(email):
                 log_security_violation(
                     user_id,
                     "invalid_email_format",
-                    details={
-                        "email_domain": (
-                            email.split("@")[1] if "@" in email else "unknown"
-                        )
-                    },
+                    details={"email_domain": (email.split("@")[1] if "@" in email else "unknown")},
                 )
                 raise ValueError("Invalid email format")
 
             if not self.validator.validate_password(password):
-                log_security_violation(
-                    user_id, "weak_password", details={"password_length": len(password)}
-                )
+                log_security_violation(user_id, "weak_password", details={"password_length": len(password)})
                 raise ValueError("Password does not meet security requirements")
 
             # Check rate limit
             if not self.rate_limiter.is_allowed(user_id):
                 log_rate_limit_exceeded(
                     user_id,
-                    details={
-                        "remaining_requests": self.rate_limiter.get_remaining_requests(
-                            user_id
-                        )
-                    },
+                    details={"remaining_requests": self.rate_limiter.get_remaining_requests(user_id)},
                 )
                 raise ValueError("Rate limit exceeded for user")
 
@@ -370,9 +342,7 @@ class CredentialEncryptionService:
             )
 
             # Get key version for metadata
-            key_info = self.vault_client.secrets.transit.read_key(
-                name=self.transit_key_name, mount_point=self.transit_path
-            )
+            key_info = self.vault_client.secrets.transit.read_key(name=self.transit_key_name, mount_point=self.transit_path)
 
             # Create metadata
             metadata = CredentialMetadata(
@@ -422,9 +392,7 @@ class CredentialEncryptionService:
             logger.error(f"Failed to encrypt credentials for user {user_id}: {e}")
             raise
 
-    def decrypt_credentials(
-        self, encrypted_credential: EncryptedCredential, user_id: str
-    ) -> PlainCredential:
+    def decrypt_credentials(self, encrypted_credential: EncryptedCredential, user_id: str) -> PlainCredential:
         """Decrypt ThermoWorks credentials
 
         Args:
@@ -439,9 +407,7 @@ class CredentialEncryptionService:
         try:
             # Validate inputs
             if not self.validator.validate_user_id(user_id):
-                log_security_violation(
-                    user_id, "invalid_user_id", details={"provided_user_id": user_id}
-                )
+                log_security_violation(user_id, "invalid_user_id", details={"provided_user_id": user_id})
                 raise ValueError("Invalid user ID format")
 
             if (
@@ -453,14 +419,8 @@ class CredentialEncryptionService:
                     user_id,
                     "invalid_encrypted_data",
                     details={
-                        "has_email": bool(
-                            encrypted_credential
-                            and encrypted_credential.encrypted_email
-                        ),
-                        "has_password": bool(
-                            encrypted_credential
-                            and encrypted_credential.encrypted_password
-                        ),
+                        "has_email": bool(encrypted_credential and encrypted_credential.encrypted_email),
+                        "has_password": bool(encrypted_credential and encrypted_credential.encrypted_password),
                     },
                 )
                 raise ValueError("Invalid encrypted credential data")
@@ -469,11 +429,7 @@ class CredentialEncryptionService:
             if not self.rate_limiter.is_allowed(user_id):
                 log_rate_limit_exceeded(
                     user_id,
-                    details={
-                        "remaining_requests": self.rate_limiter.get_remaining_requests(
-                            user_id
-                        )
-                    },
+                    details={"remaining_requests": self.rate_limiter.get_remaining_requests(user_id)},
                 )
                 raise ValueError("Rate limit exceeded for user")
 
@@ -492,17 +448,11 @@ class CredentialEncryptionService:
             )
 
             # Decode from base64
-            email = base64.b64decode(email_response["data"]["plaintext"]).decode(
-                "utf-8"
-            )
-            password = base64.b64decode(password_response["data"]["plaintext"]).decode(
-                "utf-8"
-            )
+            email = base64.b64decode(email_response["data"]["plaintext"]).decode("utf-8")
+            password = base64.b64decode(password_response["data"]["plaintext"]).decode("utf-8")
 
             # Update metadata
-            encrypted_credential.metadata.last_accessed = datetime.now(
-                timezone.utc
-            ).isoformat()
+            encrypted_credential.metadata.last_accessed = datetime.now(timezone.utc).isoformat()
             encrypted_credential.metadata.access_count += 1
 
             # Create plain credential object
@@ -554,9 +504,7 @@ class CredentialEncryptionService:
             )
 
             # Get new key information
-            key_info = self.vault_client.secrets.transit.read_key(
-                name=self.transit_key_name, mount_point=self.transit_path
-            )
+            key_info = self.vault_client.secrets.transit.read_key(name=self.transit_key_name, mount_point=self.transit_path)
 
             rotation_info = {
                 "rotated_at": datetime.now(timezone.utc).isoformat(),
@@ -573,9 +521,7 @@ class CredentialEncryptionService:
                 details=rotation_info,
             )
 
-            logger.info(
-                f"Successfully rotated key {self.transit_key_name} to version {rotation_info['new_version']}"
-            )
+            logger.info(f"Successfully rotated key {self.transit_key_name} to version {rotation_info['new_version']}")
             return rotation_info
 
         except Exception as e:
@@ -596,9 +542,7 @@ class CredentialEncryptionService:
             Dictionary with key information
         """
         try:
-            key_info = self.vault_client.secrets.transit.read_key(
-                name=self.transit_key_name, mount_point=self.transit_path
-            )
+            key_info = self.vault_client.secrets.transit.read_key(name=self.transit_key_name, mount_point=self.transit_path)
 
             return {
                 "name": self.transit_key_name,
@@ -649,9 +593,7 @@ class CredentialEncryptionService:
                 mount_point=self.transit_path,
             )
 
-            decrypted_data = base64.b64decode(
-                decrypt_response["data"]["plaintext"]
-            ).decode("utf-8")
+            decrypted_data = base64.b64decode(decrypt_response["data"]["plaintext"]).decode("utf-8")
 
             if decrypted_data != test_data:
                 return {

@@ -37,9 +37,7 @@ class EmailChannel(BaseNotificationChannel):
         self.default_from = config.get("from_email", "noreply@example.com")
         self.default_recipients = config.get("recipients", [])
 
-    async def send(
-        self, recipient: str, subject: str, body: str, channel_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def send(self, recipient: str, subject: str, body: str, channel_config: Dict[str, Any]) -> Dict[str, Any]:
         """Send email notification."""
         try:
             # Parse recipients
@@ -81,9 +79,7 @@ class EmailChannel(BaseNotificationChannel):
             logger.error(f"Error sending email: {str(e)}", exc_info=True)
             return {"success": False, "error": str(e)}
 
-    async def _send_email(
-        self, msg: MIMEMultipart, recipients: List[str], channel_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def _send_email(self, msg: MIMEMultipart, recipients: List[str], channel_config: Dict[str, Any]) -> Dict[str, Any]:
         """Send email using SMTP."""
         try:
             # Get SMTP configuration
@@ -163,9 +159,7 @@ class EmailChannel(BaseNotificationChannel):
             try:
                 test_result = await self._test_smtp_connection(config)
                 if not test_result["success"]:
-                    errors.append(
-                        f'SMTP connection test failed: {test_result["error"]}'
-                    )
+                    errors.append(f'SMTP connection test failed: {test_result["error"]}')
             except Exception as e:
                 errors.append(f"Connection test error: {str(e)}")
 
@@ -186,9 +180,7 @@ class EmailChannel(BaseNotificationChannel):
                     timeout=10,
                 )
             else:
-                server = smtplib.SMTP(
-                    smtp_config["server"], smtp_config["port"], timeout=10
-                )
+                server = smtplib.SMTP(smtp_config["server"], smtp_config["port"], timeout=10)
 
                 if smtp_config["use_tls"]:
                     context = ssl.create_default_context()

@@ -6,18 +6,11 @@ import unittest
 from unittest.mock import MagicMock, patch
 
 # Add the services directory to the path so we can import modules
-sys.path.append(
-    os.path.join(os.path.dirname(__file__), "../../services/device-service")
-)
+sys.path.append(os.path.join(os.path.dirname(__file__), "../../services/device-service"))
 
 # Import modules
 from main import app
-from rfx_gateway_client import (
-    GatewaySetupStatus,
-    GatewaySetupStep,
-    RFXGatewayClient,
-    WiFiNetwork,
-)
+from rfx_gateway_client import GatewaySetupStatus, GatewaySetupStep, RFXGatewayClient, WiFiNetwork
 
 
 class TestRFXGatewayAPI(unittest.TestCase):
@@ -43,15 +36,11 @@ class TestRFXGatewayAPI(unittest.TestCase):
         self.temp_token_file.close()
 
         # Patch the rfx_gateway_bp.rfx_gateway_client
-        self.rfx_gateway_client_patcher = patch(
-            "rfx_gateway_routes.rfx_gateway_bp.rfx_gateway_client"
-        )
+        self.rfx_gateway_client_patcher = patch("rfx_gateway_routes.rfx_gateway_bp.rfx_gateway_client")
         self.mock_rfx_client = self.rfx_gateway_client_patcher.start()
 
         # Patch the rfx_gateway_bp.thermoworks_client
-        self.thermoworks_client_patcher = patch(
-            "rfx_gateway_routes.rfx_gateway_bp.thermoworks_client"
-        )
+        self.thermoworks_client_patcher = patch("rfx_gateway_routes.rfx_gateway_bp.thermoworks_client")
         self.mock_thermoworks_client = self.thermoworks_client_patcher.start()
 
         # Set up token for authenticated endpoints
@@ -101,9 +90,7 @@ class TestRFXGatewayAPI(unittest.TestCase):
     def test_discover_gateways(self):
         """Test discovering gateways."""
         # Mock response
-        self.mock_rfx_client.discover_gateways.return_value = [
-            {"id": "001122334455", "name": "RFX Gateway 4455"}
-        ]
+        self.mock_rfx_client.discover_gateways.return_value = [{"id": "001122334455", "name": "RFX Gateway 4455"}]
 
         # Make request
         response = self.client.post("/api/gateways/discover")
@@ -133,9 +120,7 @@ class TestRFXGatewayAPI(unittest.TestCase):
         # Mock response
         self.mock_rfx_client.scan_wifi_networks.return_value = [
             WiFiNetwork(ssid="Home WiFi", signal_strength=-50, security_type="WPA2"),
-            WiFiNetwork(
-                ssid="Guest Network", signal_strength=-70, security_type="Open"
-            ),
+            WiFiNetwork(ssid="Guest Network", signal_strength=-70, security_type="Open"),
         ]
 
         # Make request

@@ -74,10 +74,7 @@ class SessionTracker:
         self.device_temp_buffers[device_id].append(reading)
 
         # Update ambient temperature if this is the first reading or device is idle
-        if (
-            device_id not in self.device_ambient_temps
-            or device_id not in self.active_session_devices
-        ):
+        if device_id not in self.device_ambient_temps or device_id not in self.active_session_devices:
             self._update_ambient_temperature(device_id)
 
         # Check for session start
@@ -124,21 +121,13 @@ class SessionTracker:
                 if temp_increase >= self.TEMP_RISE_THRESHOLD:
                     # Mark as potential start
                     if device_id not in self.potential_starts:
-                        self.potential_starts[device_id] = recent_readings[0][
-                            "timestamp"
-                        ]
-                        logger.info(
-                            f"Potential session start detected for device {device_id}"
-                        )
+                        self.potential_starts[device_id] = recent_readings[0]["timestamp"]
+                        logger.info(f"Potential session start detected for device {device_id}")
 
                     # Confirm start if sustained for enough time
-                    time_since_potential = (
-                        datetime.utcnow() - self.potential_starts[device_id]
-                    )
+                    time_since_potential = datetime.utcnow() - self.potential_starts[device_id]
                     if time_since_potential >= timedelta(minutes=10):
-                        self._start_session(
-                            device_id, self.potential_starts[device_id], user_id
-                        )
+                        self._start_session(device_id, self.potential_starts[device_id], user_id)
         else:
             # Reset potential start if temperature drops
             self.potential_starts.pop(device_id, None)
@@ -173,14 +162,10 @@ class SessionTracker:
 
                 if device_id not in self.potential_ends:
                     self.potential_ends[device_id] = datetime.utcnow()
-                    logger.info(
-                        f"Potential session end detected for device {device_id}"
-                    )
+                    logger.info(f"Potential session end detected for device {device_id}")
 
                 # Confirm end if sustained
-                time_since_potential = (
-                    datetime.utcnow() - self.potential_ends[device_id]
-                )
+                time_since_potential = datetime.utcnow() - self.potential_ends[device_id]
                 if time_since_potential >= timedelta(minutes=20):
                     self._end_session(device_id)
             else:
@@ -204,9 +189,7 @@ class SessionTracker:
             # Clear potential start tracking
             self.potential_starts.pop(device_id, None)
 
-            logger.info(
-                f"Session started for device {device_id}, session_id: {session.id}"
-            )
+            logger.info(f"Session started for device {device_id}, session_id: {session.id}")
 
             return session
 
@@ -233,9 +216,7 @@ class SessionTracker:
 
                         # Generate name if not set
                         if not ended_session.name:
-                            name = self.session_manager.generate_session_name(
-                                ended_session
-                            )
+                            name = self.session_manager.generate_session_name(ended_session)
                             self.session_manager.update_session(session.id, name=name)
 
                         logger.info(
@@ -245,9 +226,7 @@ class SessionTracker:
                     else:
                         # Cancel short sessions
                         self.session_manager.cancel_session(session.id)
-                        logger.info(
-                            f"Session cancelled for device {device_id} (too short: {duration} minutes)"
-                        )
+                        logger.info(f"Session cancelled for device {device_id} (too short: {duration} minutes)")
 
                     break
 
@@ -297,9 +276,7 @@ class SessionTracker:
         else:
             return "cooking"
 
-    def force_start_session(
-        self, device_id: str, user_id: int, session_type: str = None
-    ) -> Optional[Any]:
+    def force_start_session(self, device_id: str, user_id: int, session_type: str = None) -> Optional[Any]:
         """Manually start a session for a device"""
         try:
             session = self.session_manager.create_session(
@@ -314,9 +291,7 @@ class SessionTracker:
             return session
 
         except Exception as e:
-            logger.error(
-                f"Failed to manually start session for device {device_id}: {e}"
-            )
+            logger.error(f"Failed to manually start session for device {device_id}: {e}")
             return None
 
     def force_end_session(self, device_id: str) -> bool:
@@ -340,9 +315,7 @@ class SessionTracker:
             "buffer_status": {
                 "size": len(self.device_temp_buffers[device_id]),
                 "latest_temp": (
-                    self.device_temp_buffers[device_id][-1]["temperature"]
-                    if self.device_temp_buffers[device_id]
-                    else None
+                    self.device_temp_buffers[device_id][-1]["temperature"] if self.device_temp_buffers[device_id] else None
                 ),
                 "latest_time": (
                     self.device_temp_buffers[device_id][-1]["timestamp"].isoformat()
@@ -378,14 +351,9 @@ class SessionTracker:
 
     def get_all_session_statuses(self) -> Dict:
         """Get session status for all tracked devices"""
-        return {
-            device_id: self.get_session_status(device_id)
-            for device_id in self.device_temp_buffers.keys()
-        }
+        return {device_id: self.get_session_status(device_id) for device_id in self.device_temp_buffers.keys()}
 
-    def simulate_temperature_data(
-        self, device_id: str, user_id: int, session_profile: str = "grilling"
-    ):
+    def simulate_temperature_data(self, device_id: str, user_id: int, session_profile: str = "grilling"):
         """
         Simulate temperature data for testing session detection
 
@@ -398,9 +366,7 @@ class SessionTracker:
             logger.warning("Simulation attempted but mock mode is disabled")
             return
 
-        logger.info(
-            f"Starting temperature simulation for {device_id} with profile: {session_profile}"
-        )
+        logger.info(f"Starting temperature simulation for {device_id} with profile: {session_profile}")
 
         # Define temperature profiles
         profiles = {

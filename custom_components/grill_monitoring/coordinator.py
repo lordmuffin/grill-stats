@@ -98,9 +98,7 @@ class GrillMonitoringCoordinator(DataUpdateCoordinator):
             _LOGGER.error(f"Error fetching devices: {err}")
             return []
 
-    async def _fetch_current_temperature(
-        self, device_id: str
-    ) -> Optional[Dict[str, Any]]:
+    async def _fetch_current_temperature(self, device_id: str) -> Optional[Dict[str, Any]]:
         """Fetch current temperature data for a device."""
         url = f"{self.temperature_service_url}{ENDPOINT_CURRENT_TEMPERATURE.format(device_id=device_id)}"
 
@@ -110,9 +108,7 @@ class GrillMonitoringCoordinator(DataUpdateCoordinator):
                     data = await response.json()
                     return data.get("data")
                 else:
-                    _LOGGER.debug(
-                        f"No temperature data for device {device_id}: {response.status}"
-                    )
+                    _LOGGER.debug(f"No temperature data for device {device_id}: {response.status}")
                     return None
         except aiohttp.ClientError as err:
             _LOGGER.error(f"Error fetching temperature for device {device_id}: {err}")
@@ -128,9 +124,7 @@ class GrillMonitoringCoordinator(DataUpdateCoordinator):
                     data = await response.json()
                     return data.get("health")
                 else:
-                    _LOGGER.debug(
-                        f"No health data for device {device_id}: {response.status}"
-                    )
+                    _LOGGER.debug(f"No health data for device {device_id}: {response.status}")
                     return None
         except aiohttp.ClientError as err:
             _LOGGER.error(f"Error fetching health for device {device_id}: {err}")
@@ -168,9 +162,7 @@ class GrillMonitoringCoordinator(DataUpdateCoordinator):
         """Get data for a specific device."""
         return self.data.get(device_id) if self.data else None
 
-    def get_temperature_data(
-        self, device_id: str, probe_id: Optional[str] = None
-    ) -> Optional[Dict[str, Any]]:
+    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """Get temperature data for a specific device and probe."""
         device_data = self.get_device_data(device_id)
         if not device_data:

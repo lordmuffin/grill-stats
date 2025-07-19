@@ -137,9 +137,7 @@ class TemperatureManager:
             success = self.client.write_points([data_point])
 
             if success:
-                logger.debug(
-                    "Temperature reading stored", device_id=reading_data["device_id"]
-                )
+                logger.debug("Temperature reading stored", device_id=reading_data["device_id"])
             else:
                 logger.warning(
                     "Failed to store temperature reading",
@@ -169,9 +167,7 @@ class TemperatureManager:
                         "unit": reading_data.get("unit", "F"),
                     },
                     "fields": {"temperature": float(reading_data["temperature"])},
-                    "time": reading_data.get(
-                        "timestamp", datetime.utcnow().isoformat()
-                    ),
+                    "time": reading_data.get("timestamp", datetime.utcnow().isoformat()),
                 }
 
                 # Add probe_id if present
@@ -401,11 +397,7 @@ class TemperatureManager:
                         "probe_id": probe_id,
                         "alert_type": "high_temperature",
                         "threshold": threshold_high,
-                        "severity": (
-                            "warning"
-                            if point["temperature"] < threshold_high + 50
-                            else "critical"
-                        ),
+                        "severity": ("warning" if point["temperature"] < threshold_high + 50 else "critical"),
                     }
                 )
 
@@ -427,14 +419,10 @@ class TemperatureManager:
             # Sort by timestamp
             alerts.sort(key=lambda x: x["timestamp"], reverse=True)
 
-            logger.debug(
-                "Temperature alerts retrieved", device_id=device_id, count=len(alerts)
-            )
+            logger.debug("Temperature alerts retrieved", device_id=device_id, count=len(alerts))
 
             return alerts
 
         except Exception as e:
-            logger.error(
-                "Error retrieving temperature alerts", device_id=device_id, error=str(e)
-            )
+            logger.error("Error retrieving temperature alerts", device_id=device_id, error=str(e))
             return []

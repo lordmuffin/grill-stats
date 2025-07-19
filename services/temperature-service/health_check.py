@@ -25,9 +25,7 @@ def check_health(base_url: str = "http://localhost:8080") -> bool:
 
         print("\nDependencies:")
         for dep, status in health_data.get("dependencies", {}).items():
-            status_icon = (
-                "✅" if status == "healthy" else "⚠️" if status == "degraded" else "❌"
-            )
+            status_icon = "✅" if status == "healthy" else "⚠️" if status == "degraded" else "❌"
             print(f"  {dep}: {status_icon} {status}")
 
         # Test temperature endpoint

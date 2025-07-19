@@ -86,18 +86,14 @@ class CredentialIntegrationService:
     def _test_connection(self):
         """Test connection to encryption service"""
         try:
-            response = self.session.get(
-                f"{self.encryption_service_url}/health", timeout=5
-            )
+            response = self.session.get(f"{self.encryption_service_url}/health", timeout=5)
             response.raise_for_status()
             health_data = response.json()
 
             if health_data.get("status") == "healthy":
                 logger.info("Successfully connected to encryption service")
             else:
-                raise Exception(
-                    f"Encryption service is unhealthy: {health_data.get('error', 'Unknown error')}"
-                )
+                raise Exception(f"Encryption service is unhealthy: {health_data.get('error', 'Unknown error')}")
         except Exception as e:
             logger.error(f"Failed to connect to encryption service: {e}")
             raise
@@ -126,9 +122,7 @@ class CredentialIntegrationService:
 
         raise Exception("Max retries exceeded")
 
-    def encrypt_credentials(
-        self, email: str, password: str, user_id: int
-    ) -> EncryptedCredential:
+    def encrypt_credentials(self, email: str, password: str, user_id: int) -> EncryptedCredential:
         """Encrypt ThermoWorks credentials
 
         Args:
@@ -145,9 +139,7 @@ class CredentialIntegrationService:
             response = self._make_request("POST", "/encrypt", data)
 
             if response.get("status") != "success":
-                raise Exception(
-                    f"Encryption failed: {response.get('error', 'Unknown error')}"
-                )
+                raise Exception(f"Encryption failed: {response.get('error', 'Unknown error')}")
 
             encrypted_credential_data = response["encrypted_credential"]
             return EncryptedCredential.from_dict(encrypted_credential_data)
@@ -156,9 +148,7 @@ class CredentialIntegrationService:
             logger.error(f"Failed to encrypt credentials for user {user_id}: {e}")
             raise
 
-    def decrypt_credentials(
-        self, encrypted_credential: EncryptedCredential, user_id: int
-    ) -> Tuple[str, str]:
+    def decrypt_credentials(self, encrypted_credential: EncryptedCredential, user_id: int) -> Tuple[str, str]:
         """Decrypt ThermoWorks credentials
 
         Args:
@@ -177,9 +167,7 @@ class CredentialIntegrationService:
             response = self._make_request("POST", "/decrypt", data)
 
             if response.get("status") != "success":
-                raise Exception(
-                    f"Decryption failed: {response.get('error', 'Unknown error')}"
-                )
+                raise Exception(f"Decryption failed: {response.get('error', 'Unknown error')}")
 
             credentials = response["credentials"]
             return credentials["email"], credentials["password"]
@@ -210,9 +198,7 @@ class CredentialIntegrationService:
             result = response.json()
 
             if result.get("status") != "success":
-                raise Exception(
-                    f"Key rotation failed: {result.get('error', 'Unknown error')}"
-                )
+                raise Exception(f"Key rotation failed: {result.get('error', 'Unknown error')}")
 
             return result["rotation_info"]
 
@@ -230,9 +216,7 @@ class CredentialIntegrationService:
             response = self._make_request("GET", "/key-info")
 
             if response.get("status") != "success":
-                raise Exception(
-                    f"Failed to get key info: {response.get('error', 'Unknown error')}"
-                )
+                raise Exception(f"Failed to get key info: {response.get('error', 'Unknown error')}")
 
             return response["key_info"]
 
@@ -253,9 +237,7 @@ class CredentialIntegrationService:
             response = self._make_request("GET", f"/rate-limit/{user_id}")
 
             if response.get("status") != "success":
-                raise Exception(
-                    f"Rate limit check failed: {response.get('error', 'Unknown error')}"
-                )
+                raise Exception(f"Rate limit check failed: {response.get('error', 'Unknown error')}")
 
             return response["rate_limit"]
 
@@ -295,9 +277,7 @@ class DatabaseCredentialManager:
         self.db = db_connection
         self.credential_service = credential_service
 
-    def store_encrypted_credentials(
-        self, user_id: int, email: str, password: str
-    ) -> bool:
+    def store_encrypted_credentials(self, user_id: int, email: str, password: str) -> bool:
         """Store encrypted ThermoWorks credentials in database
 
         Args:
@@ -310,9 +290,7 @@ class DatabaseCredentialManager:
         """
         try:
             # Encrypt the credentials
-            encrypted_credential = self.credential_service.encrypt_credentials(
-                email, password, user_id
-            )
+            encrypted_credential = self.credential_service.encrypt_credentials(email, password, user_id)
 
             # Store in database
             cursor = self.db.cursor()
@@ -377,14 +355,10 @@ class DatabaseCredentialManager:
         except Exception as e:
             self.db.rollback()
             self._log_credential_access(user_id, "encrypt", False, str(e))
-            logger.error(
-                f"Failed to store encrypted credentials for user {user_id}: {e}"
-            )
+            logger.error(f"Failed to store encrypted credentials for user {user_id}: {e}")
             return False
 
-    def get_decrypted_credentials(
-        self, user_id: int
-    ) -> Tuple[Optional[str], Optional[str]]:
+    def get_decrypted_credentials(self, user_id: int) -> Tuple[Optional[str], Optional[str]]:
         """Get decrypted ThermoWorks credentials from database
 
         Args:
@@ -424,9 +398,7 @@ class DatabaseCredentialManager:
             )
 
             # Decrypt credentials
-            email, password = self.credential_service.decrypt_credentials(
-                encrypted_credential, user_id
-            )
+            email, password = self.credential_service.decrypt_credentials(encrypted_credential, user_id)
 
             # Update access metadata
             self._update_access_metadata(user_id, encrypted_credential)
@@ -441,17 +413,13 @@ class DatabaseCredentialManager:
             logger.error(f"Failed to get decrypted credentials for user {user_id}: {e}")
             return None, None
 
-    def _update_access_metadata(
-        self, user_id: int, encrypted_credential: EncryptedCredential
-    ):
+    def _update_access_metadata(self, user_id: int, encrypted_credential: EncryptedCredential):
         """Update access metadata after successful decryption"""
         try:
             cursor = self.db.cursor()
 
             # Update metadata
-            encrypted_credential.metadata.last_accessed = datetime.now(
-                timezone.utc
-            ).isoformat()
+            encrypted_credential.metadata.last_accessed = datetime.now(timezone.utc).isoformat()
             encrypted_credential.metadata.access_count += 1
 
             cursor.execute(
@@ -469,9 +437,7 @@ class DatabaseCredentialManager:
         except Exception as e:
             logger.error(f"Failed to update access metadata for user {user_id}: {e}")
 
-    def _log_credential_access(
-        self, user_id: int, action: str, success: bool, details: str = None
-    ):
+    def _log_credential_access(self, user_id: int, action: str, success: bool, details: str = None):
         """Log credential access operation"""
         try:
             cursor = self.db.cursor()
@@ -536,9 +502,7 @@ class DatabaseCredentialManager:
             return True
 
         except Exception as e:
-            logger.error(
-                f"Failed to increment validation attempts for user {user_id}: {e}"
-            )
+            logger.error(f"Failed to increment validation attempts for user {user_id}: {e}")
             return False
 
     def deactivate_credentials(self, user_id: int) -> bool:

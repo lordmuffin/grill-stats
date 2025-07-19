@@ -97,9 +97,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
             return jsonify(health_status), 200
         elif all(status in ["healthy", "unavailable"] for status in dep_statuses):
             health_status["overall_status"] = "degraded"
-            health_status["message"] = (
-                "Service operational, some dependencies unavailable (expected in test environment)"
-            )
+            health_status["message"] = "Service operational, some dependencies unavailable (expected in test environment)"
             logger.warning("Dependencies unavailable (expected in test)")
             return jsonify(health_status), 200
         else:
@@ -192,16 +190,12 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if not validated_readings:
                     return (
-                        jsonify(
-                            {"status": "error", "message": "No valid readings provided"}
-                        ),
+                        jsonify({"status": "error", "message": "No valid readings provided"}),
                         400,
                     )
 
                 # Store readings
-                stored_count = timescale_manager.store_batch_temperature_readings(
-                    validated_readings
-                )
+                stored_count = timescale_manager.store_batch_temperature_readings(validated_readings)
 
                 logger.info("Batch temperature data stored", count=stored_count)
                 return jsonify(
@@ -245,9 +239,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if start_time_str:
                     try:
-                        start_time = datetime.fromisoformat(
-                            start_time_str.replace("Z", "+00:00")
-                        )
+                        start_time = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
                     except ValueError:
                         return (
                             jsonify(
@@ -264,9 +256,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if end_time_str:
                     try:
-                        end_time = datetime.fromisoformat(
-                            end_time_str.replace("Z", "+00:00")
-                        )
+                        end_time = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
                     except ValueError:
                         return (
                             jsonify(
@@ -347,9 +337,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if not user_id:
                     return (
-                        jsonify(
-                            {"status": "error", "message": "Authentication required"}
-                        ),
+                        jsonify({"status": "error", "message": "Authentication required"}),
                         401,
                     )
 
@@ -376,9 +364,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if start_time_str:
                     try:
-                        start_time = datetime.fromisoformat(
-                            start_time_str.replace("Z", "+00:00")
-                        )
+                        start_time = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
                     except ValueError:
                         return (
                             jsonify(
@@ -395,9 +381,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if end_time_str:
                     try:
-                        end_time = datetime.fromisoformat(
-                            end_time_str.replace("Z", "+00:00")
-                        )
+                        end_time = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
                     except ValueError:
                         return (
                             jsonify(
@@ -483,9 +467,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
                 )
 
             except Exception as e:
-                logger.error(
-                    "Failed to get device history", device_id=device_id, error=str(e)
-                )
+                logger.error("Failed to get device history", device_id=device_id, error=str(e))
                 return jsonify({"status": "error", "message": str(e)}), 500
 
     # Temperature statistics endpoint
@@ -507,9 +489,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if start_time_str:
                     try:
-                        start_time = datetime.fromisoformat(
-                            start_time_str.replace("Z", "+00:00")
-                        )
+                        start_time = datetime.fromisoformat(start_time_str.replace("Z", "+00:00"))
                     except ValueError:
                         return (
                             jsonify(
@@ -526,9 +506,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
 
                 if end_time_str:
                     try:
-                        end_time = datetime.fromisoformat(
-                            end_time_str.replace("Z", "+00:00")
-                        )
+                        end_time = datetime.fromisoformat(end_time_str.replace("Z", "+00:00"))
                     except ValueError:
                         return (
                             jsonify(
@@ -603,9 +581,7 @@ def register_routes(app, timescale_manager: TimescaleManager):
                     501,
                 )
             except Exception as e:
-                logger.error(
-                    "Failed to get cooking session", session_id=session_id, error=str(e)
-                )
+                logger.error("Failed to get cooking session", session_id=session_id, error=str(e))
                 return jsonify({"status": "error", "message": str(e)}), 500
 
     @app.route("/api/sessions", methods=["GET"])

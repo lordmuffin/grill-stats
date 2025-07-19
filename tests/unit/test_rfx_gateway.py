@@ -11,13 +11,7 @@ from . import mock_bluetooth
 
 sys.modules["bluetooth"] = mock_bluetooth
 
-from rfx_gateway_client import (
-    GatewaySetupStatus,
-    GatewaySetupStep,
-    RFXGatewayClient,
-    RFXGatewayError,
-    WiFiNetwork,
-)
+from rfx_gateway_client import GatewaySetupStatus, GatewaySetupStep, RFXGatewayClient, RFXGatewayError, WiFiNetwork
 
 
 class TestRFXGatewayClient(unittest.TestCase):
@@ -61,18 +55,14 @@ class TestRFXGatewayClient(unittest.TestCase):
 
         # Create a setup status
         gateway_id = "001122334455"
-        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
-            gateway_id=gateway_id
-        )
+        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id)
 
         # Connect to the gateway
         result = self.gateway_client.connect_to_gateway(gateway_id)
 
         # Verify connection was successful
         self.assertTrue(result)
-        self.assertTrue(
-            self.gateway_client.active_setups[gateway_id].connected_to_bluetooth
-        )
+        self.assertTrue(self.gateway_client.active_setups[gateway_id].connected_to_bluetooth)
 
         # Verify socket connection was attempted
         mock_socket.connect.assert_called_once()
@@ -95,9 +85,7 @@ class TestRFXGatewayClient(unittest.TestCase):
 
         # Create a setup status and connect
         gateway_id = "001122334455"
-        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
-            gateway_id=gateway_id, connected_to_bluetooth=True
-        )
+        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id, connected_to_bluetooth=True)
         self.gateway_client.connected_devices[gateway_id] = mock_socket
 
         # Scan for networks
@@ -128,23 +116,17 @@ class TestRFXGatewayClient(unittest.TestCase):
         self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
             gateway_id=gateway_id,
             connected_to_bluetooth=True,
-            wifi_networks=[
-                WiFiNetwork(ssid="Home WiFi", signal_strength=-50, security_type="WPA2")
-            ],
+            wifi_networks=[WiFiNetwork(ssid="Home WiFi", signal_strength=-50, security_type="WPA2")],
         )
         self.gateway_client.connected_devices[gateway_id] = mock_socket
 
         # Configure Wi-Fi
-        result = self.gateway_client.configure_wifi(
-            gateway_id, "Home WiFi", "password123", "WPA2"
-        )
+        result = self.gateway_client.configure_wifi(gateway_id, "Home WiFi", "password123", "WPA2")
 
         # Verify configuration was successful
         self.assertTrue(result)
         self.assertTrue(self.gateway_client.active_setups[gateway_id].wifi_connected)
-        self.assertEqual(
-            self.gateway_client.active_setups[gateway_id].selected_wifi, "Home WiFi"
-        )
+        self.assertEqual(self.gateway_client.active_setups[gateway_id].selected_wifi, "Home WiFi")
 
         # Verify command was sent
         mock_socket.send.assert_called_once()
@@ -156,9 +138,7 @@ class TestRFXGatewayClient(unittest.TestCase):
 
         # Create a setup status with Wi-Fi connected
         gateway_id = "001122334455"
-        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
-            gateway_id=gateway_id, wifi_connected=True
-        )
+        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id, wifi_connected=True)
 
         # Link to account
         result = self.gateway_client.link_to_thermoworks_account(gateway_id)
@@ -174,9 +154,7 @@ class TestRFXGatewayClient(unittest.TestCase):
         """Test completing setup."""
         # Create a setup status with cloud linked
         gateway_id = "001122334455"
-        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
-            gateway_id=gateway_id, cloud_linked=True
-        )
+        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id, cloud_linked=True)
 
         # Complete setup
         result = self.gateway_client.complete_setup(gateway_id)
@@ -205,9 +183,7 @@ class TestRFXGatewayClient(unittest.TestCase):
         """Test cancelling setup."""
         # Create a setup status and connect
         gateway_id = "001122334455"
-        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
-            gateway_id=gateway_id
-        )
+        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id)
         self.gateway_client.connected_devices[gateway_id] = MagicMock()
 
         # Cancel setup
@@ -221,9 +197,7 @@ class TestRFXGatewayClient(unittest.TestCase):
         """Test cleanup."""
         # Create a setup status and connect
         gateway_id = "001122334455"
-        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(
-            gateway_id=gateway_id
-        )
+        self.gateway_client.active_setups[gateway_id] = GatewaySetupStatus(gateway_id=gateway_id)
         self.gateway_client.connected_devices[gateway_id] = MagicMock()
 
         # Cleanup

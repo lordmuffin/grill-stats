@@ -31,9 +31,7 @@ import requests
 import schedule
 
 # Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -127,9 +125,7 @@ class VaultKeyManager:
 
             # Perform rotation
             if not self.config.dry_run:
-                self.vault_client.secrets.transit.rotate_key(
-                    name=self.config.key_name, mount_point=self.config.transit_path
-                )
+                self.vault_client.secrets.transit.rotate_key(name=self.config.key_name, mount_point=self.config.transit_path)
 
             # Get new key info
             new_key_info = self.get_key_info()
@@ -158,9 +154,7 @@ class VaultKeyManager:
 
             if str(latest_version) in keys:
                 creation_time = keys[str(latest_version)]["creation_time"]
-                creation_dt = datetime.fromisoformat(
-                    creation_time.replace("Z", "+00:00")
-                )
+                creation_dt = datetime.fromisoformat(creation_time.replace("Z", "+00:00"))
                 return datetime.now(timezone.utc) - creation_dt
             else:
                 return timedelta(days=0)
@@ -200,9 +194,7 @@ class VaultKeyManager:
                 mount_point=self.config.transit_path,
             )
 
-            decrypted_data = base64.b64decode(
-                decrypt_response["data"]["plaintext"]
-            ).decode()
+            decrypted_data = base64.b64decode(decrypt_response["data"]["plaintext"]).decode()
 
             if decrypted_data == test_data:
                 return {
@@ -250,14 +242,10 @@ class KeyRotationScheduler:
         self.running = True
 
         # Schedule regular rotation
-        schedule.every(self.config.rotation_interval_hours).hours.do(
-            self._scheduled_rotation
-        )
+        schedule.every(self.config.rotation_interval_hours).hours.do(self._scheduled_rotation)
 
         # Schedule health checks
-        schedule.every(self.config.health_check_interval_minutes).minutes.do(
-            self._health_check
-        )
+        schedule.every(self.config.health_check_interval_minutes).minutes.do(self._health_check)
 
         # Log service start
         self._log_event(
@@ -361,17 +349,13 @@ class KeyRotationScheduler:
         # Check age-based rotation
         key_age = self.vault_manager.get_key_age()
         if key_age.days >= self.config.max_key_age_days:
-            logger.info(
-                f"Key age ({key_age.days} days) exceeds maximum ({self.config.max_key_age_days} days)"
-            )
+            logger.info(f"Key age ({key_age.days} days) exceeds maximum ({self.config.max_key_age_days} days)")
             return True
 
         # Check usage-based rotation
         usage_count = self.vault_manager.get_key_usage_count()
         if usage_count >= self.config.max_usage_count:
-            logger.info(
-                f"Key usage count ({usage_count}) exceeds maximum ({self.config.max_usage_count})"
-            )
+            logger.info(f"Key usage count ({usage_count}) exceeds maximum ({self.config.max_usage_count})")
             return True
 
         return False
@@ -425,10 +409,7 @@ class KeyRotationScheduler:
             backup_dir = Path(self.config.backup_path)
             backup_dir.mkdir(parents=True, exist_ok=True)
 
-            backup_file = (
-                backup_dir
-                / f"key-rotation-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
-            )
+            backup_file = backup_dir / f"key-rotation-{datetime.now().strftime('%Y%m%d-%H%M%S')}.json"
 
             backup_data = {
                 "rotation_info": rotation_info,
@@ -460,9 +441,7 @@ class KeyRotationScheduler:
             "key_age_days": key_age.days,
             "last_health_check": self.last_health_check,
             "rotation_events_count": len(self.rotation_events),
-            "last_rotation": (
-                self.rotation_events[-1].timestamp if self.rotation_events else None
-            ),
+            "last_rotation": (self.rotation_events[-1].timestamp if self.rotation_events else None),
         }
 
 
@@ -485,35 +464,24 @@ def load_config(config_file: str) -> KeyRotationConfig:
             notification_webhook=os.getenv("NOTIFICATION_WEBHOOK"),
             backup_enabled=os.getenv("BACKUP_ENABLED", "true").lower() == "true",
             backup_path=os.getenv("BACKUP_PATH", "/var/backups/vault-keys"),
-            health_check_interval_minutes=int(
-                os.getenv("HEALTH_CHECK_INTERVAL_MINUTES", "60")
-            ),
-            monitoring_enabled=os.getenv("MONITORING_ENABLED", "true").lower()
-            == "true",
+            health_check_interval_minutes=int(os.getenv("HEALTH_CHECK_INTERVAL_MINUTES", "60")),
+            monitoring_enabled=os.getenv("MONITORING_ENABLED", "true").lower() == "true",
             dry_run=os.getenv("DRY_RUN", "false").lower() == "true",
         )
 
 
 def main():
     """Main function"""
-    parser = argparse.ArgumentParser(
-        description="Automated key rotation for Vault Transit Engine"
-    )
+    parser = argparse.ArgumentParser(description="Automated key rotation for Vault Transit Engine")
     parser.add_argument(
         "--config",
         "-c",
         default="/etc/grill-stats/key-rotation.json",
         help="Configuration file path",
     )
-    parser.add_argument(
-        "--rotate", "-r", action="store_true", help="Perform immediate key rotation"
-    )
-    parser.add_argument(
-        "--status", "-s", action="store_true", help="Show current status"
-    )
-    parser.add_argument(
-        "--health-check", "-h", action="store_true", help="Perform health check"
-    )
+    parser.add_argument("--rotate", "-r", action="store_true", help="Perform immediate key rotation")
+    parser.add_argument("--status", "-s", action="store_true", help="Show current status")
+    parser.add_argument("--health-check", "-h", action="store_true", help="Perform health check")
     parser.add_argument("--dry-run", "-d", action="store_true", help="Dry run mode")
 
     args = parser.parse_args()

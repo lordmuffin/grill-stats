@@ -10,11 +10,7 @@ from sqlalchemy import and_, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ..models.alert_models import Alert, NotificationChannel
-from ..models.notification_models import (
-    NotificationHistory,
-    NotificationPriority,
-    NotificationStatus,
-)
+from ..models.notification_models import NotificationHistory, NotificationPriority, NotificationStatus
 from .discord_channel import DiscordChannel
 from .email_channel import EmailChannel
 from .push_channel import PushChannel
@@ -144,9 +140,7 @@ class NotificationManager:
             await self.db.commit()
 
             # Prepare notification data
-            notification_data = await self._prepare_notification_data(
-                alert, channels[0], template_variables
-            )
+            notification_data = await self._prepare_notification_data(alert, channels[0], template_variables)
 
             # Add to queue with priority
             queue_item = {
@@ -166,8 +160,7 @@ class NotificationManager:
                 "status": "queued",
                 "notification_id": notification.id,
                 "channel": channel_type,
-                "estimated_delivery": datetime.utcnow()
-                + timedelta(seconds=delay_seconds + 10),
+                "estimated_delivery": datetime.utcnow() + timedelta(seconds=delay_seconds + 10),
             }
 
         except Exception as e:
@@ -196,9 +189,7 @@ class NotificationManager:
 
         return results
 
-    async def _get_notification_channels(
-        self, channel_type: str
-    ) -> List[NotificationChannel]:
+    async def _get_notification_channels(self, channel_type: str) -> List[NotificationChannel]:
         """Get configured notification channels for a type."""
         result = await self.db.execute(
             select(NotificationChannel).where(
@@ -265,9 +256,7 @@ class NotificationManager:
             "channel_config": channel.configuration,
         }
 
-    async def _get_notification_template(
-        self, channel: NotificationChannel
-    ) -> Dict[str, str]:
+    async def _get_notification_template(self, channel: NotificationChannel) -> Dict[str, str]:
         """Get notification template for channel."""
         # Try to get custom template from database
         # For now, return default templates
@@ -476,9 +465,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
                 await self._process_single_notification(notification_item)
 
             except Exception as e:
-                logger.error(
-                    f"Error processing notification queue: {str(e)}", exc_info=True
-                )
+                logger.error(f"Error processing notification queue: {str(e)}", exc_info=True)
                 await asyncio.sleep(1)
 
     async def _process_single_notification(self, notification_item: Dict[str, Any]):
@@ -550,10 +537,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
                 self.metrics["channel_performance"][channel_type]["failed"] += 1
 
             # Retry logic for failed notifications
-            if (
-                not result["success"]
-                and notification.attempts < notification.max_attempts
-            ):
+            if not result["success"] and notification.attempts < notification.max_attempts:
                 await self._schedule_retry(notification_item)
 
         except Exception as e:
@@ -562,9 +546,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
     async def _schedule_retry(self, notification_item: Dict[str, Any]):
         """Schedule retry for failed notification."""
         # Exponential backoff
-        delay = min(
-            300, 30 * (2 ** notification_item.get("retry_count", 0))
-        )  # Max 5 min
+        delay = min(300, 30 * (2 ** notification_item.get("retry_count", 0)))  # Max 5 min
 
         # Add retry information
         notification_item["retry_count"] = notification_item.get("retry_count", 0) + 1
@@ -599,9 +581,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
                     channel_handler = self.channels[notification.channel_type]
 
                     if hasattr(channel_handler, "check_delivery_status"):
-                        status = await channel_handler.check_delivery_status(
-                            notification.id, notification.response_data
-                        )
+                        status = await channel_handler.check_delivery_status(notification.id, notification.response_data)
 
                         if status == "delivered":
                             notification.status = NotificationStatus.DELIVERED
@@ -626,10 +606,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
             "total_sent": self.metrics["notifications_sent"],
             "total_delivered": self.metrics["notifications_delivered"],
             "total_failed": self.metrics["notifications_failed"],
-            "delivery_rate": (
-                self.metrics["notifications_delivered"]
-                / max(self.metrics["notifications_sent"], 1)
-            ),
+            "delivery_rate": (self.metrics["notifications_delivered"] / max(self.metrics["notifications_sent"], 1)),
             "channel_performance": self.metrics["channel_performance"],
         }
 
@@ -639,12 +616,8 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
                     "average_delivery_time": sum(delivery_times) / len(delivery_times),
                     "max_delivery_time": max(delivery_times),
                     "min_delivery_time": min(delivery_times),
-                    "p95_delivery_time": sorted(delivery_times)[
-                        int(len(delivery_times) * 0.95)
-                    ],
-                    "p99_delivery_time": sorted(delivery_times)[
-                        int(len(delivery_times) * 0.99)
-                    ],
+                    "p95_delivery_time": sorted(delivery_times)[int(len(delivery_times) * 0.95)],
+                    "p99_delivery_time": sorted(delivery_times)[int(len(delivery_times) * 0.99)],
                 }
             )
 
@@ -699,9 +672,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
             return {"success": False, "error": "Alert not found"}
 
         # Resend notification
-        result = await self.send_notification(
-            alert=alert, channel_type=notification.channel_type, priority="normal"
-        )
+        result = await self.send_notification(alert=alert, channel_type=notification.channel_type, priority="normal")
 
         return {"success": True, "result": result}
 
@@ -709,11 +680,7 @@ View in dashboard: {{dashboard_url}}/alerts/{{alert.id}}
         """Clean up old notification history."""
         cutoff_date = datetime.utcnow() - timedelta(days=days)
 
-        result = await self.db.execute(
-            select(NotificationHistory).where(
-                NotificationHistory.created_at < cutoff_date
-            )
-        )
+        result = await self.db.execute(select(NotificationHistory).where(NotificationHistory.created_at < cutoff_date))
 
         old_notifications = result.scalars().all()
 

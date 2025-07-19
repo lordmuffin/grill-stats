@@ -80,9 +80,7 @@ async def startup_event():
         consumer_manager = ConsumerManager(config.kafka_config)
 
         # Initialize processors
-        temperature_aggregator = TemperatureAggregationService(
-            producer_manager, config.redis_config
-        )
+        temperature_aggregator = TemperatureAggregationService(producer_manager, config.redis_config)
         anomaly_detector = AnomalyDetector(producer_manager, config.redis_config)
 
         # Start background tasks
@@ -183,22 +181,12 @@ async def get_status():
         return {
             "service": "data-pipeline",
             "version": "1.0.0",
-            "kafka_status": (
-                await consumer_manager.get_status()
-                if consumer_manager
-                else "not_initialized"
-            ),
+            "kafka_status": (await consumer_manager.get_status() if consumer_manager else "not_initialized"),
             "processor_status": {
                 "temperature_aggregator": (
-                    temperature_aggregator.get_status()
-                    if temperature_aggregator
-                    else "not_initialized"
+                    temperature_aggregator.get_status() if temperature_aggregator else "not_initialized"
                 ),
-                "anomaly_detector": (
-                    anomaly_detector.get_status()
-                    if anomaly_detector
-                    else "not_initialized"
-                ),
+                "anomaly_detector": (anomaly_detector.get_status() if anomaly_detector else "not_initialized"),
             },
             "metrics": metrics.get_summary(),
         }
@@ -215,9 +203,7 @@ async def trigger_sync():
             await temperature_aggregator.trigger_sync()
             return {"status": "sync_triggered"}
         else:
-            raise HTTPException(
-                status_code=503, detail="Temperature aggregator not initialized"
-            )
+            raise HTTPException(status_code=503, detail="Temperature aggregator not initialized")
     except Exception as e:
         logger.error("Manual sync trigger failed", error=str(e))
         raise HTTPException(status_code=500, detail="Sync trigger failed")
@@ -231,9 +217,7 @@ async def retrain_anomaly_detector():
             await anomaly_detector.retrain_model()
             return {"status": "retraining_started"}
         else:
-            raise HTTPException(
-                status_code=503, detail="Anomaly detector not initialized"
-            )
+            raise HTTPException(status_code=503, detail="Anomaly detector not initialized")
     except Exception as e:
         logger.error("Anomaly detector retrain failed", error=str(e))
         raise HTTPException(status_code=500, detail="Retrain failed")
@@ -255,6 +239,4 @@ if __name__ == "__main__":
     logging.basicConfig(level=getattr(logging, log_level))
 
     # Run the FastAPI app
-    uvicorn.run(
-        app, host="0.0.0.0", port=8000, log_level=log_level.lower(), access_log=True
-    )
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level=log_level.lower(), access_log=True)

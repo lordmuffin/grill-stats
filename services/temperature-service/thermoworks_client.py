@@ -28,14 +28,10 @@ class ThermoWorksClient:
                 "on",
             )
 
-        self.mock_mode = (
-            mock_mode and not os.getenv("FLASK_ENV", "").lower() == "production"
-        )
+        self.mock_mode = mock_mode and not os.getenv("FLASK_ENV", "").lower() == "production"
 
         if self.mock_mode:
-            logger.info(
-                "ThermoWorks temperature service client initialized in MOCK MODE"
-            )
+            logger.info("ThermoWorks temperature service client initialized in MOCK MODE")
             # Import and initialize mock service
             try:
                 import sys
@@ -49,9 +45,7 @@ class ThermoWorksClient:
                 self.mock_mode = False
                 self.mock_service = None
         else:
-            logger.info(
-                "ThermoWorks temperature service client initialized in LIVE MODE"
-            )
+            logger.info("ThermoWorks temperature service client initialized in LIVE MODE")
             self.mock_service = None
 
         # Initialize real session for non-mock mode
@@ -65,15 +59,11 @@ class ThermoWorksClient:
             if api_key:
                 headers["Authorization"] = f"Bearer {api_key}"
             else:
-                logger.warning(
-                    "ThermoWorks client initialized without API key, will return mock data"
-                )
+                logger.warning("ThermoWorks client initialized without API key, will return mock data")
 
             self.session.headers.update(headers)
 
-    def get_temperature_data(
-        self, device_id: str, probe_id: Optional[str] = None
-    ) -> Dict:
+    def get_temperature_data(self, device_id: str, probe_id: Optional[str] = None) -> Dict:
         """Get current temperature data from ThermoWorks API"""
         if self.mock_mode and self.mock_service:
             return self.mock_service.get_temperature_data(device_id, probe_id)
@@ -146,9 +136,7 @@ class ThermoWorksClient:
             # Batch request to ThermoWorks API
             batch_data = {"device_ids": device_ids, "include_metadata": True}
 
-            response = self.session.post(
-                f"{self.base_url}/devices/temperature/batch", json=batch_data
-            )
+            response = self.session.post(f"{self.base_url}/devices/temperature/batch", json=batch_data)
             response.raise_for_status()
 
             batch_results = response.json()

@@ -100,9 +100,7 @@ class UserStory3IntegrationTest:
             return False
 
         except Exception as e:
-            self.log_test(
-                "setup_authentication", "FAIL", f"Authentication error: {str(e)}"
-            )
+            self.log_test("setup_authentication", "FAIL", f"Authentication error: {str(e)}")
             return False
 
     def test_device_list_access(self) -> bool:
@@ -143,9 +141,7 @@ class UserStory3IntegrationTest:
             return False
 
         except Exception as e:
-            self.log_test(
-                "test_device_list_access", "FAIL", f"Device list error: {str(e)}"
-            )
+            self.log_test("test_device_list_access", "FAIL", f"Device list error: {str(e)}")
             return False
 
     def test_live_device_data_endpoint(self) -> bool:
@@ -160,9 +156,7 @@ class UserStory3IntegrationTest:
 
                     # Validate live data structure
                     required_fields = ["device_id", "timestamp", "channels", "status"]
-                    missing_fields = [
-                        field for field in required_fields if field not in live_data
-                    ]
+                    missing_fields = [field for field in required_fields if field not in live_data]
 
                     if not missing_fields:
                         channels = live_data.get("channels", [])
@@ -200,9 +194,7 @@ class UserStory3IntegrationTest:
     def test_device_channels_endpoint(self) -> bool:
         """Test device channels endpoint"""
         try:
-            response = self.session.get(
-                f"{BASE_URL}/api/devices/{TEST_DEVICE_ID}/channels"
-            )
+            response = self.session.get(f"{BASE_URL}/api/devices/{TEST_DEVICE_ID}/channels")
 
             if response.status_code == 200:
                 data = response.json()
@@ -214,9 +206,7 @@ class UserStory3IntegrationTest:
                     if channels:
                         channel = channels[0]
                         required_fields = ["channel_id", "name", "probe_type", "unit"]
-                        missing_fields = [
-                            field for field in required_fields if field not in channel
-                        ]
+                        missing_fields = [field for field in required_fields if field not in channel]
 
                         if not missing_fields:
                             self.log_test(
@@ -233,9 +223,7 @@ class UserStory3IntegrationTest:
                             )
                             return False
                     else:
-                        self.log_test(
-                            "test_device_channels_endpoint", "FAIL", "No channels found"
-                        )
+                        self.log_test("test_device_channels_endpoint", "FAIL", "No channels found")
                         return False
 
             self.log_test(
@@ -256,9 +244,7 @@ class UserStory3IntegrationTest:
     def test_device_status_endpoint(self) -> bool:
         """Test device status endpoint"""
         try:
-            response = self.session.get(
-                f"{BASE_URL}/api/devices/{TEST_DEVICE_ID}/status"
-            )
+            response = self.session.get(f"{BASE_URL}/api/devices/{TEST_DEVICE_ID}/status")
 
             if response.status_code == 200:
                 data = response.json()
@@ -272,9 +258,7 @@ class UserStory3IntegrationTest:
                         "signal_strength",
                         "connection_status",
                     ]
-                    missing_fields = [
-                        field for field in required_fields if field not in status_data
-                    ]
+                    missing_fields = [field for field in required_fields if field not in status_data]
 
                     if not missing_fields:
                         battery = status_data.get("battery_level", 0)
@@ -339,10 +323,7 @@ class UserStory3IntegrationTest:
                             messages.append(data)
 
                             # Check if we got valid live data
-                            if (
-                                data.get("device_id") == TEST_DEVICE_ID
-                                and "channels" in data
-                            ):
+                            if data.get("device_id") == TEST_DEVICE_ID and "channels" in data:
                                 self.log_test(
                                     "test_live_data_stream",
                                     "PASS",
@@ -378,14 +359,10 @@ class UserStory3IntegrationTest:
             return False
 
         except ImportError:
-            self.log_test(
-                "test_live_data_stream", "SKIP", "sseclient library not available"
-            )
+            self.log_test("test_live_data_stream", "SKIP", "sseclient library not available")
             return True  # Skip this test if library not available
         except Exception as e:
-            self.log_test(
-                "test_live_data_stream", "FAIL", f"SSE stream error: {str(e)}"
-            )
+            self.log_test("test_live_data_stream", "FAIL", f"SSE stream error: {str(e)}")
             return False
 
     def test_database_schema(self) -> bool:
@@ -435,15 +412,11 @@ class UserStory3IntegrationTest:
                     )
                     return False
             else:
-                self.log_test(
-                    "test_database_schema", "FAIL", "Database schema file not found"
-                )
+                self.log_test("test_database_schema", "FAIL", "Database schema file not found")
                 return False
 
         except Exception as e:
-            self.log_test(
-                "test_database_schema", "FAIL", f"Database schema test error: {str(e)}"
-            )
+            self.log_test("test_database_schema", "FAIL", f"Database schema test error: {str(e)}")
             return False
 
     def test_frontend_routing(self) -> bool:
@@ -478,18 +451,14 @@ class UserStory3IntegrationTest:
                 return False
 
         except Exception as e:
-            self.log_test(
-                "test_frontend_routing", "SKIP", f"Frontend test skipped: {str(e)}"
-            )
+            self.log_test("test_frontend_routing", "SKIP", f"Frontend test skipped: {str(e)}")
             return True  # Skip if frontend not running
 
     def test_error_handling(self) -> bool:
         """Test error handling for invalid requests"""
         try:
             # Test invalid device ID
-            response = self.session.get(
-                f"{BASE_URL}/api/devices/invalid_device_id/live"
-            )
+            response = self.session.get(f"{BASE_URL}/api/devices/invalid_device_id/live")
 
             if response.status_code in [400, 404, 500]:
                 data = response.json()
@@ -509,9 +478,7 @@ class UserStory3IntegrationTest:
             return False
 
         except Exception as e:
-            self.log_test(
-                "test_error_handling", "FAIL", f"Error handling test failed: {str(e)}"
-            )
+            self.log_test("test_error_handling", "FAIL", f"Error handling test failed: {str(e)}")
             return False
 
     def test_performance(self) -> bool:
@@ -545,9 +512,7 @@ class UserStory3IntegrationTest:
                 return False
 
         except Exception as e:
-            self.log_test(
-                "test_performance", "FAIL", f"Performance test error: {str(e)}"
-            )
+            self.log_test("test_performance", "FAIL", f"Performance test error: {str(e)}")
             return False
 
     def run_all_tests(self) -> Dict:
@@ -676,9 +641,7 @@ def main():
     report = tester.generate_report(results)
 
     # Save report
-    report_file = (
-        f"user_story_3_integration_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
-    )
+    report_file = f"user_story_3_integration_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.md"
     with open(report_file, "w") as f:
         f.write(report)
 

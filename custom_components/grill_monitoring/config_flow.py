@@ -31,15 +31,9 @@ _LOGGER = logging.getLogger(__name__)
 STEP_USER_DATA_SCHEMA = vol.Schema(
     {
         vol.Required(CONF_DEVICE_SERVICE_URL, default=DEFAULT_DEVICE_SERVICE_URL): str,
-        vol.Required(
-            CONF_TEMPERATURE_SERVICE_URL, default=DEFAULT_TEMPERATURE_SERVICE_URL
-        ): str,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-            vol.Coerce(int), vol.Range(min=10, max=300)
-        ),
-        vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): vol.All(
-            vol.Coerce(int), vol.Range(min=5, max=60)
-        ),
+        vol.Required(CONF_TEMPERATURE_SERVICE_URL, default=DEFAULT_TEMPERATURE_SERVICE_URL): str,
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(vol.Coerce(int), vol.Range(min=10, max=300)),
+        vol.Optional(CONF_TIMEOUT, default=DEFAULT_TIMEOUT): vol.All(vol.Coerce(int), vol.Range(min=5, max=60)),
     }
 )
 
@@ -93,9 +87,7 @@ class PlaceholderHub:
                         )
 
                     devices_data = await response.json()
-                    _LOGGER.debug(
-                        "Found %d devices", len(devices_data.get("devices", []))
-                    )
+                    _LOGGER.debug("Found %d devices", len(devices_data.get("devices", [])))
 
                 return True, "Successfully connected to both services"
 
@@ -136,9 +128,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     VERSION = 1
 
-    async def async_step_user(
-        self, user_input: Optional[Dict[str, Any]] = None
-    ) -> Dict[str, Any]:
+    async def async_step_user(self, user_input: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Handle the initial step."""
         if user_input is None:
             return self.async_show_form(
@@ -164,9 +154,7 @@ class ConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors["base"] = "unknown"
         else:
             # Check if already configured
-            await self.async_set_unique_id(
-                f"{user_input[CONF_DEVICE_SERVICE_URL]}_{user_input[CONF_TEMPERATURE_SERVICE_URL]}"
-            )
+            await self.async_set_unique_id(f"{user_input[CONF_DEVICE_SERVICE_URL]}_{user_input[CONF_TEMPERATURE_SERVICE_URL]}")
             self._abort_if_unique_id_configured()
 
             return self.async_create_entry(title=info["title"], data=user_input)

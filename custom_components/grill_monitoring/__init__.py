@@ -113,9 +113,7 @@ class GrillMonitoringDevice:
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
-        self.async_on_remove(
-            self.coordinator.async_add_listener(self.async_write_ha_state)
-        )
+        self.async_on_remove(self.coordinator.async_add_listener(self.async_write_ha_state))
 
     async def async_update(self) -> None:
         """Update the entity."""

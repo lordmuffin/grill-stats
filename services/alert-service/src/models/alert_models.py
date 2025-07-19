@@ -3,17 +3,7 @@ from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel, Field, validator
-from sqlalchemy import (
-    JSON,
-    Boolean,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Integer,
-    String,
-    Text,
-)
+from sqlalchemy import JSON, Boolean, Column, DateTime, Float, ForeignKey, Integer, String, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import relationship
 
@@ -93,9 +83,7 @@ class AlertEvent(Base):
 
     id = Column(Integer, primary_key=True, index=True)
     alert_id = Column(Integer, ForeignKey("alerts.id"), nullable=False)
-    event_type = Column(
-        String(50), nullable=False
-    )  # created, updated, acknowledged, resolved
+    event_type = Column(String(50), nullable=False)  # created, updated, acknowledged, resolved
     event_data = Column(JSON)
     timestamp = Column(DateTime, default=datetime.utcnow)
     user_id = Column(String(255))
@@ -233,9 +221,7 @@ class NotificationChannelCreate(BaseModel):
             required_fields = []
 
         if not all(field in v for field in required_fields):
-            raise ValueError(
-                f"Configuration for {channel_type} must contain: {required_fields}"
-            )
+            raise ValueError(f"Configuration for {channel_type} must contain: {required_fields}")
         return v
 
 
@@ -249,9 +235,7 @@ class EscalationPolicyCreate(BaseModel):
     def validate_rules(cls, v):
         for rule in v:
             if not all(field in rule for field in ["delay_minutes", "channels"]):
-                raise ValueError(
-                    "Each escalation rule must contain delay_minutes and channels"
-                )
+                raise ValueError("Each escalation rule must contain delay_minutes and channels")
         return v
 
 

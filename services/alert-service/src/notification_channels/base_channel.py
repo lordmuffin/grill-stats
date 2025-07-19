@@ -10,9 +10,7 @@ class BaseNotificationChannel(ABC):
         self.enabled = config.get("enabled", True)
 
     @abstractmethod
-    async def send(
-        self, recipient: str, subject: str, body: str, channel_config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    async def send(self, recipient: str, subject: str, body: str, channel_config: Dict[str, Any]) -> Dict[str, Any]:
         """
         Send notification through this channel.
 
@@ -50,9 +48,7 @@ class BaseNotificationChannel(ABC):
         """
         pass
 
-    async def check_delivery_status(
-        self, notification_id: int, response_data: Dict[str, Any]
-    ) -> str:
+    async def check_delivery_status(self, notification_id: int, response_data: Dict[str, Any]) -> str:
         """
         Check delivery status for a notification.
 
@@ -72,6 +68,4 @@ class BaseNotificationChannel(ABC):
 
     def get_rate_limits(self) -> Dict[str, int]:
         """Get rate limits for this channel."""
-        return self.config.get(
-            "rate_limits", {"per_minute": 60, "per_hour": 1000, "per_day": 10000}
-        )
+        return self.config.get("rate_limits", {"per_minute": 60, "per_hour": 1000, "per_day": 10000})

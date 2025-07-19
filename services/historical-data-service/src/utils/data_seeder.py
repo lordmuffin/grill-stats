@@ -63,19 +63,13 @@ class TemperatureDataSeeder:
 
                 if probe_id.startswith("probe_1"):  # Grill temperature
                     # Grill temperature stays relatively stable with small variations
-                    temperature = (
-                        base_temp + random.uniform(-10, 10) + (hours_elapsed * 2)
-                    )
+                    temperature = base_temp + random.uniform(-10, 10) + (hours_elapsed * 2)
                 else:  # Meat probes
                     # Meat temperature rises gradually
-                    temperature = (
-                        base_temp + (hours_elapsed * 15) + random.uniform(-5, 5)
-                    )
+                    temperature = base_temp + (hours_elapsed * 15) + random.uniform(-5, 5)
 
                 # Add some realistic constraints
-                temperature = max(
-                    70, min(500, temperature)
-                )  # Reasonable temperature range
+                temperature = max(70, min(500, temperature))  # Reasonable temperature range
 
                 # Create temperature reading
                 reading = {

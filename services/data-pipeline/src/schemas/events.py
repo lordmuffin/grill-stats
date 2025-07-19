@@ -41,9 +41,7 @@ class BaseEvent(BaseModel):
 
     event_id: str = Field(..., description="Unique event identifier")
     event_type: EventType = Field(..., description="Type of event")
-    timestamp: datetime = Field(
-        default_factory=datetime.utcnow, description="Event timestamp"
-    )
+    timestamp: datetime = Field(default_factory=datetime.utcnow, description="Event timestamp")
     source: str = Field(..., description="Source of the event")
     version: str = Field(default="1.0", description="Schema version")
 
@@ -62,9 +60,7 @@ class TemperatureReading(BaseModel):
     battery_level: Optional[float] = Field(None, description="Battery level percentage")
     signal_strength: Optional[float] = Field(None, description="Signal strength")
     location: Optional[str] = Field(None, description="Device location")
-    status: DeviceStatus = Field(
-        default=DeviceStatus.ONLINE, description="Device status"
-    )
+    status: DeviceStatus = Field(default=DeviceStatus.ONLINE, description="Device status")
 
     @validator("temperature")
     def validate_temperature(cls, v):
@@ -106,12 +102,8 @@ class TemperatureValidatedEvent(BaseEvent):
     event_type: EventType = Field(default=EventType.TEMPERATURE_VALIDATED, const=True)
     data: TemperatureReading = Field(..., description="Validated temperature reading")
     validation_status: str = Field(..., description="Validation status")
-    validation_errors: List[ValidationError] = Field(
-        default=[], description="Validation errors"
-    )
-    processing_time_ms: float = Field(
-        ..., description="Processing time in milliseconds"
-    )
+    validation_errors: List[ValidationError] = Field(default=[], description="Validation errors")
+    processing_time_ms: float = Field(..., description="Processing time in milliseconds")
 
 
 class AnomalyDetails(BaseModel):
@@ -122,9 +114,7 @@ class AnomalyDetails(BaseModel):
     severity: SeverityLevel = Field(..., description="Severity level")
     expected_range: Dict[str, float] = Field(..., description="Expected value range")
     actual_value: float = Field(..., description="Actual value that triggered anomaly")
-    historical_stats: Dict[str, Any] = Field(
-        default={}, description="Historical statistics"
-    )
+    historical_stats: Dict[str, Any] = Field(default={}, description="Historical statistics")
 
     @validator("confidence_score")
     def validate_confidence_score(cls, v):
@@ -138,15 +128,9 @@ class AnomalyDetectedEvent(BaseEvent):
 
     event_type: EventType = Field(default=EventType.ANOMALY_DETECTED, const=True)
     device_id: str = Field(..., description="Device identifier")
-    temperature_reading: TemperatureReading = Field(
-        ..., description="Temperature reading that triggered anomaly"
-    )
-    anomaly_details: AnomalyDetails = Field(
-        ..., description="Anomaly detection details"
-    )
-    detection_time_ms: float = Field(
-        ..., description="Detection processing time in milliseconds"
-    )
+    temperature_reading: TemperatureReading = Field(..., description="Temperature reading that triggered anomaly")
+    anomaly_details: AnomalyDetails = Field(..., description="Anomaly detection details")
+    detection_time_ms: float = Field(..., description="Detection processing time in milliseconds")
 
 
 class AlertAction(BaseModel):
@@ -165,9 +149,7 @@ class AlertTriggeredEvent(BaseEvent):
     alert_type: str = Field(..., description="Type of alert")
     severity: SeverityLevel = Field(..., description="Alert severity")
     message: str = Field(..., description="Alert message")
-    anomaly_event: AnomalyDetectedEvent = Field(
-        ..., description="Anomaly that triggered the alert"
-    )
+    anomaly_event: AnomalyDetectedEvent = Field(..., description="Anomaly that triggered the alert")
     actions: List[AlertAction] = Field(default=[], description="Actions to take")
     expires_at: Optional[datetime] = Field(None, description="Alert expiration time")
 
@@ -185,15 +167,11 @@ class HomeAssistantState(BaseModel):
 class HomeAssistantStateUpdateEvent(BaseEvent):
     """Home Assistant state update event."""
 
-    event_type: EventType = Field(
-        default=EventType.HOMEASSISTANT_STATE_UPDATE, const=True
-    )
+    event_type: EventType = Field(default=EventType.HOMEASSISTANT_STATE_UPDATE, const=True)
     device_id: str = Field(..., description="Device identifier")
     ha_state: HomeAssistantState = Field(..., description="Home Assistant state")
     update_status: str = Field(..., description="Update status")
-    update_time_ms: float = Field(
-        ..., description="Update processing time in milliseconds"
-    )
+    update_time_ms: float = Field(..., description="Update processing time in milliseconds")
 
 
 class BatchEvent(BaseModel):
@@ -210,9 +188,7 @@ class BatchEvent(BaseModel):
         ]
     ] = Field(..., description="List of events in the batch")
     total_events: int = Field(..., description="Total number of events in batch")
-    created_at: datetime = Field(
-        default_factory=datetime.utcnow, description="Batch creation time"
-    )
+    created_at: datetime = Field(default_factory=datetime.utcnow, description="Batch creation time")
 
     @validator("total_events")
     def validate_total_events(cls, v, values):

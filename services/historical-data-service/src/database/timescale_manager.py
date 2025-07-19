@@ -15,9 +15,7 @@ logger = structlog.get_logger()
 class TimescaleManager:
     """Manages interactions with TimescaleDB for temperature data."""
 
-    def __init__(
-        self, host: str, port: int, database: str, username: str, password: str
-    ):
+    def __init__(self, host: str, port: int, database: str, username: str, password: str):
         """Initialize the TimescaleDB manager with connection parameters."""
         self.host = host
         self.port = port
@@ -88,15 +86,9 @@ class TimescaleManager:
                 )
 
                 # Create indexes for better query performance
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_temperature_device_id ON temperature_readings(device_id)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_temperature_probe_id ON temperature_readings(probe_id)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_temperature_grill_id ON temperature_readings(grill_id)"
-                )
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_temperature_device_id ON temperature_readings(device_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_temperature_probe_id ON temperature_readings(probe_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_temperature_grill_id ON temperature_readings(grill_id)")
 
                 # Convert to hypertable if not already
                 try:
@@ -138,15 +130,9 @@ class TimescaleManager:
                 )
 
                 # Create indexes for sessions
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_sessions_grill_id ON cooking_sessions(grill_id)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON cooking_sessions(user_id)"
-                )
-                cursor.execute(
-                    "CREATE INDEX IF NOT EXISTS idx_sessions_time ON cooking_sessions(start_time, end_time)"
-                )
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_grill_id ON cooking_sessions(grill_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON cooking_sessions(user_id)")
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_sessions_time ON cooking_sessions(start_time, end_time)")
 
                 logger.info("TimescaleDB schema initialized successfully")
 
@@ -198,9 +184,7 @@ class TimescaleManager:
                 )
 
                 self.connection.commit()
-                logger.debug(
-                    "Temperature reading stored", device_id=reading["device_id"]
-                )
+                logger.debug("Temperature reading stored", device_id=reading["device_id"])
                 return True
 
         except Exception as e:
@@ -231,9 +215,7 @@ class TimescaleManager:
                     if not timestamp:
                         timestamp = datetime.utcnow()
                     elif isinstance(timestamp, str):
-                        timestamp = datetime.fromisoformat(
-                            timestamp.replace("Z", "+00:00")
-                        )
+                        timestamp = datetime.fromisoformat(timestamp.replace("Z", "+00:00"))
 
                     # Insert the temperature reading
                     cursor.execute(
@@ -357,9 +339,7 @@ class TimescaleManager:
                     if "metadata" in data_point and data_point["metadata"]:
                         if isinstance(data_point["metadata"], str):
                             try:
-                                data_point["metadata"] = json.loads(
-                                    data_point["metadata"]
-                                )
+                                data_point["metadata"] = json.loads(data_point["metadata"])
                             except:
                                 pass
 

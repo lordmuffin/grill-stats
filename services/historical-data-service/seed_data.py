@@ -41,9 +41,7 @@ def main():
 
     except Exception as e:
         print(f"❌ Failed to connect to TimescaleDB: {e}")
-        print(
-            "Make sure TimescaleDB is running and environment variables are set correctly"
-        )
+        print("Make sure TimescaleDB is running and environment variables are set correctly")
         return 1
 
     # Create data seeder

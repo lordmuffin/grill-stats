@@ -54,15 +54,11 @@ class HomeAssistantBluetoothClient:
         Returns:
             List of discovered devices
         """
-        logger.info(
-            f"Starting Bluetooth scan via Home Assistant (duration: {scan_duration}s)"
-        )
+        logger.info(f"Starting Bluetooth scan via Home Assistant (duration: {scan_duration}s)")
 
         try:
             # Start a Bluetooth discovery scan
-            self.client.post(
-                "/api/services/bluetooth/start_discovery", {"duration": scan_duration}
-            )
+            self.client.post("/api/services/bluetooth/start_discovery", {"duration": scan_duration})
 
             # Wait for scan to complete
             time.sleep(scan_duration)
@@ -77,9 +73,7 @@ class HomeAssistantBluetoothClient:
                     name=device_data.get("name", device_data["address"]),
                     address=device_data["address"],
                     rssi=device_data.get("rssi", 0),
-                    state=BluetoothDeviceState(
-                        device_data.get("state", "disconnected")
-                    ),
+                    state=BluetoothDeviceState(device_data.get("state", "disconnected")),
                     attributes=device_data.get("attributes", {}),
                 )
                 devices.append(device)
@@ -103,9 +97,7 @@ class HomeAssistantBluetoothClient:
 
         try:
             # Connect to the device
-            response = self.client.post(
-                f"/api/bluetooth/connect", {"device_id": device_id}
-            )
+            response = self.client.post(f"/api/bluetooth/connect", {"device_id": device_id})
 
             if response.get("success"):
                 # Get updated device info
@@ -140,9 +132,7 @@ class HomeAssistantBluetoothClient:
         logger.info(f"Disconnecting from Bluetooth device {device_id}")
 
         try:
-            response = self.client.post(
-                f"/api/bluetooth/disconnect", {"device_id": device_id}
-            )
+            response = self.client.post(f"/api/bluetooth/disconnect", {"device_id": device_id})
 
             if response.get("success"):
                 self._connected_devices.pop(device_id, None)
@@ -169,9 +159,7 @@ class HomeAssistantBluetoothClient:
             return False
 
         try:
-            response = self.client.post(
-                f"/api/bluetooth/write", {"device_id": device_id, "data": data.hex()}
-            )
+            response = self.client.post(f"/api/bluetooth/write", {"device_id": device_id, "data": data.hex()})
             return response.get("success", False)
 
         except Exception as e:
@@ -193,9 +181,7 @@ class HomeAssistantBluetoothClient:
             return None
 
         try:
-            response = self.client.get(
-                f"/api/bluetooth/read", {"device_id": device_id, "timeout": timeout}
-            )
+            response = self.client.get(f"/api/bluetooth/read", {"device_id": device_id, "timeout": timeout})
 
             if response.get("success") and "data" in response:
                 return bytes.fromhex(response["data"])

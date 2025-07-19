@@ -49,9 +49,7 @@ def test_device_id_validation():
                 print(f"✓ PASS: {description} - {device_id}")
                 passed += 1
             else:
-                print(
-                    f"✗ FAIL: {description} - {device_id} - Expected {expected_valid}, got {is_valid}"
-                )
+                print(f"✗ FAIL: {description} - {device_id} - Expected {expected_valid}, got {is_valid}")
                 print(f"       Message: {message}")
                 failed += 1
         except Exception as e:

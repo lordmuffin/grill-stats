@@ -13,9 +13,7 @@ class LoginForm(FlaskForm):
             Email(message="Please enter a valid email address"),
         ],
     )
-    password = PasswordField(
-        "Password", validators=[DataRequired(message="Password cannot be empty")]
-    )
+    password = PasswordField("Password", validators=[DataRequired(message="Password cannot be empty")])
     submit = SubmitField("Log In")
 
     def validate(self, extra_validators=None):

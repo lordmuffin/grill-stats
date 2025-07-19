@@ -14,14 +14,7 @@ from sqlalchemy.orm import selectinload
 from ..analytics.alert_analytics import AlertAnalytics
 from ..correlation.alert_correlator import AlertCorrelator
 from ..escalation.escalation_manager import EscalationManager
-from ..models.alert_models import (
-    Alert,
-    AlertCorrelation,
-    AlertEvent,
-    AlertRule,
-    AlertSeverity,
-    AlertStatus,
-)
+from ..models.alert_models import Alert, AlertCorrelation, AlertEvent, AlertRule, AlertSeverity, AlertStatus
 from ..models.notification_models import NotificationHistory, NotificationStatus
 from ..notification_channels.notification_manager import NotificationManager
 from ..storage.alert_storage import AlertStorage
@@ -119,14 +112,10 @@ class IntelligentAlertService:
                 await self._store_correlations(alert, filtered_correlations)
 
                 # Determine notification strategy
-                notification_strategy = await self._determine_notification_strategy(
-                    alert, filtered_correlations
-                )
+                notification_strategy = await self._determine_notification_strategy(alert, filtered_correlations)
 
                 # Send notifications
-                notification_results = await self._send_notifications(
-                    alert, notification_strategy
-                )
+                notification_results = await self._send_notifications(alert, notification_strategy)
 
                 # Start escalation if needed
                 await self._start_escalation(alert, notification_strategy)
@@ -200,9 +189,7 @@ class IntelligentAlertService:
         )
         return result.scalar_one_or_none()
 
-    async def _update_existing_alert(
-        self, alert: Alert, alert_data: Dict[str, Any]
-    ) -> Alert:
+    async def _update_existing_alert(self, alert: Alert, alert_data: Dict[str, Any]) -> Alert:
         """Update existing alert with new data."""
         alert.updated_at = datetime.utcnow()
         alert.annotations = {**alert.annotations, **alert_data["annotations"]}
@@ -219,9 +206,7 @@ class IntelligentAlertService:
         await self.db.commit()
         return alert
 
-    async def _create_new_alert(
-        self, alert_data: Dict[str, Any], fingerprint: str
-    ) -> Alert:
+    async def _create_new_alert(self, alert_data: Dict[str, Any], fingerprint: str) -> Alert:
         """Create new alert from data."""
         # Find or create alert rule
         rule = await self._get_or_create_alert_rule(alert_data)
@@ -257,9 +242,7 @@ class IntelligentAlertService:
         """Get or create alert rule for the alert."""
         rule_name = f"auto_rule_{alert_data['source']}_{alert_data['title']}"
 
-        result = await self.db.execute(
-            select(AlertRule).where(AlertRule.name == rule_name)
-        )
+        result = await self.db.execute(select(AlertRule).where(AlertRule.name == rule_name))
         rule = result.scalar_one_or_none()
 
         if not rule:
@@ -278,9 +261,7 @@ class IntelligentAlertService:
 
         return rule
 
-    async def _apply_smart_filtering(
-        self, alert: Alert, event_data: Dict[str, Any]
-    ) -> bool:
+    async def _apply_smart_filtering(self, alert: Alert, event_data: Dict[str, Any]) -> bool:
         """
         Apply intelligent filtering to reduce noise.
 
@@ -299,9 +280,7 @@ class IntelligentAlertService:
         # Check noise score
         noise_score = await self._calculate_noise_score(alert)
         if noise_score > self.filtering_config["noise_threshold"]:
-            logger.info(
-                f"Alert {alert.id} filtered due to high noise score: {noise_score}"
-            )
+            logger.info(f"Alert {alert.id} filtered due to high noise score: {noise_score}")
             return False
 
         # Check severity-based filtering
@@ -321,9 +300,7 @@ class IntelligentAlertService:
 
     async def _check_duplicate_detection(self, alert: Alert) -> bool:
         """Check for duplicate alerts in time window."""
-        window_start = datetime.utcnow() - timedelta(
-            seconds=self.filtering_config["duplicate_window"]
-        )
+        window_start = datetime.utcnow() - timedelta(seconds=self.filtering_config["duplicate_window"])
 
         result = await self.db.execute(
             select(Alert).where(
@@ -357,11 +334,9 @@ class IntelligentAlertService:
         # Calculate metrics
         total_alerts = len(alerts)
         resolved_alerts = sum(1 for a in alerts if a.status == AlertStatus.RESOLVED)
-        avg_resolution_time = sum(
-            (a.resolved_at - a.starts_at).total_seconds()
-            for a in alerts
-            if a.resolved_at
-        ) / max(resolved_alerts, 1)
+        avg_resolution_time = sum((a.resolved_at - a.starts_at).total_seconds() for a in alerts if a.resolved_at) / max(
+            resolved_alerts, 1
+        )
 
         # Calculate noise score (0-1, higher = more noise)
         resolution_rate = resolved_alerts / total_alerts
@@ -376,9 +351,7 @@ class IntelligentAlertService:
         weight = self.filtering_config["severity_weights"].get(alert.severity, 0.5)
 
         # Get current system load
-        active_alerts = await self.db.execute(
-            select(Alert).where(Alert.status == AlertStatus.ACTIVE)
-        )
+        active_alerts = await self.db.execute(select(Alert).where(Alert.status == AlertStatus.ACTIVE))
 
         active_count = len(active_alerts.scalars().all())
 
@@ -390,19 +363,11 @@ class IntelligentAlertService:
         else:  # Low load
             return weight > 0.2
 
-    async def _filter_correlations(
-        self, correlations: List[AlertCorrelation]
-    ) -> List[AlertCorrelation]:
+    async def _filter_correlations(self, correlations: List[AlertCorrelation]) -> List[AlertCorrelation]:
         """Filter correlations based on confidence threshold."""
-        return [
-            corr
-            for corr in correlations
-            if corr.confidence_score >= self.filtering_config["correlation_threshold"]
-        ]
+        return [corr for corr in correlations if corr.confidence_score >= self.filtering_config["correlation_threshold"]]
 
-    async def _store_correlations(
-        self, alert: Alert, correlations: List[AlertCorrelation]
-    ):
+    async def _store_correlations(self, alert: Alert, correlations: List[AlertCorrelation]):
         """Store alert correlations in database."""
         for correlation in correlations:
             correlation.alert_id = alert.id
@@ -410,9 +375,7 @@ class IntelligentAlertService:
 
         await self.db.commit()
 
-    async def _determine_notification_strategy(
-        self, alert: Alert, correlations: List[AlertCorrelation]
-    ) -> Dict[str, Any]:
+    async def _determine_notification_strategy(self, alert: Alert, correlations: List[AlertCorrelation]) -> Dict[str, Any]:
         """Determine optimal notification strategy based on alert and correlations."""
         strategy = {
             "channels": [],
@@ -473,9 +436,7 @@ class IntelligentAlertService:
 
         return None
 
-    async def _send_notifications(
-        self, alert: Alert, strategy: Dict[str, Any]
-    ) -> List[Dict[str, Any]]:
+    async def _send_notifications(self, alert: Alert, strategy: Dict[str, Any]) -> List[Dict[str, Any]]:
         """Send notifications based on strategy."""
         results = []
 
@@ -489,25 +450,17 @@ class IntelligentAlertService:
                 )
                 results.append(result)
             except Exception as e:
-                logger.error(
-                    f"Failed to send notification via {channel_type}: {str(e)}"
-                )
-                results.append(
-                    {"channel": channel_type, "status": "failed", "error": str(e)}
-                )
+                logger.error(f"Failed to send notification via {channel_type}: {str(e)}")
+                results.append({"channel": channel_type, "status": "failed", "error": str(e)})
 
         return results
 
     async def _start_escalation(self, alert: Alert, strategy: Dict[str, Any]):
         """Start escalation process if configured."""
         if strategy.get("escalation_policy"):
-            await self.escalation_manager.start_escalation(
-                alert=alert, policy=strategy["escalation_policy"]
-            )
+            await self.escalation_manager.start_escalation(alert=alert, policy=strategy["escalation_policy"])
 
-    async def _update_performance_metrics(
-        self, start_time: datetime, alert: Alert, correlations: List[AlertCorrelation]
-    ):
+    async def _update_performance_metrics(self, start_time: datetime, alert: Alert, correlations: List[AlertCorrelation]):
         """Update performance tracking metrics."""
         processing_time = (datetime.utcnow() - start_time).total_seconds()
 
@@ -517,9 +470,7 @@ class IntelligentAlertService:
 
         # Keep only last 1000 processing times
         if len(self.performance_metrics["processing_times"]) > 1000:
-            self.performance_metrics["processing_times"] = self.performance_metrics[
-                "processing_times"
-            ][-1000:]
+            self.performance_metrics["processing_times"] = self.performance_metrics["processing_times"][-1000:]
 
         # Store metrics in Redis for monitoring
         await self.redis.hset(
@@ -563,12 +514,8 @@ class IntelligentAlertService:
             "avg_processing_time": sum(processing_times) / len(processing_times),
             "max_processing_time": max(processing_times),
             "min_processing_time": min(processing_times),
-            "p95_processing_time": sorted(processing_times)[
-                int(len(processing_times) * 0.95)
-            ],
-            "p99_processing_time": sorted(processing_times)[
-                int(len(processing_times) * 0.99)
-            ],
+            "p95_processing_time": sorted(processing_times)[int(len(processing_times) * 0.95)],
+            "p99_processing_time": sorted(processing_times)[int(len(processing_times) * 0.99)],
         }
 
     async def acknowledge_alert(self, alert_id: int, user_id: str) -> Dict[str, Any]:
@@ -640,10 +587,7 @@ class IntelligentAlertService:
     async def get_active_alerts(self, limit: int = 100) -> List[Alert]:
         """Get active alerts."""
         result = await self.db.execute(
-            select(Alert)
-            .where(Alert.status == AlertStatus.ACTIVE)
-            .order_by(Alert.created_at.desc())
-            .limit(limit)
+            select(Alert).where(Alert.status == AlertStatus.ACTIVE).order_by(Alert.created_at.desc()).limit(limit)
         )
 
         return result.scalars().all()
@@ -651,16 +595,12 @@ class IntelligentAlertService:
     async def get_alert_statistics(self) -> Dict[str, Any]:
         """Get alert statistics."""
         # Get active alerts count
-        active_result = await self.db.execute(
-            select(Alert).where(Alert.status == AlertStatus.ACTIVE)
-        )
+        active_result = await self.db.execute(select(Alert).where(Alert.status == AlertStatus.ACTIVE))
         active_count = len(active_result.scalars().all())
 
         # Get total alerts in last 24 hours
         yesterday = datetime.utcnow() - timedelta(days=1)
-        recent_result = await self.db.execute(
-            select(Alert).where(Alert.created_at >= yesterday)
-        )
+        recent_result = await self.db.execute(select(Alert).where(Alert.created_at >= yesterday))
         recent_count = len(recent_result.scalars().all())
 
         # Get critical alerts

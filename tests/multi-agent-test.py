@@ -129,9 +129,7 @@ class ContainerAgent:
     async def test_health_endpoint(self) -> Dict:
         """Test the health endpoint"""
         try:
-            self.logger.info(
-                f"🔍 Testing health endpoint: http://localhost:{self.port}/health"
-            )
+            self.logger.info(f"🔍 Testing health endpoint: http://localhost:{self.port}/health")
 
             start_time = time.time()
 
@@ -139,9 +137,7 @@ class ContainerAgent:
             max_retries = 10
             for attempt in range(max_retries):
                 try:
-                    response = requests.get(
-                        f"http://localhost:{self.port}/health", timeout=10
-                    )
+                    response = requests.get(f"http://localhost:{self.port}/health", timeout=10)
 
                     response_time_ms = (time.time() - start_time) * 1000
 
@@ -154,22 +150,14 @@ class ContainerAgent:
                         # Determine success based on service type
                         if response.status_code == 200:
                             success = True
-                            self.logger.info(
-                                f"✅ Health check passed: {response_data.get('status')}"
-                            )
+                            self.logger.info(f"✅ Health check passed: {response_data.get('status')}")
                         else:
                             # For microservices, 500 with proper error structure is expected
-                            success = (
-                                "status" in response_data and "error" in response_data
-                            )
+                            success = "status" in response_data and "error" in response_data
                             if success:
-                                self.logger.info(
-                                    f"⚠️  Health check returned expected error: {response_data.get('error')}"
-                                )
+                                self.logger.info(f"⚠️  Health check returned expected error: {response_data.get('error')}")
                             else:
-                                self.logger.warning(
-                                    f"❓ Unexpected health response: {response_data}"
-                                )
+                                self.logger.warning(f"❓ Unexpected health response: {response_data}")
 
                         return {
                             "success": success,
@@ -180,9 +168,7 @@ class ContainerAgent:
 
                 except requests.exceptions.ConnectionError:
                     if attempt < max_retries - 1:
-                        self.logger.info(
-                            f"⏳ Waiting for service to start... (attempt {attempt + 1}/{max_retries})"
-                        )
+                        self.logger.info(f"⏳ Waiting for service to start... (attempt {attempt + 1}/{max_retries})")
                         await asyncio.sleep(2)
                         continue
                     else:
@@ -422,13 +408,9 @@ class MultiAgentTestOrchestrator:
             "summary": {
                 "builds_successful": sum(1 for r in self.results if r.build_success),
                 "containers_started": sum(1 for r in self.results if r.start_success),
-                "health_checks_passed": sum(
-                    1 for r in self.results if r.health_check_success
-                ),
+                "health_checks_passed": sum(1 for r in self.results if r.health_check_success),
                 "avg_response_time_ms": (
-                    sum(r.response_time_ms for r in self.results) / len(self.results)
-                    if self.results
-                    else 0
+                    sum(r.response_time_ms for r in self.results) / len(self.results) if self.results else 0
                 ),
             },
             "agents": [],
@@ -467,15 +449,9 @@ class MultiAgentTestOrchestrator:
         summary = report["summary"]
         print("📊 SUMMARY")
         print("-" * 40)
-        print(
-            f"✅ Builds Successful: {summary['builds_successful']}/{report['total_agents']}"
-        )
-        print(
-            f"🚀 Containers Started: {summary['containers_started']}/{report['total_agents']}"
-        )
-        print(
-            f"💚 Health Checks Passed: {summary['health_checks_passed']}/{report['total_agents']}"
-        )
+        print(f"✅ Builds Successful: {summary['builds_successful']}/{report['total_agents']}")
+        print(f"🚀 Containers Started: {summary['containers_started']}/{report['total_agents']}")
+        print(f"💚 Health Checks Passed: {summary['health_checks_passed']}/{report['total_agents']}")
         print(f"⚡ Average Response Time: {summary['avg_response_time_ms']:.2f}ms")
         print()
 
