@@ -54,7 +54,13 @@
       "Bash(./venv/bin/mypy --config-file mypy.ini models/user.py)",
       "Bash(./venv/bin/mypy --config-file mypy.ini models/temperature_alert.py)",
       "Bash(./venv/bin/mypy --config-file mypy.ini models/)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(pip3 list:*)",
+      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/test-secret-management.sh:*)",
+      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/update-all-workflow-credentials.sh)",
+      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/fix-workflow-files.sh:*)",
+      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/cleanup-workflow-files.sh:*)",
+      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/fix-workflow-syntax.sh:*)"
     ],
     "deny": [
       "Bash(git commit --no-verify:*)"

@@ -32,8 +32,8 @@ This document outlines the development tasks organized into milestones for trans
   - [x] Fix Device ID validation to properly handle lowercase device IDs
   - [x] Fix database model circular dependencies in test execution
   - [x] Improve environment configuration and validation
-  - [ ] Enhance mock mode with better device simulation
-  - [ ] Fix tests to properly isolate database operations
+  - [x] Enhance mock mode with better device simulation
+  - [x] Fix tests to properly isolate database operations
 - [⚠️] Add type annotations to model classes (high priority)
   - [x] Add type annotations to all methods in models/device.py
   - [x] Add type annotations to all methods in models/user.py
@@ -48,7 +48,7 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Set up Docker image building and scanning
 - [x] Configure artifact storage for built images
 - [x] Set up branch protection rules
-- [ ] Create deployment scripts for different environments
+- [x] Create deployment scripts for different environments
 - [ ] Configure secret management in CI/CD
 
 ### Database Infrastructure

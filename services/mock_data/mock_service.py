@@ -7,8 +7,9 @@ and testing. It generates realistic temperature data variations and supports all
 methods as the real ThermoWorks client.
 
 Features:
-- Realistic temperature data with gradual changes
+- Realistic temperature data with gradual changes based on meat types
 - Multiple probe types with different cooking patterns
+- Cooking events simulation (lid opening, temp adjustments, etc.)
 - Battery level and signal strength simulation
 - Historical data support
 - Device status management
@@ -24,6 +25,8 @@ import time
 from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Union
+
+from .temp_simulator import simulator as temp_simulator
 
 logger = logging.getLogger(__name__)
 
@@ -47,12 +50,10 @@ class MockDataService:
 
         # Internal state for temperature simulation
         self._last_update: Dict[str, float] = {}  # device_id -> last update timestamp
-        self._temperature_trends: Dict[str, Dict[str, Dict[str, Any]]] = {}  # device_id -> probe_id -> trend data
         self._simulation_lock = threading.Lock()
 
         # Load initial data
         self._load_device_data()
-        self._initialize_temperature_simulation()
 
         logger.info("MockDataService initialized with data directory: %s", data_directory)
 
@@ -68,106 +69,6 @@ class MockDataService:
         except Exception as e:
             logger.error("Failed to load device data: %s", e)
             self._device_data = {"devices": [], "metadata": {}}
-
-    def _initialize_temperature_simulation(self) -> None:
-        """Initialize temperature simulation for each probe"""
-        now = time.time()
-
-        for device in self._device_data.get("devices", []):
-            device_id = device["device_id"]
-            self._last_update[device_id] = now
-            self._temperature_trends[device_id] = {}
-
-            for probe in device.get("probes", []):
-                probe_id = probe["probe_id"]
-                probe_type = probe.get("type", "food")
-
-                # Initialize temperature trends based on probe type
-                if probe_type == "food":
-                    # Food probes generally increase slowly
-                    trend = {
-                        "rate": random.uniform(0.5, 2.0),  # degrees per minute
-                        "target": probe.get("alarm_high", probe["current_temp"] + 20),
-                        "volatility": 0.5,  # temperature noise
-                        "pattern": "rising",
-                    }
-                elif probe_type == "ambient":
-                    # Ambient probes are more stable with small fluctuations
-                    trend = {
-                        "rate": random.uniform(-0.2, 0.2),  # small changes
-                        "target": probe["current_temp"],
-                        "volatility": 1.0,
-                        "pattern": "stable",
-                    }
-                else:  # surface, etc.
-                    # Surface probes can be more variable
-                    trend = {
-                        "rate": random.uniform(-1.0, 1.0),
-                        "target": probe["current_temp"],
-                        "volatility": 2.0,
-                        "pattern": "variable",
-                    }
-
-                self._temperature_trends[device_id][probe_id] = trend
-
-    def _simulate_temperature_change(self, device_id: str, probe_id: str, current_temp: float, probe_type: str) -> float:
-        """
-        Simulate realistic temperature changes for a probe
-
-        Args:
-            device_id: Device identifier
-            probe_id: Probe identifier
-            current_temp: Current temperature
-            probe_type: Type of probe (food, ambient, surface)
-
-        Returns:
-            New simulated temperature
-        """
-        now = time.time()
-
-        if device_id not in self._last_update:
-            self._last_update[device_id] = now
-            return current_temp
-
-        # Calculate time elapsed since last update
-        time_elapsed = now - self._last_update[device_id]
-        minutes_elapsed = time_elapsed / 60.0
-
-        # Get or create trend for this probe
-        if device_id not in self._temperature_trends:
-            self._temperature_trends[device_id] = {}
-        if probe_id not in self._temperature_trends[device_id]:
-            self._initialize_temperature_simulation()
-
-        trend = self._temperature_trends[device_id][probe_id]
-
-        # Calculate base temperature change
-        base_change = trend["rate"] * minutes_elapsed
-
-        # Add some realistic noise/volatility
-        noise = random.gauss(0, trend["volatility"]) * math.sqrt(minutes_elapsed)
-
-        # Apply pattern-specific behavior
-        if trend["pattern"] == "rising":
-            # Food probes approaching target temperature slow down
-            distance_to_target = abs(trend["target"] - current_temp)
-            if distance_to_target < 10:
-                base_change *= distance_to_target / 10.0
-        elif trend["pattern"] == "stable":
-            # Ambient probes oscillate around target
-            distance_to_target = current_temp - trend["target"]
-            base_change = -0.1 * distance_to_target + random.uniform(-0.5, 0.5)
-
-        # Apply changes
-        new_temp = current_temp + base_change + noise
-
-        # Ensure reasonable bounds
-        new_temp = max(-40, min(572, new_temp))
-
-        # Update last update time
-        self._last_update[device_id] = now
-
-        return float(round(new_temp, 1))
 
     def get_devices(self, force_refresh: bool = False) -> List[Dict[str, Any]]:
         """
@@ -192,20 +93,25 @@ class MockDataService:
                         updated_probes = []
                         for probe in device_copy.get("probes", []):
                             probe_copy = probe.copy()
-                            new_temp = self._simulate_temperature_change(
-                                device_copy["device_id"],
-                                probe_copy["probe_id"],
-                                probe_copy["current_temp"],
-                                probe_copy.get("type", "food"),
+
+                            # Use the enhanced temperature simulator
+                            new_temp = temp_simulator.update_temperature(
+                                device_id=device_copy["device_id"],
+                                probe_id=probe_copy["probe_id"],
+                                current_temp=probe_copy["current_temp"],
+                                probe_name=probe_copy["name"],
+                                probe_type=probe_copy.get("type", "food"),
                             )
                             probe_copy["current_temp"] = new_temp
                             updated_probes.append(probe_copy)
 
                         device_copy["probes"] = updated_probes
 
-                        # Simulate battery drain (very slowly)
-                        if random.random() < 0.01:  # 1% chance per call
-                            device_copy["battery_level"] = max(0, device_copy.get("battery_level", 100) - 1)
+                        # Get device status from simulator (battery, signal)
+                        device_status = temp_simulator.get_device_status(device_copy["device_id"])
+                        device_copy["battery_level"] = device_status["battery_level"]
+                        device_copy["signal_strength"] = device_status["signal_strength"]
+                        device_copy["is_charging"] = device_status.get("is_charging", False)
 
                     devices.append(device_copy)
 
@@ -230,13 +136,17 @@ class MockDataService:
             devices = self.get_devices()
             for device in devices:
                 if device["device_id"] == device_id:
+                    # Use the enhanced device status
+                    device_status = temp_simulator.get_device_status(device_id)
+
                     return {
                         "device_id": device_id,
                         "name": device["name"],
                         "model": device["model"],
                         "is_online": device.get("is_online", True),
-                        "battery_level": device.get("battery_level", 100),
-                        "signal_strength": device.get("signal_strength", -50),
+                        "battery_level": device_status["battery_level"],
+                        "signal_strength": device_status["signal_strength"],
+                        "is_charging": device_status.get("is_charging", False),
                         "last_seen": device.get("last_seen", datetime.utcnow().isoformat()),
                         "firmware_version": device.get("firmware_version", "1.0.0"),
                         "probe_count": len(device.get("probes", [])),
@@ -276,6 +186,9 @@ class MockDataService:
 
                     for probe in device.get("probes", []):
                         if probe_id is None or probe["probe_id"] == probe_id:
+                            # Get device status for this reading
+                            device_status = temp_simulator.get_device_status(device_id)
+
                             probe_data = {
                                 "device_id": device_id,
                                 "probe_id": probe["probe_id"],
@@ -284,8 +197,9 @@ class MockDataService:
                                 "temperature": probe["current_temp"],
                                 "unit": probe.get("unit", "F"),
                                 "timestamp": datetime.utcnow().isoformat(),
-                                "battery_level": device.get("battery_level", 100),
-                                "signal_strength": device.get("signal_strength", -50),
+                                "battery_level": device_status["battery_level"],
+                                "signal_strength": device_status["signal_strength"],
+                                "is_charging": device_status.get("is_charging", False),
                                 "alarm_low": probe.get("alarm_low"),
                                 "alarm_high": probe.get("alarm_high"),
                                 "min_temp": probe.get("min_temp", -40),
@@ -377,44 +291,68 @@ class MockDataService:
         # Get current device/probe info
         devices = self.get_devices()
         current_temp = 70.0  # Default starting temperature
+        probe_name = "Unknown"
+        probe_type = "food"
 
         for device in devices:
             if device["device_id"] == device_id:
                 for probe in device.get("probes", []):
                     if probe["probe_id"] == probe_id:
                         current_temp = probe["current_temp"]
+                        probe_name = probe["name"]
+                        probe_type = probe.get("type", "food")
                         break
                 break
 
-        # Generate realistic cooking curve
+        # Create a temporary cooking session for this historical data
+        from .cooking_profiles import get_profile_by_name
+        from .temp_simulator import CookingSession
+
+        profile = get_profile_by_name(probe_name)
+
+        # Calculate how far back in time this is
+        now = datetime.utcnow()
+        days_ago = (now - start_time).days
+
+        # Adjust the final temp based on how old this data is
+        # If recent, end near current temp; if older, use a completed cook
+        if days_ago < 1:
+            # Recent - start from a lower temp and work toward current
+            start_temp = max(40.0, current_temp - random.uniform(100.0, 150.0))
+            session = CookingSession(
+                device_id=device_id, probe_id=probe_id, probe_name=probe_name, initial_temp=start_temp, profile=profile
+            )
+        else:
+            # Older - complete cook that reached target temp
+            session = CookingSession(
+                device_id=device_id,
+                probe_id=probe_id,
+                probe_name=probe_name,
+                initial_temp=40.0,  # Start from refrigerator temp
+                profile=profile,
+            )
+
+        # Generate time series data
+        elapsed_minutes: float = 0.0
         while current_time <= end_time:
-            # Simulate gradual temperature rise for food probes
-            time_ratio = (current_time - start_time).total_seconds() / (end_time - start_time).total_seconds()
+            # Simulate time passing in our session
+            # Speed up time 10x for this simulation
+            for _ in range(10):
+                session.last_update_time = session.start_time + timedelta(minutes=elapsed_minutes).total_seconds()
+                temp = session.update_temperature()
+                elapsed_minutes = float(elapsed_minutes + 0.1)  # Small time steps for smoother curve
 
-            if "food" in probe_id.lower() or any(word in probe_id.lower() for word in ["brisket", "ribs", "chicken", "steak"]):
-                # Food probe: gradual rise then plateau
-                if time_ratio < 0.7:
-                    # Rising phase
-                    target_temp = 70 + (current_temp - 70) * (time_ratio / 0.7)
-                else:
-                    # Plateau phase
-                    target_temp = current_temp * 0.95 + random.uniform(-2, 1)
-            else:
-                # Ambient probe: more stable
-                target_temp = current_temp + random.uniform(-3, 3)
-
-            # Add some noise
-            actual_temp = target_temp + random.gauss(0, 1.0)
-            actual_temp = max(-40, min(572, actual_temp))
+            # Get device status for this historical point
+            device_status = temp_simulator.get_device_status(device_id)
 
             reading = {
                 "device_id": device_id,
                 "probe_id": probe_id,
-                "temperature": round(actual_temp, 1),
+                "temperature": temp,
                 "unit": "F",
                 "timestamp": current_time.isoformat() + "Z",
-                "battery_level": random.randint(70, 100),
-                "signal_strength": random.randint(-65, -30),
+                "battery_level": device_status["battery_level"],
+                "signal_strength": device_status["signal_strength"],
             }
 
             readings.append(reading)
@@ -437,12 +375,9 @@ class MockDataService:
     def get_device_battery_level(self, device_id: str) -> Optional[int]:
         """Get battery level for a device"""
         try:
-            devices = self._device_data.get("devices", [])
-            for device in devices:
-                if device["device_id"] == device_id:
-                    battery = device.get("battery_level")
-                    return int(battery) if battery is not None else None
-            return None
+            # Use the enhanced device status
+            device_status = temp_simulator.get_device_status(device_id)
+            return int(device_status["battery_level"])
         except Exception as e:
             logger.error("Error getting battery level for %s: %s", device_id, e)
             return None

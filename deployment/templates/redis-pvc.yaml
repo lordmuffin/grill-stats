@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: redis-data-pvc
+  namespace: ${NAMESPACE}
+  labels:
+    app: redis
+    environment: ${ENVIRONMENT}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: ${STORAGE_CLASS}
+  resources:
+    requests:
+      storage: 5Gi

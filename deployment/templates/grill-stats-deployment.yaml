@@ -1,0 +1,134 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: grill-stats
+  namespace: ${NAMESPACE}
+  labels:
+    app: grill-stats
+    environment: ${ENVIRONMENT}
+spec:
+  replicas: ${REPLICAS}
+  selector:
+    matchLabels:
+      app: grill-stats
+  template:
+    metadata:
+      labels:
+        app: grill-stats
+    spec:
+      containers:
+      - name: grill-stats
+        image: lordmuffin/grill-stats:${TAG}
+        ports:
+        - containerPort: 5000
+        env:
+        - name: THERMOWORKS_API_KEY
+          valueFrom:
+            secretKeyRef:
+              name: grill-stats-secrets
+              key: thermoworks-api-key
+        - name: THERMOWORKS_CLIENT_ID
+          valueFrom:
+            secretKeyRef:
+              name: grill-stats-secrets
+              key: thermoworks-client-id
+        - name: THERMOWORKS_CLIENT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: grill-stats-secrets
+              key: thermoworks-client-secret
+        - name: THERMOWORKS_REDIRECT_URI
+          value: ${THERMOWORKS_REDIRECT_URI}
+        - name: THERMOWORKS_BASE_URL
+          value: ${THERMOWORKS_BASE_URL}
+        - name: THERMOWORKS_AUTH_URL
+          value: ${THERMOWORKS_AUTH_URL}
+        - name: HOMEASSISTANT_URL
+          value: ${HOMEASSISTANT_URL}
+        - name: HOMEASSISTANT_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: grill-stats-secrets
+              key: homeassistant-token
+        - name: DB_HOST
+          value: postgres
+        - name: DB_PORT
+          value: "5432"
+        - name: DB_NAME
+          value: ${DB_NAME}
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: username
+        - name: DB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: postgres-secrets
+              key: password
+        - name: REDIS_HOST
+          value: redis
+        - name: REDIS_PORT
+          value: "6379"
+        - name: REDIS_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: redis-secrets
+              key: password
+        - name: INFLUXDB_HOST
+          value: influxdb
+        - name: INFLUXDB_PORT
+          value: "8086"
+        - name: INFLUXDB_DATABASE
+          value: ${INFLUXDB_DATABASE}
+        - name: INFLUXDB_USERNAME
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-secrets
+              key: username
+        - name: INFLUXDB_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: influxdb-secrets
+              key: password
+        - name: SECRET_KEY
+          valueFrom:
+            secretKeyRef:
+              name: grill-stats-secrets
+              key: secret-key
+        - name: JWT_SECRET
+          valueFrom:
+            secretKeyRef:
+              name: grill-stats-secrets
+              key: jwt-secret
+        - name: LOG_LEVEL
+          value: ${LOG_LEVEL}
+        - name: FLASK_ENV
+          value: production
+        - name: DEBUG
+          value: "false"
+        resources:
+          limits:
+            cpu: ${CPU_LIMIT}
+            memory: ${MEMORY_LIMIT}
+          requests:
+            cpu: ${CPU_REQUEST}
+            memory: ${MEMORY_REQUEST}
+        livenessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          timeoutSeconds: 10
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /health
+            port: 5000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          timeoutSeconds: 5
+          failureThreshold: 3
+      imagePullSecrets:
+      - name: docker-registry-cred
