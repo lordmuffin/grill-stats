@@ -83,3 +83,4 @@ To modify the pre-commit configuration, edit the `.pre-commit-config.yaml` file 
 - Fix issues identified by the hooks rather than bypassing them
 - Keep hook configurations up to date with project requirements
 - Consider adding additional hooks as needed for specific project requirements
+

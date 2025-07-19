@@ -79,3 +79,4 @@ Types:
 - perf: Performance improvements
 - test: Adding or fixing tests
 - chore: Changes to the build process or auxiliary tools
+
