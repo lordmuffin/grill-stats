@@ -34,16 +34,16 @@ const HistoricalGraph = () => {
   const { deviceId } = useParams();
   const navigate = useNavigate();
   const { historicalApi } = useApi();
-  
+
   // State for date range selection
   const [startDate, setStartDate] = useState(new Date(Date.now() - 24 * 60 * 60 * 1000)); // 24 hours ago
   const [endDate, setEndDate] = useState(new Date());
-  
+
   // State for historical data
   const [historicalData, setHistoricalData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  
+
   // State for chart configuration
   const [selectedProbes, setSelectedProbes] = useState(new Set());
   const [aggregation, setAggregation] = useState('none');
@@ -68,10 +68,10 @@ const HistoricalGraph = () => {
       }
 
       const data = await response.json();
-      
+
       if (data.status === 'success') {
         setHistoricalData(data.data);
-        
+
         // Initialize selected probes to show all probes by default
         const probeIds = new Set(data.data.probes.map(probe => probe.probe_id));
         setSelectedProbes(probeIds);
@@ -213,11 +213,11 @@ const HistoricalGraph = () => {
 
   const formatDataSummary = () => {
     if (!historicalData) return null;
-    
+
     const timeDiff = endDate.getTime() - startDate.getTime();
     const hours = Math.round(timeDiff / (1000 * 60 * 60));
     const days = Math.round(hours / 24);
-    
+
     return {
       timeRange: days > 1 ? `${days} days` : `${hours} hours`,
       totalReadings: historicalData.total_readings,
@@ -242,8 +242,8 @@ const HistoricalGraph = () => {
     <div className="historical-graph">
       <div className="graph-header">
         <div className="header-left">
-          <button 
-            onClick={() => navigate('/devices')} 
+          <button
+            onClick={() => navigate('/devices')}
             className="btn btn-secondary"
           >
             ← Back to Devices
@@ -287,8 +287,8 @@ const HistoricalGraph = () => {
         <div className="chart-controls">
           <div className="control-group">
             <label>Aggregation:</label>
-            <select 
-              value={aggregation} 
+            <select
+              value={aggregation}
               onChange={(e) => setAggregation(e.target.value)}
               className="control-select"
             >
@@ -298,12 +298,12 @@ const HistoricalGraph = () => {
               <option value="max">Maximum</option>
             </select>
           </div>
-          
+
           {aggregation !== 'none' && (
             <div className="control-group">
               <label>Interval:</label>
-              <select 
-                value={interval} 
+              <select
+                value={interval}
                 onChange={(e) => setInterval(e.target.value)}
                 className="control-select"
               >
@@ -318,8 +318,8 @@ const HistoricalGraph = () => {
           )}
         </div>
 
-        <button 
-          onClick={handleLoadGraph} 
+        <button
+          onClick={handleLoadGraph}
           disabled={loading}
           className="btn btn-primary"
         >
@@ -338,7 +338,7 @@ const HistoricalGraph = () => {
       {dataSummary && (
         <div className="data-summary">
           <p>
-            Showing {dataSummary.totalReadings} readings from {dataSummary.probeCount} probe(s) 
+            Showing {dataSummary.totalReadings} readings from {dataSummary.probeCount} probe(s)
             over {dataSummary.timeRange}
           </p>
         </div>
@@ -374,8 +374,8 @@ const HistoricalGraph = () => {
             </div>
           ) : (
             <div className="chart-container">
-              <Line 
-                data={generateChartData() || { datasets: [] }} 
+              <Line
+                data={generateChartData() || { datasets: [] }}
                 options={chartOptions}
               />
             </div>

@@ -20,7 +20,7 @@ wait_for_service() {
     local service_name=$1
     local port=$2
     local max_attempts=30
-    
+
     echo "⏳ Waiting for $service_name to be ready..."
     for i in $(seq 1 $max_attempts); do
         if curl -f http://localhost:$port/ping 2>/dev/null || \
@@ -41,7 +41,7 @@ cleanup_pod() {
     echo "🧹 Cleaning up existing pod and containers..."
     podman pod stop $POD_NAME 2>/dev/null || true
     podman pod rm $POD_NAME 2>/dev/null || true
-    
+
     # Clean up individual containers if they exist
     for container in $POSTGRES_CONTAINER $REDIS_CONTAINER $INFLUXDB_CONTAINER $DEVICE_SERVICE_CONTAINER $TEMP_SERVICE_CONTAINER; do
         podman stop $container 2>/dev/null || true
@@ -145,7 +145,7 @@ podman run -d --pod $POD_NAME --name $DEVICE_SERVICE_CONTAINER \
   -e PYTHONUNBUFFERED=1 \
   device-service:pod-test
 
-# Start Temperature Service  
+# Start Temperature Service
 echo "   Starting Temperature Service..."
 podman run -d --pod $POD_NAME --name $TEMP_SERVICE_CONTAINER \
   -e INFLUXDB_HOST=localhost \
@@ -180,7 +180,7 @@ echo ""
 # Test Temperature Service
 echo "   Testing Temperature Service..."
 if curl -f http://localhost:8081/health; then
-    echo "   ✅ Temperature Service: Healthy"  
+    echo "   ✅ Temperature Service: Healthy"
     curl -s http://localhost:8081/health | python3 -m json.tool | head -10
 else
     echo "   ❌ Temperature Service: Failed"
@@ -223,7 +223,7 @@ echo "🎉 Podman Pod Test Complete!"
 echo ""
 echo "📄 Services accessible at:"
 echo "   🗄️ PostgreSQL: localhost:5432"
-echo "   🔗 Redis: localhost:6379" 
+echo "   🔗 Redis: localhost:6379"
 echo "   📊 InfluxDB: localhost:8086"
 echo "   📱 Device Service: http://localhost:8080"
 echo "   🌡️ Temperature Service: http://localhost:8081"

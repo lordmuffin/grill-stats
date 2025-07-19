@@ -15,10 +15,10 @@ const DeviceList = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       const response = await deviceApi.getDevices(forceRefresh);
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         setDevices(data.data.devices || []);
       } else {
@@ -36,10 +36,10 @@ const DeviceList = () => {
     try {
       setSyncing(true);
       setError(null);
-      
+
       const response = await deviceApi.syncDevices();
       const data = await response.json();
-      
+
       if (response.ok && data.status === 'success') {
         // Wait a moment for sync to complete, then refresh
         setTimeout(() => {
@@ -79,12 +79,12 @@ const DeviceList = () => {
 
   const formatLastSeen = (lastSeen) => {
     if (!lastSeen) return 'Never';
-    
+
     const date = new Date(lastSeen);
     const now = new Date();
     const diffMs = now - date;
     const diffMins = Math.floor(diffMs / 60000);
-    
+
     if (diffMins < 1) return 'Just now';
     if (diffMins < 60) return `${diffMins}m ago`;
     if (diffMins < 1440) return `${Math.floor(diffMins / 60)}h ago`;
@@ -108,21 +108,21 @@ const DeviceList = () => {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
           <h2>Your Devices</h2>
           <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button 
+            <button
               onClick={() => navigate('/devices/manage')}
               className="btn btn-primary"
             >
               Manage Devices
             </button>
-            <button 
-              onClick={handleRefresh} 
+            <button
+              onClick={handleRefresh}
               className="btn btn-secondary"
               disabled={loading}
             >
               {loading ? 'Refreshing...' : 'Refresh'}
             </button>
-            <button 
-              onClick={handleSync} 
+            <button
+              onClick={handleSync}
               className="btn btn-secondary"
               disabled={syncing}
             >
@@ -130,30 +130,30 @@ const DeviceList = () => {
             </button>
           </div>
         </div>
-        
+
         {error && (
           <div className="error-message" style={{ marginBottom: '1rem' }}>
             {error}
           </div>
         )}
-        
+
         {devices.length === 0 ? (
           <div className="empty-state">
             <h3>No devices found</h3>
             <p>
-              You don't have any ThermoWorks devices connected yet. 
+              You don't have any ThermoWorks devices connected yet.
               <br />
               Use Device Management to add devices manually or sync with your ThermoWorks account.
             </p>
             <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-              <button 
+              <button
                 onClick={() => navigate('/devices/manage')}
                 className="btn btn-primary"
               >
                 Manage Devices
               </button>
-              <button 
-                onClick={handleSync} 
+              <button
+                onClick={handleSync}
                 className="btn btn-secondary"
                 disabled={syncing}
               >
@@ -164,15 +164,15 @@ const DeviceList = () => {
         ) : (
           <div className="device-grid">
             {devices.map(device => (
-              <DeviceCard 
-                key={device.device_id} 
+              <DeviceCard
+                key={device.device_id}
                 device={device}
                 onRefresh={() => fetchDevices(true)}
               />
             ))}
           </div>
         )}
-        
+
         {devices.length > 0 && (
           <div style={{ marginTop: '2rem', textAlign: 'center', color: '#7f8c8d' }}>
             <p>

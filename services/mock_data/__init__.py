@@ -13,7 +13,7 @@ Components:
 
 Usage:
     from services.mock_data import MockDataService
-    
+
     mock_service = MockDataService()
     devices = mock_service.get_devices()
     temperature_data = mock_service.get_temperature_data(device_id, probe_id)
@@ -21,4 +21,4 @@ Usage:
 
 from .mock_service import MockDataService
 
-__all__ = ['MockDataService']
+__all__ = ["MockDataService"]

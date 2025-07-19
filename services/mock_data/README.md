@@ -79,9 +79,9 @@ temp_data = mock_service.get_temperature_data('mock-bluedot-002', 'probe_1')
 
 # Get historical data (returns 4-hour cooking curves)
 history = mock_service.get_historical_data(
-    'mock-node-003', 
-    'probe_1', 
-    start_time, 
+    'mock-node-003',
+    'probe_1',
+    start_time,
     end_time
 )
 ```
@@ -104,7 +104,7 @@ The MockDataService provides the same methods as the real ThermoWorks client:
 The mock service generates realistic temperature changes:
 
 - **Food Probes**: Gradual temperature rise with cooking patterns
-- **Ambient Probes**: Stable temperatures with controlled fluctuations  
+- **Ambient Probes**: Stable temperatures with controlled fluctuations
 - **Surface Probes**: Variable temperatures mimicking grill surfaces
 
 ### Cooking Patterns
@@ -134,7 +134,7 @@ Temperature changes follow realistic patterns:
 # - Realistic pit temperature behavior
 
 # Surface probes: higher variability
-# - Rate: ±1.0°F per minute  
+# - Rate: ±1.0°F per minute
 # - Greater temperature swings
 # - Simulates direct heat variations
 ```
@@ -184,7 +184,7 @@ The mock data supports comprehensive testing:
 services/mock-data/
 ├── __init__.py                 # Module exports
 ├── mock_service.py            # Main MockDataService class
-├── devices.json               # Static device configurations  
+├── devices.json               # Static device configurations
 ├── historical.json            # Pre-generated historical data
 ├── generate_historical_data.py # Historical data generator script
 └── README.md                  # This documentation
@@ -236,7 +236,7 @@ Edit `devices.json` to modify mock devices:
   "probes": [
     {
       "probe_id": "probe_1",
-      "name": "Custom Probe", 
+      "name": "Custom Probe",
       "type": "food",
       "current_temp": 150.0,
       "alarm_low": 140,
@@ -254,7 +254,7 @@ Edit `devices.json` to modify mock devices:
 # config.py
 MOCK_MODE = os.getenv('MOCK_MODE', 'false').lower() in ('true', '1', 'yes', 'on')
 
-# app.py  
+# app.py
 thermoworks_client = ThermoWorksClient(
     api_key=app.config['THERMOWORKS_API_KEY'],
     mock_mode=app.config.get('MOCK_MODE', False)
@@ -268,7 +268,7 @@ thermoworks_client = ThermoWorksClient(
 client = ThermoworksClient(mock_mode=True)
 devices = client.get_devices()  # Returns mock devices
 
-# Temperature Service  
+# Temperature Service
 client = ThermoWorksClient(mock_mode=True)
 temp_data = client.get_temperature_data(device_id, probe_id)
 ```
@@ -383,7 +383,7 @@ Returns current temperature data for device/probe.
 Returns historical temperature data for specified time range.
 
 **Parameters**:
-- `device_id` (str): Device identifier  
+- `device_id` (str): Device identifier
 - `probe_id` (str): Probe identifier
 - `start_time` (datetime): Start of time range
 - `end_time` (datetime): End of time range

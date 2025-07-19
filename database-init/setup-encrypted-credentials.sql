@@ -8,23 +8,23 @@ BEGIN;
 CREATE TABLE IF NOT EXISTS thermoworks_credentials (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    
+
     -- Encrypted credential data (stored as encrypted strings from Vault Transit)
     encrypted_email TEXT NOT NULL,
     encrypted_password TEXT NOT NULL,
-    
+
     -- Encryption metadata (stored as JSON)
     encryption_metadata JSONB NOT NULL,
-    
+
     -- Credential status and validation
     is_active BOOLEAN DEFAULT TRUE,
     last_validated TIMESTAMP,
     validation_attempts INTEGER DEFAULT 0,
-    
+
     -- Audit fields
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Ensure one credential per user
     UNIQUE(user_id)
 );
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS credential_access_log (
     details TEXT,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     ip_address TEXT,
-    
+
     -- Constraint to ensure valid actions
     CONSTRAINT chk_action CHECK (action IN ('encrypt', 'decrypt', 'rotate', 'validate', 'delete', 'deactivate'))
 );
@@ -62,7 +62,7 @@ CREATE TABLE IF NOT EXISTS encryption_key_management (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     rotated_at TIMESTAMP,
     is_active BOOLEAN DEFAULT TRUE,
-    
+
     -- Metadata
     metadata JSONB
 );
@@ -101,22 +101,22 @@ BEGIN
     ) THEN
         RETURN FALSE;
     END IF;
-    
+
     -- Check if algorithm is valid
     IF (metadata_json->>'algorithm') NOT IN ('aes256-gcm96') THEN
         RETURN FALSE;
     END IF;
-    
+
     -- Check if key_version is a positive integer
     IF NOT (metadata_json->>'key_version')::INTEGER > 0 THEN
         RETURN FALSE;
     END IF;
-    
+
     -- Check if access_count is a non-negative integer
     IF NOT (metadata_json->>'access_count')::INTEGER >= 0 THEN
         RETURN FALSE;
     END IF;
-    
+
     RETURN TRUE;
 END;
 $$ LANGUAGE plpgsql;
@@ -161,11 +161,11 @@ RETURNS INTEGER AS $$
 DECLARE
     deleted_count INTEGER;
 BEGIN
-    DELETE FROM credential_access_log 
+    DELETE FROM credential_access_log
     WHERE timestamp < NOW() - INTERVAL '1 day' * retention_days;
-    
+
     GET DIAGNOSTICS deleted_count = ROW_COUNT;
-    
+
     RETURN deleted_count;
 END;
 $$ LANGUAGE plpgsql;
@@ -179,47 +179,47 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         'total_encrypted_credentials'::TEXT,
         COUNT(*)::BIGINT,
         'Total encrypted credentials in system'::TEXT
     FROM thermoworks_credentials
     WHERE is_active = TRUE
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'credentials_accessed_today'::TEXT,
         COUNT(DISTINCT user_id)::BIGINT,
         'Unique users who accessed credentials today'::TEXT
     FROM credential_access_log
-    WHERE action = 'decrypt' 
+    WHERE action = 'decrypt'
     AND success = TRUE
     AND timestamp >= CURRENT_DATE
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'failed_decrypt_attempts_today'::TEXT,
         COUNT(*)::BIGINT,
         'Failed decryption attempts today'::TEXT
     FROM credential_access_log
-    WHERE action = 'decrypt' 
+    WHERE action = 'decrypt'
     AND success = FALSE
     AND timestamp >= CURRENT_DATE
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'inactive_credentials'::TEXT,
         COUNT(*)::BIGINT,
         'Inactive credentials (validation failed)'::TEXT
     FROM thermoworks_credentials
     WHERE is_active = FALSE
-    
+
     UNION ALL
-    
-    SELECT 
+
+    SELECT
         'credentials_needing_validation'::TEXT,
         COUNT(*)::BIGINT,
         'Credentials that have never been validated'::TEXT
@@ -238,9 +238,9 @@ RETURNS TABLE (
 ) AS $$
 BEGIN
     RETURN QUERY
-    SELECT 
+    SELECT
         tc.user_id,
-        CASE 
+        CASE
             WHEN NOT is_credential_encrypted(tc.encrypted_email) THEN 'INVALID_EMAIL_ENCRYPTION'
             WHEN NOT is_credential_encrypted(tc.encrypted_password) THEN 'INVALID_PASSWORD_ENCRYPTION'
             WHEN NOT validate_encryption_metadata(tc.encryption_metadata) THEN 'INVALID_METADATA'
@@ -248,7 +248,7 @@ BEGIN
             WHEN tc.encrypted_password IS NULL OR tc.encrypted_password = '' THEN 'MISSING_PASSWORD'
             ELSE 'VALID'
         END,
-        CASE 
+        CASE
             WHEN NOT is_credential_encrypted(tc.encrypted_email) THEN 'Email is not properly encrypted with Vault'
             WHEN NOT is_credential_encrypted(tc.encrypted_password) THEN 'Password is not properly encrypted with Vault'
             WHEN NOT validate_encryption_metadata(tc.encryption_metadata) THEN 'Encryption metadata is invalid or incomplete'
@@ -263,7 +263,7 @@ $$ LANGUAGE plpgsql;
 
 -- Create view for credential information without sensitive data
 CREATE OR REPLACE VIEW thermoworks_credentials_info AS
-SELECT 
+SELECT
     tc.id,
     tc.user_id,
     u.email as user_email,
@@ -282,7 +282,7 @@ JOIN users u ON tc.user_id = u.id;
 
 -- Create view for encrypted credential statistics
 CREATE OR REPLACE VIEW encrypted_credential_stats AS
-SELECT 
+SELECT
     COUNT(*) as total_credentials,
     COUNT(CASE WHEN is_active = TRUE THEN 1 END) as active_credentials,
     COUNT(CASE WHEN is_active = FALSE THEN 1 END) as inactive_credentials,

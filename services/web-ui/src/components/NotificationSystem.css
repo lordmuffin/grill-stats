@@ -322,25 +322,25 @@
     width: 320px;
     right: -10px;
   }
-  
+
   .floating-notification {
     right: 10px;
     left: 10px;
     top: 10px;
   }
-  
+
   .floating-notification-content {
     max-width: none;
   }
-  
+
   .notification-item {
     padding: 12px 16px;
   }
-  
+
   .notification-panel-header {
     padding: 12px 16px;
   }
-  
+
   .notification-panel-footer {
     padding: 6px 16px;
   }
@@ -351,11 +351,11 @@
     width: calc(100vw - 20px);
     right: 10px;
   }
-  
+
   .notification-controls {
     gap: 4px;
   }
-  
+
   .control-btn {
     padding: 4px 6px;
     font-size: 0.9rem;
@@ -508,58 +508,58 @@
     border-color: #4a5568;
     color: #e2e8f0;
   }
-  
+
   .notification-panel-header,
   .notification-panel-footer,
   .notification-status-bar {
     background: #1a202c;
     border-color: #4a5568;
   }
-  
+
   .notification-panel-header h3 {
     color: #e2e8f0;
   }
-  
+
   .notification-item {
     border-color: #4a5568;
   }
-  
+
   .notification-item:hover {
     background: #2d3748;
   }
-  
+
   .notification-title {
     color: #e2e8f0;
   }
-  
+
   .notification-message {
     color: #a0aec0;
   }
-  
+
   .device-info {
     background: #4a5568;
     color: #e2e8f0;
   }
-  
+
   .temperature-info {
     background: #2a4a6b;
     color: #93c5fd;
   }
-  
+
   .floating-notification-content {
     background: #2d3748;
     color: #e2e8f0;
   }
-  
+
   .notification-bell {
     background: #4a5568;
     color: #e2e8f0;
   }
-  
+
   .notification-bell:hover {
     background: #2d3748;
   }
-  
+
   .connection-status {
     background: #2d3748;
   }

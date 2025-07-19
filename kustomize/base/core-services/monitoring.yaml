@@ -202,7 +202,7 @@ spec:
         summary: "Grill Stats service {{ $labels.job }} is down"
         description: "{{ $labels.job }} has been down for more than 5 minutes."
         runbook_url: "https://homelab.local/runbooks/grill-stats/service-down"
-    
+
     - alert: GrillStatsHighErrorRate
       expr: |
         (
@@ -219,7 +219,7 @@ spec:
         summary: "High error rate for {{ $labels.job }}"
         description: "Error rate is {{ $value | humanizePercentage }} for {{ $labels.job }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/high-error-rate"
-    
+
     - alert: GrillStatsHighLatency
       expr: |
         histogram_quantile(0.95,
@@ -234,7 +234,7 @@ spec:
         summary: "High latency for {{ $labels.job }}"
         description: "95th percentile latency is {{ $value }}s for {{ $labels.job }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/high-latency"
-    
+
     - alert: GrillStatsHighMemoryUsage
       expr: |
         (
@@ -250,7 +250,7 @@ spec:
         summary: "High memory usage for {{ $labels.pod }}"
         description: "Memory usage is {{ $value }}% for {{ $labels.pod }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/high-memory"
-    
+
     - alert: GrillStatsHighCPUUsage
       expr: |
         (
@@ -281,7 +281,7 @@ spec:
         summary: "No temperature readings from device {{ $labels.device_id }}"
         description: "Device {{ $labels.device_id }} hasn't sent temperature data for over 5 minutes"
         runbook_url: "https://homelab.local/runbooks/grill-stats/missing-temperature-data"
-    
+
     - alert: HighTemperatureAlert
       expr: |
         grill_stats_temperature_celsius > 120
@@ -294,7 +294,7 @@ spec:
         summary: "High temperature alert for device {{ $labels.device_id }}"
         description: "Temperature is {{ $value }}°C for device {{ $labels.device_id }}, channel {{ $labels.channel_id }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/high-temperature"
-    
+
     - alert: DeviceBatteryLow
       expr: |
         grill_stats_device_battery_level < 20
@@ -307,7 +307,7 @@ spec:
         summary: "Low battery for device {{ $labels.device_id }}"
         description: "Battery level is {{ $value }}% for device {{ $labels.device_id }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/low-battery"
-    
+
     - alert: DeviceOffline
       expr: |
         grill_stats_device_online_status == 0
@@ -320,7 +320,7 @@ spec:
         summary: "Device {{ $labels.device_id }} is offline"
         description: "ThermoWorks device {{ $labels.device_id }} has been offline for more than 5 minutes"
         runbook_url: "https://homelab.local/runbooks/grill-stats/device-offline"
-    
+
     - alert: AuthenticationFailureSpike
       expr: |
         rate(auth_failures_total[5m]) > 0.1
@@ -333,7 +333,7 @@ spec:
         summary: "High authentication failure rate"
         description: "Authentication failure rate is {{ $value | humanizePercentage }} for more than 5 minutes"
         runbook_url: "https://homelab.local/runbooks/grill-stats/auth-failures"
-    
+
     - alert: UnusualTemperatureSpike
       expr: |
         increase(grill_stats_temperature_celsius[5m]) > 50
@@ -369,7 +369,7 @@ spec:
         summary: "SLO violation: Request availability below 99.9%"
         description: "Current availability is {{ $value }}% which is below the 99.9% SLO target"
         runbook_url: "https://homelab.local/runbooks/grill-stats/slo-violation"
-    
+
     - alert: GrillStatsTemperatureDataFreshnessSLO
       expr: |
         (
@@ -387,7 +387,7 @@ spec:
         summary: "SLO violation: Temperature data freshness below 99.5%"
         description: "Current data freshness is {{ $value }}% which is below the 99.5% SLO target"
         runbook_url: "https://homelab.local/runbooks/grill-stats/slo-violation"
-    
+
     - alert: GrillStatsResponseTimeSLO
       expr: |
         histogram_quantile(0.95,
@@ -420,7 +420,7 @@ spec:
         summary: "PostgreSQL connection pool nearly exhausted"
         description: "PostgreSQL connection usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/postgresql-connections"
-    
+
     - alert: InfluxDBHighMemoryUsage
       expr: |
         influxdb_system_memory_usage_percent > 85
@@ -434,7 +434,7 @@ spec:
         summary: "InfluxDB high memory usage"
         description: "InfluxDB memory usage is {{ $value }}% on {{ $labels.instance }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/influxdb-memory"
-    
+
     - alert: RedisHighMemoryUsage
       expr: |
         redis_memory_used_bytes / redis_memory_max_bytes > 0.9
@@ -448,7 +448,7 @@ spec:
         summary: "Redis high memory usage"
         description: "Redis memory usage is {{ $value | humanizePercentage }} on {{ $labels.instance }}"
         runbook_url: "https://homelab.local/runbooks/grill-stats/redis-memory"
-    
+
     - alert: DatabaseBackupFailed
       expr: |
         time() - last_successful_backup_timestamp > 86400

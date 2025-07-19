@@ -64,24 +64,24 @@ data:
   01-setup-buckets.sh: |
     #!/bin/bash
     set -e
-    
+
     echo "🔧 Setting up InfluxDB buckets for PRODUCTION environment..."
-    
+
     # Wait for InfluxDB to be ready
     until curl -f http://localhost:8086/ping; do
         echo "⏳ Waiting for InfluxDB to be ready..."
         sleep 5
     done
-    
+
     echo "✅ InfluxDB is ready, proceeding with bucket setup..."
-    
+
     # Get admin token from environment
     ADMIN_TOKEN="${DOCKER_INFLUXDB_INIT_ADMIN_TOKEN}"
     ORG="${DOCKER_INFLUXDB_INIT_ORG}"
-    
+
     # Create production buckets with full retention
     echo "📊 Creating PRODUCTION buckets with full retention policies..."
-    
+
     # Real-time bucket (7 days retention)
     influx bucket create \
       --name grill-stats-realtime \
@@ -89,7 +89,7 @@ data:
       --retention 168h \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Real-time bucket already exists"
-    
+
     # Hourly aggregated bucket (90 days retention)
     influx bucket create \
       --name grill-stats-hourly \
@@ -97,7 +97,7 @@ data:
       --retention 2160h \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Hourly bucket already exists"
-    
+
     # Daily aggregated bucket (1 year retention)
     influx bucket create \
       --name grill-stats-daily \
@@ -105,7 +105,7 @@ data:
       --retention 8760h \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Daily bucket already exists"
-    
+
     # Archive bucket (infinite retention)
     influx bucket create \
       --name grill-stats-archive \
@@ -113,7 +113,7 @@ data:
       --retention 0 \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Archive bucket already exists"
-    
+
     # Monitoring bucket (30 days retention)
     influx bucket create \
       --name grill-stats-monitoring \
@@ -121,7 +121,7 @@ data:
       --retention 720h \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Monitoring bucket already exists"
-    
+
     # Alerts bucket (90 days retention)
     influx bucket create \
       --name grill-stats-alerts \
@@ -129,7 +129,7 @@ data:
       --retention 2160h \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Alerts bucket already exists"
-    
+
     # Analytics bucket (1 year retention)
     influx bucket create \
       --name grill-stats-analytics \
@@ -137,22 +137,22 @@ data:
       --retention 8760h \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Analytics bucket already exists"
-    
+
     echo "✅ PRODUCTION Buckets created successfully!"
-    
+
     # Create production-specific continuous queries
     echo "📈 Creating production continuous queries..."
-    
+
     # Enhanced downsampling for production
     cat > /tmp/prod-hourly-downsample.flux << 'EOF'
     import "influxdata/influxdb/tasks"
-    
+
     option task = {
       name: "prod-downsample-hourly-temperature",
       every: 1h,
       offset: 5m,
     }
-    
+
     from(bucket: "grill-stats-realtime")
       |> range(start: -1h)
       |> filter(fn: (r) => r._measurement == "temperature_readings")
@@ -160,7 +160,7 @@ data:
       |> aggregateWindow(every: 1h, fn: mean, createEmpty: false)
       |> set(key: "_measurement", value: "temperature_readings_hourly")
       |> to(bucket: "grill-stats-hourly")
-    
+
     from(bucket: "grill-stats-realtime")
       |> range(start: -1h)
       |> filter(fn: (r) => r._measurement == "temperature_readings")
@@ -169,7 +169,7 @@ data:
       |> set(key: "_field", value: "temperature_max")
       |> set(key: "_measurement", value: "temperature_readings_hourly")
       |> to(bucket: "grill-stats-hourly")
-    
+
     from(bucket: "grill-stats-realtime")
       |> range(start: -1h)
       |> filter(fn: (r) => r._measurement == "temperature_readings")
@@ -179,16 +179,16 @@ data:
       |> set(key: "_measurement", value: "temperature_readings_hourly")
       |> to(bucket: "grill-stats-hourly")
     EOF
-    
+
     # Create the production tasks
     influx task create \
       --file /tmp/prod-hourly-downsample.flux \
       --org "$ORG" \
       --token "$ADMIN_TOKEN" \
       --host http://localhost:8086 || echo "Production hourly task already exists"
-    
+
     echo "✅ Production continuous queries created successfully!"
-    
+
     # No test data insertion for production
     echo "🔒 Skipping test data insertion for production environment"
 ---

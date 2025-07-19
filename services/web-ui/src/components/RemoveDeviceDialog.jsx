@@ -39,7 +39,7 @@ const RemoveDeviceDialog = ({ device, isOpen, onClose, onDeviceRemoved }) => {
       // In a real implementation, you would check for active sessions
       // For now, we'll simulate this check
       // This could be an API call like: deviceApi.getActiveSession(device.device_id)
-      
+
       // Mock check - you can replace this with actual session checking logic
       const mockActiveSession = Math.random() < 0.3; // 30% chance of active session
       setHasActiveSession(mockActiveSession);
@@ -64,17 +64,17 @@ const RemoveDeviceDialog = ({ device, isOpen, onClose, onDeviceRemoved }) => {
           type: 'success',
           text: `Device "${device.name || device.nickname}" has been successfully removed.`
         });
-        
+
         // Notify parent component
         if (onDeviceRemoved) {
           onDeviceRemoved(device);
         }
-        
+
         // Close dialog after short delay
         setTimeout(() => {
           onClose();
         }, 1500);
-        
+
       } else {
         setRemoveMessage({
           type: 'error',
@@ -106,15 +106,15 @@ const RemoveDeviceDialog = ({ device, isOpen, onClose, onDeviceRemoved }) => {
     <div className="dialog-overlay" onClick={handleOverlayClick}>
       <div className="dialog" role="dialog" aria-labelledby="remove-dialog-title" aria-modal="true">
         <h3 id="remove-dialog-title">Remove Device</h3>
-        
+
         <div style={{ marginBottom: '1.5rem' }}>
           <p>
             Are you sure you want to remove <strong>"{deviceName}"</strong> from your account?
           </p>
-          
-          <div style={{ 
-            backgroundColor: '#f8f9fa', 
-            padding: '1rem', 
+
+          <div style={{
+            backgroundColor: '#f8f9fa',
+            padding: '1rem',
             borderRadius: '4px',
             marginTop: '1rem',
             fontSize: '0.9rem'
@@ -126,36 +126,36 @@ const RemoveDeviceDialog = ({ device, isOpen, onClose, onDeviceRemoved }) => {
             {device.model && <div>Model: {device.model}</div>}
             {device.device_type && <div>Type: {device.device_type}</div>}
           </div>
-          
+
           {hasActiveSession && (
             <div className="message message-warning" style={{ marginTop: '1rem' }}>
-              <strong>Cannot remove device:</strong> This device is currently in an active monitoring session. 
+              <strong>Cannot remove device:</strong> This device is currently in an active monitoring session.
               Please stop the session before removing the device.
             </div>
           )}
-          
+
           {!hasActiveSession && (
-            <div style={{ 
-              backgroundColor: '#fff3cd', 
+            <div style={{
+              backgroundColor: '#fff3cd',
               color: '#856404',
-              padding: '1rem', 
+              padding: '1rem',
               borderRadius: '4px',
               marginTop: '1rem',
               fontSize: '0.9rem',
               border: '1px solid #ffeaa7'
             }}>
-              <strong>Warning:</strong> This action cannot be undone. All historical data and settings 
+              <strong>Warning:</strong> This action cannot be undone. All historical data and settings
               for this device will be permanently removed from your account.
             </div>
           )}
         </div>
-        
+
         {removeMessage.text && (
           <div className={`message message-${removeMessage.type}`} style={{ marginBottom: '1.5rem' }}>
             {removeMessage.text}
           </div>
         )}
-        
+
         <div className="dialog-actions">
           <button
             type="button"
@@ -181,12 +181,12 @@ const RemoveDeviceDialog = ({ device, isOpen, onClose, onDeviceRemoved }) => {
             )}
           </button>
         </div>
-        
-        <div style={{ 
-          marginTop: '1rem', 
-          fontSize: '0.8rem', 
-          color: '#7f8c8d', 
-          textAlign: 'center' 
+
+        <div style={{
+          marginTop: '1rem',
+          fontSize: '0.8rem',
+          color: '#7f8c8d',
+          textAlign: 'center'
         }}>
           Press Escape to cancel
         </div>

@@ -83,7 +83,7 @@ services:
 
   # Data Pipeline Service
   data-pipeline:
-    build: 
+    build:
       context: .
       dockerfile: Dockerfile
     container_name: data-pipeline

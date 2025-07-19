@@ -119,7 +119,7 @@ cat > /tmp/daily-downsample.flux << 'EOF'
 import "influxdata/influxdb/tasks"
 
 option task = {
-  name: "downsample-daily-temperature", 
+  name: "downsample-daily-temperature",
   every: 1d,
   offset: 10m,
 }
@@ -216,7 +216,7 @@ echo "🧪 Inserting sample temperature data..."
 if [ "${ENVIRONMENT}" != "production" ] && [ "${ENVIRONMENT}" != "prod" ]; then
     # Current timestamp in nanoseconds
     CURRENT_TIME=$(date +%s)000000000
-    
+
     # Sample data for ThermoWorks Signals device
     cat > /tmp/sample-data.txt << EOF
 temperature_readings,device_id=test_signals_001,channel_id=1,probe_type=meat,user_id=test_user,device_type=signals,location=test_lab temperature=165.5,unit="F",battery_level=85,signal_strength=-45,accuracy=0.1,calibration_offset=0.0 $CURRENT_TIME
@@ -225,7 +225,7 @@ temperature_readings,device_id=test_signals_001,channel_id=3,probe_type=meat,use
 temperature_readings,device_id=test_signals_001,channel_id=4,probe_type=meat,user_id=test_user,device_type=signals,location=test_lab temperature=140.8,unit="F",battery_level=85,signal_strength=-45,accuracy=0.1,calibration_offset=0.0 $CURRENT_TIME
 device_status,device_id=test_signals_001,user_id=test_user,device_type=signals,location=test_lab online=true,battery_level=85,signal_strength=-45,connection_status="connected",last_seen=1642267800,firmware_version="2.1.0",hardware_version="1.0",uptime=3600,memory_usage=45,cpu_usage=12 $CURRENT_TIME
 EOF
-    
+
     # Insert sample data
     influx write \
         --org "$ORG" \
@@ -233,7 +233,7 @@ EOF
         --token "$ADMIN_TOKEN" \
         --host http://localhost:8086 \
         --file /tmp/sample-data.txt || echo "⚠️ Sample data insertion failed"
-    
+
     echo "✅ Sample data inserted successfully!"
 else
     echo "🔒 Skipping sample data insertion for production environment"
@@ -273,7 +273,7 @@ if [ "${ENVIRONMENT}" != "production" ] && [ "${ENVIRONMENT}" != "prod" ]; then
         --host http://localhost:8086 \
         'from(bucket: "grill-stats-realtime") |> range(start: -1h) |> filter(fn: (r) => r._measurement == "temperature_readings") |> count()' \
         --raw 2>/dev/null | grep -o '"_value":[0-9]*' | cut -d':' -f2 | head -1 || echo "0")
-    
+
     if [ "$DATA_COUNT" -gt "0" ]; then
         echo "✅ Sample data verified successfully ($DATA_COUNT points)"
     else

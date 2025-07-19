@@ -34,12 +34,12 @@ jobs:
     steps:
       - name: Checkout repository
         uses: https://github.com/actions/checkout@v4
-        
+
       - name: Setup Python
         uses: https://github.com/actions/setup-python@v4
         with:
           python-version: '3.11'
-      
+
       - name: Install system dependencies
         run: |
           sudo apt-get update

@@ -1,7 +1,7 @@
 #!/bin/bash
 # =======================================================================
 # Performance & Reliability Test Script
-# 
+#
 # Purpose: Test system performance, stability, and reliability under
 #          various load conditions and over extended time periods
 # Environment: Production - grill-stats.lab.apj.dev
@@ -40,14 +40,14 @@ check_status() {
 
 login() {
   log "Attempting login with $TEST_EMAIL..."
-  
+
   LOGIN_RESPONSE=$(curl -s -X POST "$API_BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
-  
+
   # Extract token from response
   AUTH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
-  
+
   if [[ "$AUTH_TOKEN" == "null" || -z "$AUTH_TOKEN" ]]; then
     log "❌ Login failed. Response: $LOGIN_RESPONSE"
     return 1
@@ -61,22 +61,22 @@ login() {
 make_request() {
   local endpoint=$1
   local id=$2
-  
+
   START_TIME=$(date +%s.%N)
   RESPONSE=$(curl -s -w "%{http_code}" -o "/tmp/response_${id}.json" \
     -H "Authorization: Bearer $AUTH_TOKEN" "${API_BASE_URL}${endpoint}")
   END_TIME=$(date +%s.%N)
-  
+
   # Calculate response time in milliseconds
   RESP_TIME=$(echo "($END_TIME - $START_TIME) * 1000" | bc | cut -d'.' -f1)
-  
+
   # Check for success (HTTP 200)
   if [[ "$RESPONSE" == "200" ]]; then
     STATUS="SUCCESS"
   else
     STATUS="FAILED ($RESPONSE)"
   fi
-  
+
   echo "$RESP_TIME $STATUS"
 }
 
@@ -138,7 +138,7 @@ for endpoint in "${ENDPOINTS[@]}"; do
   RESULT=$(make_request "$endpoint" "baseline")
   RESP_TIME=$(echo $RESULT | cut -d' ' -f1)
   STATUS=$(echo $RESULT | cut -d' ' -f2-)
-  
+
   log "| $endpoint | $RESP_TIME ms | $STATUS |"
 done
 
@@ -157,21 +157,21 @@ run_user_load() {
   local user_id=$1
   local iterations=$2
   local result_file="${RESULTS_DIR}/user_${user_id}.txt"
-  
+
   # Clear result file
   echo "" > $result_file
-  
+
   for ((i=1; i<=iterations; i++)); do
     # Pick random endpoint
     ENDPOINT=${ENDPOINTS[$RANDOM % ${#ENDPOINTS[@]}]}
-    
+
     # Make request and record result
     RESULT=$(make_request "$ENDPOINT" "load_${user_id}_${i}")
     RESP_TIME=$(echo $RESULT | cut -d' ' -f1)
     STATUS=$(echo $RESULT | cut -d' ' -f2-)
-    
+
     echo "$i,$ENDPOINT,$RESP_TIME,$STATUS" >> $result_file
-    
+
     # Random delay between 1-5 seconds
     sleep $(( ( RANDOM % 5 ) + 1 ))
   done
@@ -203,19 +203,19 @@ for result_file in ${RESULTS_DIR}/user_*.txt; do
   while IFS=, read -r iter endpoint resp_time status; do
     if [[ -n "$resp_time" ]]; then
       TOTAL_REQUESTS=$((TOTAL_REQUESTS + 1))
-      
+
       if [[ "$status" == "SUCCESS" ]]; then
         TOTAL_SUCCESS=$((TOTAL_SUCCESS + 1))
       else
         TOTAL_FAILURE=$((TOTAL_FAILURE + 1))
       fi
-      
+
       SUM_RESPONSE_TIME=$((SUM_RESPONSE_TIME + resp_time))
-      
+
       if [[ $resp_time -gt $MAX_RESPONSE_TIME ]]; then
         MAX_RESPONSE_TIME=$resp_time
       fi
-      
+
       if [[ $resp_time -lt $MIN_RESPONSE_TIME ]]; then
         MIN_RESPONSE_TIME=$resp_time
       fi
@@ -269,13 +269,13 @@ while [[ $(date +%s) -lt $END_TIME ]]; do
   COMPLETED_CHECKS=$((COMPLETED_CHECKS + 1))
   CHECK_TIMESTAMP=$(date +"%Y-%m-%d %H:%M:%S")
   RESULT_FILE="${STABILITY_DIR}/check_${COMPLETED_CHECKS}.txt"
-  
+
   log "Running stability check $COMPLETED_CHECKS of $TOTAL_CHECKS at $CHECK_TIMESTAMP"
-  
+
   # Run basic health check
   HEALTH_RESPONSE=$(curl -s -w "\n%{http_code}" "$API_BASE_URL/health")
   HEALTH_CODE=$(echo "$HEALTH_RESPONSE" | tail -n1)
-  
+
   if [[ "$HEALTH_CODE" == "200" ]]; then
     log "  ✅ Health endpoint OK"
     echo "HEALTH,200,$(date +%s)" >> $RESULT_FILE
@@ -284,15 +284,15 @@ while [[ $(date +%s) -lt $END_TIME ]]; do
     echo "HEALTH,$HEALTH_CODE,$(date +%s)" >> $RESULT_FILE
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
   fi
-  
+
   # Check devices endpoint (requires auth)
   DEVICES_RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices")
   DEVICES_CODE=$(echo "$DEVICES_RESPONSE" | tail -n1)
-  
+
   if [[ "$DEVICES_CODE" == "200" ]]; then
     log "  ✅ Devices endpoint OK"
     echo "DEVICES,200,$(date +%s)" >> $RESULT_FILE
-    
+
     # Check if token expired and we need to re-login
     DEVICES_BODY=$(echo "$DEVICES_RESPONSE" | head -n -1)
     if [[ "$DEVICES_BODY" == *"unauthorized"* || "$DEVICES_BODY" == *"Unauthorized"* ]]; then
@@ -303,19 +303,19 @@ while [[ $(date +%s) -lt $END_TIME ]]; do
     log "  ❌ Devices endpoint failed: $DEVICES_CODE"
     echo "DEVICES,$DEVICES_CODE,$(date +%s)" >> $RESULT_FILE
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
-    
+
     # Try to re-authenticate on failure
     login
   fi
-  
+
   # Check monitoring data
   MONITORING_RESPONSE=$(curl -s -w "\n%{http_code}" -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/api/monitoring/data")
   MONITORING_CODE=$(echo "$MONITORING_RESPONSE" | tail -n1)
-  
+
   if [[ "$MONITORING_CODE" == "200" ]]; then
     log "  ✅ Monitoring data endpoint OK"
     echo "MONITORING,200,$(date +%s)" >> $RESULT_FILE
-    
+
     # Extract number of probes for reporting
     MONITORING_BODY=$(echo "$MONITORING_RESPONSE" | head -n -1)
     PROBE_COUNT=$(echo $MONITORING_BODY | jq -r '.data.count // 0')
@@ -325,34 +325,34 @@ while [[ $(date +%s) -lt $END_TIME ]]; do
     echo "MONITORING,$MONITORING_CODE,$(date +%s)" >> $RESULT_FILE
     FAILED_CHECKS=$((FAILED_CHECKS + 1))
   fi
-  
+
   # Every hour, check memory usage pattern
   if [[ $((COMPLETED_CHECKS % (3600 / CHECK_INTERVAL))) -eq 0 ]]; then
     log "  Running hourly memory check"
-    
+
     # We can't directly check memory on remote host, but we can measure API response times
     # as a proxy for potential memory issues
-    
+
     START_TIME=$(date +%s.%N)
     curl -s -o /dev/null -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/api/monitoring/data"
     END_TIME=$(date +%s.%N)
-    
+
     # Calculate response time in milliseconds
     RESP_TIME=$(echo "($END_TIME - $START_TIME) * 1000" | bc | cut -d'.' -f1)
-    
+
     log "    Monitoring data response time: $RESP_TIME ms"
     echo "MEMORY_CHECK,$RESP_TIME,$(date +%s)" >> $RESULT_FILE
   fi
-  
+
   # Calculate completion percentage
   PCT_COMPLETE=$(( COMPLETED_CHECKS * 100 / TOTAL_CHECKS ))
   log "  Stability test $PCT_COMPLETE% complete ($COMPLETED_CHECKS/$TOTAL_CHECKS checks)"
-  
+
   # Wait until next check interval
   CHECK_END=$(date +%s)
   CHECK_DURATION=$((CHECK_END - CHECK_START))
   WAIT_TIME=$((CHECK_INTERVAL - CHECK_DURATION))
-  
+
   if [[ $WAIT_TIME -gt 0 ]]; then
     sleep $WAIT_TIME
   fi
@@ -367,7 +367,7 @@ log "Failed checks: $FAILED_CHECKS"
 if [[ $COMPLETED_CHECKS -gt 0 ]]; then
   STABILITY_RATE=$(( (COMPLETED_CHECKS - FAILED_CHECKS) * 100 / COMPLETED_CHECKS ))
   log "Stability rate: $STABILITY_RATE%"
-  
+
   if [[ $STABILITY_RATE -ge 98 ]]; then
     log "✅ Stability test passed with $STABILITY_RATE% success rate"
   elif [[ $STABILITY_RATE -ge 90 ]]; then
@@ -390,7 +390,7 @@ for i in {1..10}; do
   # Make intentionally malformed request
   BAD_RESPONSE=$(curl -s -m 1 -w "%{http_code}" -o /dev/null "$API_BASE_URL/api/nonexistent_endpoint_${RANDOM}")
   log "  Bad request $i: HTTP $BAD_RESPONSE"
-  
+
   # Minimal delay between bad requests
   sleep 0.5
 done
@@ -421,11 +421,11 @@ log "  Invalid auth request: HTTP $INVALID_RESPONSE"
 log "  Re-authenticating..."
 if login; then
   log "✅ Successfully re-authenticated after invalid token"
-  
+
   # Verify can access protected endpoint
   VERIFY_RESPONSE=$(curl -s -w "%{http_code}" -o /dev/null \
     -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices")
-  
+
   if [[ "$VERIFY_RESPONSE" == "200" ]]; then
     log "✅ Successfully accessed protected endpoint after re-authentication"
   else
@@ -444,13 +444,13 @@ SYNC_STATUS=$(echo $SYNC_RESPONSE | jq -r '.status')
 
 if [[ "$SYNC_STATUS" == "success" ]]; then
   log "✅ Forced sync operation successful"
-  
+
   # Verify data was updated
   sleep 5  # Wait for sync to complete
-  
+
   MONITORING_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/api/monitoring/data")
   MONITORING_STATUS=$(echo $MONITORING_RESPONSE | jq -r '.status')
-  
+
   if [[ "$MONITORING_STATUS" == "success" ]]; then
     log "✅ Data successfully updated after forced sync"
     TIMESTAMP=$(echo $MONITORING_RESPONSE | jq -r '.data.timestamp')

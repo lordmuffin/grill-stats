@@ -59,10 +59,10 @@ check_status() {
     local status=$2
     local message=$3
     local details=${4:-""}
-    
+
     TOTAL_CHECKS=$((TOTAL_CHECKS + 1))
     SERVICE_STATUS[$service]=$status
-    
+
     if [ "$status" == "GO" ]; then
         echo -e "${GREEN}✓ GO${NC} - $service: $message"
         PASSED_CHECKS=$((PASSED_CHECKS + 1))
@@ -73,11 +73,11 @@ check_status() {
         echo -e "${YELLOW}⚠ WARNING${NC} - $service: $message"
         WARNING_CHECKS=$((WARNING_CHECKS + 1))
     fi
-    
+
     if [ -n "$details" ]; then
         echo -e "  ${PURPLE}Details:${NC} $details"
     fi
-    
+
     log "$status - $service: $message $details"
 }
 
@@ -86,7 +86,7 @@ measure_response_time() {
     local service=$1
     local endpoint=$2
     local start=$(date +%s%N)
-    
+
     if curl -sf --max-time $TIMEOUT "$endpoint" >/dev/null 2>&1; then
         local end=$(date +%s%N)
         local duration=$((($end - $start) / 1000000))
@@ -100,7 +100,7 @@ measure_response_time() {
 # Kubernetes cluster validation
 validate_cluster() {
     echo -e "\n${BLUE}=== Kubernetes Cluster Validation ===${NC}"
-    
+
     # Check cluster connectivity
     if kubectl cluster-info --context=$CLUSTER_CONTEXT >/dev/null 2>&1; then
         check_status "CLUSTER_CONNECTIVITY" "GO" "Cluster accessible"
@@ -108,19 +108,19 @@ validate_cluster() {
         check_status "CLUSTER_CONNECTIVITY" "NO-GO" "Cannot connect to cluster"
         return 1
     fi
-    
+
     # Check nodes
     local node_info=$(kubectl get nodes --context=$CLUSTER_CONTEXT -o json 2>/dev/null)
     local node_count=$(echo "$node_info" | jq '.items | length')
     local ready_nodes=$(echo "$node_info" | jq '[.items[] | select(.status.conditions[] | select(.type=="Ready" and .status=="True"))] | length')
-    
+
     if [ "$node_count" -eq "$ready_nodes" ] && [ "$node_count" -gt 0 ]; then
         check_status "CLUSTER_NODES" "GO" "$ready_nodes/$node_count nodes ready"
-        
+
         # Check node resources
         local cpu_pressure=$(echo "$node_info" | jq '[.items[].status.conditions[] | select(.type=="MemoryPressure" and .status=="True")] | length')
         local mem_pressure=$(echo "$node_info" | jq '[.items[].status.conditions[] | select(.type=="DiskPressure" and .status=="True")] | length')
-        
+
         if [ "$cpu_pressure" -eq 0 ] && [ "$mem_pressure" -eq 0 ]; then
             check_status "NODE_RESOURCES" "GO" "No resource pressure on nodes"
         else
@@ -129,11 +129,11 @@ validate_cluster() {
     else
         check_status "CLUSTER_NODES" "NO-GO" "Only $ready_nodes/$node_count nodes ready"
     fi
-    
+
     # Check namespace
     if kubectl get namespace $NAMESPACE --context=$CLUSTER_CONTEXT >/dev/null 2>&1; then
         check_status "NAMESPACE" "GO" "Namespace $NAMESPACE exists"
-        
+
         # Check resource quotas
         local quotas=$(kubectl get resourcequota -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null)
         if [ "$(echo "$quotas" | jq '.items | length')" -gt 0 ]; then
@@ -154,7 +154,7 @@ validate_cluster() {
 # Service validation
 validate_services() {
     echo -e "\n${BLUE}=== Core Services Validation ===${NC}"
-    
+
     local services=(
         "auth-service:8082"
         "device-service:8080"
@@ -163,24 +163,24 @@ validate_services() {
         "encryption-service:8082"
         "web-ui-service:80"
     )
-    
+
     for service_port in "${services[@]}"; do
         local service="${service_port%:*}"
         local port="${service_port#*:}"
-        
+
         # Check deployment
         local deployment=$(kubectl get deployment $service -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null)
         if [ -n "$deployment" ]; then
             local replicas=$(echo "$deployment" | jq '.status.readyReplicas // 0')
             local desired=$(echo "$deployment" | jq '.spec.replicas')
             local available=$(echo "$deployment" | jq '.status.availableReplicas // 0')
-            
+
             if [ "$replicas" -eq "$desired" ] && [ "$replicas" -gt 0 ]; then
                 check_status "${service^^}_DEPLOYMENT" "GO" "$replicas/$desired replicas ready" "Available: $available"
             else
                 check_status "${service^^}_DEPLOYMENT" "NO-GO" "Only $replicas/$desired replicas ready"
             fi
-            
+
             # Check rollout status
             local conditions=$(echo "$deployment" | jq -r '.status.conditions[] | select(.type=="Progressing") | .status')
             if [ "$conditions" == "True" ]; then
@@ -191,25 +191,25 @@ validate_services() {
         else
             check_status "${service^^}_DEPLOYMENT" "NO-GO" "Deployment not found"
         fi
-        
+
         # Check service endpoints
         local endpoints=$(kubectl get endpoints $service -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null)
         if [ -n "$endpoints" ]; then
             local endpoint_count=$(echo "$endpoints" | jq '.subsets[0].addresses | length // 0')
-            
+
             if [ "$endpoint_count" -gt 0 ]; then
                 check_status "${service^^}_ENDPOINTS" "GO" "$endpoint_count endpoints available"
             else
                 check_status "${service^^}_ENDPOINTS" "NO-GO" "No endpoints available"
             fi
         fi
-        
+
         # Health check
         local pod=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -l app=$service -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
         if [ -n "$pod" ]; then
             if kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $pod -- wget -q --spider "http://localhost:$port/health" 2>/dev/null; then
                 check_status "${service^^}_HEALTH" "GO" "Health check passed"
-                
+
                 # Get detailed health info if available
                 local health_data=$(kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $pod -- wget -qO- "http://localhost:$port/health" 2>/dev/null || echo "{}")
                 if [ -n "$health_data" ] && [ "$health_data" != "{}" ]; then
@@ -220,7 +220,7 @@ validate_services() {
                 check_status "${service^^}_HEALTH" "NO-GO" "Health check failed"
             fi
         fi
-        
+
         # Check resource usage
         if [ -n "$pod" ]; then
             local metrics=$(kubectl top pod $pod -n $NAMESPACE --context=$CLUSTER_CONTEXT --no-headers 2>/dev/null || echo "")
@@ -236,13 +236,13 @@ validate_services() {
 # Database validation
 validate_databases() {
     echo -e "\n${BLUE}=== Database Validation ===${NC}"
-    
+
     # PostgreSQL
     local pg_pod=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -l app=postgresql -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
     if [ -n "$pg_pod" ]; then
         if kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $pg_pod -- pg_isready -U grill_stats >/dev/null 2>&1; then
             check_status "POSTGRESQL_CONNECTIVITY" "GO" "PostgreSQL responsive"
-            
+
             # Check database and tables
             local table_count=$(kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $pg_pod -- psql -U grill_stats -d grill_stats -t -c "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public';" 2>/dev/null | tr -d ' ' || echo "0")
             if [ "$table_count" -gt 0 ]; then
@@ -250,7 +250,7 @@ validate_databases() {
             else
                 check_status "POSTGRESQL_SCHEMA" "WARNING" "No tables found in database"
             fi
-            
+
             # Check connection pool
             local connections=$(kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $pg_pod -- psql -U grill_stats -d grill_stats -t -c "SELECT COUNT(*) FROM pg_stat_activity;" 2>/dev/null | tr -d ' ' || echo "0")
             check_status "POSTGRESQL_CONNECTIONS" "GO" "$connections active connections"
@@ -260,13 +260,13 @@ validate_databases() {
     else
         check_status "POSTGRESQL_CONNECTIVITY" "NO-GO" "PostgreSQL pod not found"
     fi
-    
+
     # InfluxDB
     local influx_pod=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -l app=influxdb -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
     if [ -n "$influx_pod" ]; then
         if kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $influx_pod -- influx ping >/dev/null 2>&1; then
             check_status "INFLUXDB_CONNECTIVITY" "GO" "InfluxDB responsive"
-            
+
             # Check buckets
             local buckets=$(kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $influx_pod -- influx bucket list --json 2>/dev/null || echo "[]")
             local bucket_count=$(echo "$buckets" | jq '[.[] | select(.name | contains("grill-stats"))] | length')
@@ -281,18 +281,18 @@ validate_databases() {
     else
         check_status "INFLUXDB_CONNECTIVITY" "NO-GO" "InfluxDB pod not found"
     fi
-    
+
     # Redis
     local redis_pod=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -l app=redis -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
     if [ -n "$redis_pod" ]; then
         if kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $redis_pod -- redis-cli ping >/dev/null 2>&1; then
             check_status "REDIS_CONNECTIVITY" "GO" "Redis responsive"
-            
+
             # Check memory and keys
             local info=$(kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $redis_pod -- redis-cli info memory 2>/dev/null || echo "")
             local memory=$(echo "$info" | grep used_memory_human | cut -d: -f2 | tr -d '\r' || echo "unknown")
             local keys=$(kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $redis_pod -- redis-cli dbsize 2>/dev/null | awk '{print $2}' || echo "0")
-            
+
             check_status "REDIS_STATUS" "GO" "Memory: $memory, Keys: $keys"
         else
             check_status "REDIS_CONNECTIVITY" "NO-GO" "Redis not responsive"
@@ -305,14 +305,14 @@ validate_databases() {
 # Network and ingress validation
 validate_network() {
     echo -e "\n${BLUE}=== Network and Ingress Validation ===${NC}"
-    
+
     # Check ingress routes
     local routes=$(kubectl get ingressroute -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local route_count=$(echo "$routes" | jq '.items | length')
-    
+
     if [ "$route_count" -gt 0 ]; then
         check_status "INGRESS_ROUTES" "GO" "$route_count ingress routes configured"
-        
+
         # Check each route
         echo "$routes" | jq -r '.items[] | .metadata.name' | while read -r route; do
             log "Ingress route configured: $route"
@@ -320,24 +320,24 @@ validate_network() {
     else
         check_status "INGRESS_ROUTES" "NO-GO" "No ingress routes found"
     fi
-    
+
     # Check certificates
     local certs=$(kubectl get certificate -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local valid_certs=$(echo "$certs" | jq '[.items[] | select(.status.conditions[] | select(.type=="Ready" and .status=="True"))] | length')
-    
+
     if [ "$valid_certs" -gt 0 ]; then
         check_status "TLS_CERTIFICATES" "GO" "$valid_certs valid certificates"
     else
         check_status "TLS_CERTIFICATES" "WARNING" "No valid certificates found"
     fi
-    
+
     # Network policies
     local policies=$(kubectl get networkpolicy -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local policy_count=$(echo "$policies" | jq '.items | length')
-    
+
     if [ "$policy_count" -gt 0 ]; then
         check_status "NETWORK_POLICIES" "GO" "$policy_count network policies active"
-        
+
         # Verify key policies
         local required_policies=("default-deny" "allow-ingress" "allow-prometheus")
         for policy in "${required_policies[@]}"; do
@@ -350,7 +350,7 @@ validate_network() {
     else
         check_status "NETWORK_POLICIES" "WARNING" "No network policies found"
     fi
-    
+
     # Service mesh check (if applicable)
     if kubectl get namespace istio-system --context=$CLUSTER_CONTEXT >/dev/null 2>&1; then
         local sidecars=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json | jq '[.items[].spec.containers[] | select(.name=="istio-proxy")] | length')
@@ -363,14 +363,14 @@ validate_network() {
 # Monitoring validation
 validate_monitoring() {
     echo -e "\n${BLUE}=== Monitoring and Observability Validation ===${NC}"
-    
+
     # ServiceMonitors
     local monitors=$(kubectl get servicemonitor -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local monitor_count=$(echo "$monitors" | jq '.items | length')
-    
+
     if [ "$monitor_count" -gt 0 ]; then
         check_status "SERVICE_MONITORS" "GO" "$monitor_count service monitors configured"
-        
+
         # Check each monitor's targets
         echo "$monitors" | jq -r '.items[] | .metadata.name' | while read -r monitor; do
             log "ServiceMonitor configured: $monitor"
@@ -378,21 +378,21 @@ validate_monitoring() {
     else
         check_status "SERVICE_MONITORS" "WARNING" "No service monitors found"
     fi
-    
+
     # PrometheusRules
     local rules=$(kubectl get prometheusrule -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local rule_count=$(echo "$rules" | jq '.items | length')
-    
+
     if [ "$rule_count" -gt 0 ]; then
         check_status "PROMETHEUS_RULES" "GO" "$rule_count prometheus rules configured"
-        
+
         # Count alert rules
         local alert_count=$(echo "$rules" | jq '[.items[].spec.groups[].rules[] | select(.alert)] | length')
         log "Total alert rules defined: $alert_count"
     else
         check_status "PROMETHEUS_RULES" "WARNING" "No prometheus rules found"
     fi
-    
+
     # Check metrics endpoint accessibility
     local services=("auth-service" "device-service" "temperature-service")
     for service in "${services[@]}"; do
@@ -403,11 +403,11 @@ validate_monitoring() {
             fi
         fi
     done
-    
+
     # Grafana dashboards
     local dashboards=$(kubectl get configmap -n $NAMESPACE --context=$CLUSTER_CONTEXT -l grafana_dashboard=1 -o json 2>/dev/null || echo '{"items":[]}')
     local dashboard_count=$(echo "$dashboards" | jq '.items | length')
-    
+
     if [ "$dashboard_count" -gt 0 ]; then
         check_status "GRAFANA_DASHBOARDS" "GO" "$dashboard_count Grafana dashboards configured"
     else
@@ -418,11 +418,11 @@ validate_monitoring() {
 # External integrations validation
 validate_external() {
     echo -e "\n${BLUE}=== External Integrations Validation ===${NC}"
-    
+
     # Vault connectivity
     local vault_endpoint="https://vault.vault.svc.cluster.local:8200"
     local encryption_pod=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -l app=encryption-service -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
-    
+
     if [ -n "$encryption_pod" ]; then
         if kubectl exec -n $NAMESPACE --context=$CLUSTER_CONTEXT $encryption_pod -- wget -q --spider --no-check-certificate "$vault_endpoint/v1/sys/health" 2>/dev/null; then
             check_status "VAULT_CONNECTIVITY" "GO" "Vault accessible from encryption service"
@@ -430,14 +430,14 @@ validate_external() {
             check_status "VAULT_CONNECTIVITY" "WARNING" "Vault connectivity issues"
         fi
     fi
-    
+
     # 1Password Connect
     local op_secrets=$(kubectl get onepassworditem -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local secret_count=$(echo "$op_secrets" | jq '.items | length')
-    
+
     if [ "$secret_count" -gt 0 ]; then
         check_status "ONEPASSWORD_SECRETS" "GO" "$secret_count 1Password secrets configured"
-        
+
         # Check sync status
         local synced=$(echo "$op_secrets" | jq '[.items[] | select(.status.conditions[] | select(.type=="Synced" and .status=="True"))] | length')
         if [ "$synced" -eq "$secret_count" ]; then
@@ -448,16 +448,16 @@ validate_external() {
     else
         check_status "ONEPASSWORD_SECRETS" "WARNING" "No 1Password secrets found"
     fi
-    
+
     # ArgoCD applications
     local argo_apps=$(kubectl get application -n argocd --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local grill_apps=$(echo "$argo_apps" | jq '[.items[] | select(.metadata.name | contains("grill-stats"))]')
     local app_count=$(echo "$grill_apps" | jq 'length')
-    
+
     if [ "$app_count" -gt 0 ]; then
         local healthy=$(echo "$grill_apps" | jq '[.[] | select(.status.health.status=="Healthy")] | length')
         local synced=$(echo "$grill_apps" | jq '[.[] | select(.status.sync.status=="Synced")] | length')
-        
+
         if [ "$healthy" -eq "$app_count" ] && [ "$synced" -eq "$app_count" ]; then
             check_status "ARGOCD_APPS" "GO" "$app_count ArgoCD apps healthy and synced"
         else
@@ -466,7 +466,7 @@ validate_external() {
     else
         check_status "ARGOCD_APPS" "WARNING" "No grill-stats ArgoCD applications found"
     fi
-    
+
     # ThermoWorks API connectivity test
     local device_pod=$(kubectl get pod -n $NAMESPACE --context=$CLUSTER_CONTEXT -l app=device-service -o jsonpath='{.items[0].metadata.name}' 2>/dev/null)
     if [ -n "$device_pod" ]; then
@@ -482,20 +482,20 @@ validate_external() {
 # Backup validation
 validate_backups() {
     echo -e "\n${BLUE}=== Backup System Validation ===${NC}"
-    
+
     # Check backup CronJobs
     local backup_jobs=$(kubectl get cronjob -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local job_names=$(echo "$backup_jobs" | jq -r '.items[] | select(.metadata.name | contains("backup")) | .metadata.name')
     local job_count=$(echo "$job_names" | grep -c . || echo "0")
-    
+
     if [ "$job_count" -gt 0 ]; then
         check_status "BACKUP_CRONJOBS" "GO" "$job_count backup jobs configured"
-        
+
         # Check each backup job
         echo "$job_names" | while read -r job; do
             local schedule=$(echo "$backup_jobs" | jq -r ".items[] | select(.metadata.name==\"$job\") | .spec.schedule")
             local suspend=$(echo "$backup_jobs" | jq -r ".items[] | select(.metadata.name==\"$job\") | .spec.suspend // false")
-            
+
             if [ "$suspend" == "false" ]; then
                 log "Backup job $job scheduled: $schedule"
             else
@@ -505,26 +505,26 @@ validate_backups() {
     else
         check_status "BACKUP_CRONJOBS" "WARNING" "No backup jobs found"
     fi
-    
+
     # Check recent backup executions
     local recent_jobs=$(kubectl get job -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local successful_backups=$(echo "$recent_jobs" | jq '[.items[] | select(.metadata.name | contains("backup")) | select(.status.succeeded==1)] | length')
     local failed_backups=$(echo "$recent_jobs" | jq '[.items[] | select(.metadata.name | contains("backup")) | select(.status.failed and .status.failed>0)] | length')
-    
+
     if [ "$successful_backups" -gt 0 ]; then
         check_status "RECENT_BACKUPS" "GO" "$successful_backups successful recent backups"
     else
         check_status "RECENT_BACKUPS" "WARNING" "No recent successful backups"
     fi
-    
+
     if [ "$failed_backups" -gt 0 ]; then
         check_status "BACKUP_FAILURES" "WARNING" "$failed_backups failed backup jobs detected"
     fi
-    
+
     # Check backup storage
     local backup_pvcs=$(kubectl get pvc -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local backup_storage=$(echo "$backup_pvcs" | jq '[.items[] | select(.metadata.name | contains("backup"))] | length')
-    
+
     if [ "$backup_storage" -gt 0 ]; then
         check_status "BACKUP_STORAGE" "GO" "$backup_storage backup storage volumes configured"
     fi
@@ -533,11 +533,11 @@ validate_backups() {
 # End-to-end functionality tests
 validate_e2e() {
     echo -e "\n${BLUE}=== End-to-End Functionality Tests ===${NC}"
-    
+
     # Get service URLs
     local base_url=""
     local ingress=$(kubectl get ingressroute -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null | jq -r '.items[0].spec.routes[0].match' | grep -oP 'Host\(`\K[^`]+' || echo "")
-    
+
     if [ -n "$ingress" ]; then
         base_url="https://$ingress"
         log "Testing against ingress URL: $base_url"
@@ -546,7 +546,7 @@ validate_e2e() {
         check_status "E2E_TESTS" "WARNING" "Cannot perform E2E tests without ingress"
         return
     fi
-    
+
     # Test authentication endpoint
     local auth_response=$(curl -sf --max-time $TIMEOUT "$base_url/api/auth/health" 2>/dev/null || echo "")
     if [ -n "$auth_response" ]; then
@@ -554,7 +554,7 @@ validate_e2e() {
     else
         check_status "E2E_AUTH" "WARNING" "Authentication service not accessible externally"
     fi
-    
+
     # Test device listing
     local device_response=$(curl -sf --max-time $TIMEOUT "$base_url/api/devices" 2>/dev/null || echo "")
     if [ -n "$device_response" ]; then
@@ -562,7 +562,7 @@ validate_e2e() {
     else
         check_status "E2E_DEVICES" "WARNING" "Device API not accessible externally"
     fi
-    
+
     # Test web UI
     local ui_response=$(curl -sf --max-time $TIMEOUT -I "$base_url" 2>/dev/null | head -n1 || echo "")
     if echo "$ui_response" | grep -q "200\|301\|302"; then
@@ -575,14 +575,14 @@ validate_e2e() {
 # Performance validation
 validate_performance() {
     echo -e "\n${BLUE}=== Performance Validation ===${NC}"
-    
+
     # Check HPA status
     local hpas=$(kubectl get hpa -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local hpa_count=$(echo "$hpas" | jq '.items | length')
-    
+
     if [ "$hpa_count" -gt 0 ]; then
         check_status "HPA_CONFIGURED" "GO" "$hpa_count Horizontal Pod Autoscalers configured"
-        
+
         # Check HPA metrics
         echo "$hpas" | jq -r '.items[] | .metadata.name + ": Current/Target = " + (.status.currentReplicas|tostring) + "/" + (.spec.minReplicas|tostring) + "-" + (.spec.maxReplicas|tostring)' | while read -r hpa_status; do
             log "HPA Status: $hpa_status"
@@ -590,17 +590,17 @@ validate_performance() {
     else
         check_status "HPA_CONFIGURED" "WARNING" "No Horizontal Pod Autoscalers found"
     fi
-    
+
     # Check PDB status
     local pdbs=$(kubectl get pdb -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local pdb_count=$(echo "$pdbs" | jq '.items | length')
-    
+
     if [ "$pdb_count" -gt 0 ]; then
         check_status "PDB_CONFIGURED" "GO" "$pdb_count Pod Disruption Budgets configured"
     else
         check_status "PDB_CONFIGURED" "WARNING" "No Pod Disruption Budgets found"
     fi
-    
+
     # Response time checks
     if [ ${#RESPONSE_TIMES[@]} -gt 0 ]; then
         echo -e "\n${PURPLE}Response Times:${NC}"
@@ -620,32 +620,32 @@ validate_performance() {
 # Security validation
 validate_security() {
     echo -e "\n${BLUE}=== Security Validation ===${NC}"
-    
+
     # Check security contexts
     local deployments=$(kubectl get deployment -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local secured_deployments=$(echo "$deployments" | jq '[.items[] | select(.spec.template.spec.securityContext or .spec.template.spec.containers[].securityContext)] | length')
     local total_deployments=$(echo "$deployments" | jq '.items | length')
-    
+
     if [ "$secured_deployments" -eq "$total_deployments" ] && [ "$total_deployments" -gt 0 ]; then
         check_status "SECURITY_CONTEXTS" "GO" "All deployments have security contexts"
     else
         check_status "SECURITY_CONTEXTS" "WARNING" "Only $secured_deployments/$total_deployments deployments have security contexts"
     fi
-    
+
     # Check RBAC
     local service_accounts=$(kubectl get serviceaccount -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local sa_count=$(echo "$service_accounts" | jq '.items | length')
-    
+
     if [ "$sa_count" -gt 1 ]; then  # More than just the default SA
         check_status "SERVICE_ACCOUNTS" "GO" "$sa_count service accounts configured"
     else
         check_status "SERVICE_ACCOUNTS" "WARNING" "Using default service account"
     fi
-    
+
     # Check secrets encryption
     local sealed_secrets=$(kubectl get sealedsecret -n $NAMESPACE --context=$CLUSTER_CONTEXT -o json 2>/dev/null || echo '{"items":[]}')
     local sealed_count=$(echo "$sealed_secrets" | jq '.items | length')
-    
+
     if [ "$sealed_count" -gt 0 ]; then
         check_status "SEALED_SECRETS" "GO" "$sealed_count sealed secrets in use"
     fi
@@ -661,10 +661,10 @@ generate_summary() {
     echo -e "${GREEN}Passed: $PASSED_CHECKS${NC}"
     echo -e "${RED}Failed: $FAILED_CHECKS${NC}"
     echo -e "${YELLOW}Warnings: $WARNING_CHECKS${NC}"
-    
+
     local success_rate=$((PASSED_CHECKS * 100 / TOTAL_CHECKS))
     echo -e "\nSuccess Rate: $success_rate%"
-    
+
     # Generate JSON report
     cat > "$RESULTS_FILE" << EOF
 {
@@ -712,7 +712,7 @@ generate_summary() {
   },
   "response_times": {
 EOF
-    
+
     if [ ${#RESPONSE_TIMES[@]} -gt 0 ]; then
         local first=true
         for service in "${!RESPONSE_TIMES[@]}"; do
@@ -724,12 +724,12 @@ EOF
         done
         echo "" >> "$RESULTS_FILE"
     fi
-    
+
     cat >> "$RESULTS_FILE" << EOF
   },
   "services": {
 EOF
-    
+
     local first=true
     for service in "${!SERVICE_STATUS[@]}"; do
         if [ "$first" = false ]; then
@@ -738,13 +738,13 @@ EOF
         echo -n "    \"$service\": \"${SERVICE_STATUS[$service]}\"" >> "$RESULTS_FILE"
         first=false
     done
-    
+
     echo -e "\n  }\n}" >> "$RESULTS_FILE"
-    
+
     echo -e "\n${PURPLE}Reports:${NC}"
     echo -e "  Detailed results: $RESULTS_FILE"
     echo -e "  Full log: $LOG_FILE"
-    
+
     # Deployment status
     if [ "$FAILED_CHECKS" -eq 0 ]; then
         echo -e "\n${GREEN}🎉 PRODUCTION DEPLOYMENT: GO${NC}"
@@ -776,7 +776,7 @@ main() {
     echo -e "Namespace: ${PURPLE}$NAMESPACE${NC}"
     echo -e "Started: $(date)"
     echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     # Core validations
     validate_cluster || exit 1
     validate_services
@@ -785,12 +785,12 @@ main() {
     validate_monitoring
     validate_external
     validate_backups
-    
+
     # Additional validations
     validate_security
     validate_performance
     validate_e2e
-    
+
     # Generate final report
     generate_summary
 }

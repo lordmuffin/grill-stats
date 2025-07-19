@@ -175,7 +175,7 @@ kubectl patch clusterissuer letsencrypt-prod \
    ```bash
    # Check certificate status
    kubectl describe certificate grill-stats-tls -n grill-stats
-   
+
    # Check cert-manager logs
    kubectl logs -n cert-manager deployment/cert-manager
    ```
@@ -184,7 +184,7 @@ kubectl patch clusterissuer letsencrypt-prod \
    ```bash
    # Check Traefik logs
    kubectl logs -n kube-system deployment/traefik
-   
+
    # Verify service endpoints
    kubectl get endpoints -n grill-stats
    ```
@@ -193,7 +193,7 @@ kubectl patch clusterissuer letsencrypt-prod \
    ```bash
    # Check middleware configuration
    kubectl get middleware grill-stats-cors -n grill-stats -o yaml
-   
+
    # Test CORS headers
    curl -H "Origin: https://grill-stats.homelab.local" \
         -H "Access-Control-Request-Method: GET" \

@@ -701,6 +701,6 @@ For questions or issues, please refer to the troubleshooting section or contact 
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: 2024-01-01  
+**Document Version**: 1.0
+**Last Updated**: 2024-01-01
 **Next Review**: 2024-04-01

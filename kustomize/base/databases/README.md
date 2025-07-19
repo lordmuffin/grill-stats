@@ -286,7 +286,7 @@ kubectl exec -it postgresql-0 -n grill-stats -- psql -U postgres -d grill_stats 
    ```bash
    # Check logs
    kubectl logs postgresql-0 -n grill-stats
-   
+
    # Check persistent volume
    kubectl describe pvc postgresql-pvc -n grill-stats
    ```
@@ -295,7 +295,7 @@ kubectl exec -it postgresql-0 -n grill-stats -- psql -U postgres -d grill_stats 
    ```bash
    # Test connectivity
    kubectl exec -it postgresql-0 -n grill-stats -- pg_isready -U postgres
-   
+
    # Check service
    kubectl get svc postgresql-service -n grill-stats
    ```
@@ -304,7 +304,7 @@ kubectl exec -it postgresql-0 -n grill-stats -- psql -U postgres -d grill_stats 
    ```bash
    # Check slow queries
    kubectl exec -it postgresql-0 -n grill-stats -- psql -U postgres -d grill_stats -c "SELECT * FROM pg_stat_activity WHERE state != 'idle';"
-   
+
    # Check database size
    kubectl exec -it postgresql-0 -n grill-stats -- psql -U postgres -d grill_stats -c "SELECT pg_size_pretty(pg_database_size('grill_stats'));"
    ```

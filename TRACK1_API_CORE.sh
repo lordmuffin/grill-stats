@@ -1,7 +1,7 @@
 #!/bin/bash
 # =======================================================================
 # API & Core Functionality Test Script
-# 
+#
 # Purpose: Verify connectivity, core functionality, and API endpoints
 # Environment: Production - grill-stats.lab.apj.dev
 # =======================================================================
@@ -36,14 +36,14 @@ check_status() {
 
 login() {
   log "Attempting login with $TEST_EMAIL..."
-  
+
   LOGIN_RESPONSE=$(curl -s -X POST "$API_BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
-  
+
   # Extract token from response
   AUTH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
-  
+
   if [[ "$AUTH_TOKEN" == "null" || -z "$AUTH_TOKEN" ]]; then
     log "❌ Login failed. Response: $LOGIN_RESPONSE"
     return 1
@@ -197,14 +197,14 @@ for endpoint in "${endpoints[@]}"; do
   # Use curl's timing option to measure response time
   TIMING=$(curl -s -w "\n%{time_total},%{http_code}" -o /dev/null \
     -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL$endpoint")
-  
+
   # Parse timing result
   TIME=$(echo "$TIMING" | tail -n1 | cut -d',' -f1)
   STATUS=$(echo "$TIMING" | tail -n1 | cut -d',' -f2)
-  
+
   # Convert to milliseconds
   TIME_MS=$(echo "$TIME * 1000" | bc | cut -d'.' -f1)
-  
+
   log "| $endpoint | ${TIME_MS}ms | $STATUS |"
 done
 

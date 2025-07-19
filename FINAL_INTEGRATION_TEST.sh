@@ -1,7 +1,7 @@
 #!/bin/bash
 # =======================================================================
 # Final Integration Test Script
-# 
+#
 # Purpose: Coordinate final integration testing after individual tracks
 #          have completed their tests
 # Environment: Production - grill-stats.lab.apj.dev
@@ -41,14 +41,14 @@ check_status() {
 
 login() {
   log "Attempting login with $TEST_EMAIL..."
-  
+
   LOGIN_RESPONSE=$(curl -s -X POST "$API_BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
-  
+
   # Extract token from response
   AUTH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
-  
+
   if [[ "$AUTH_TOKEN" == "null" || -z "$AUTH_TOKEN" ]]; then
     log "❌ Login failed. Response: $LOGIN_RESPONSE"
     return 1
@@ -62,21 +62,21 @@ login() {
 process_track_results() {
   local track_log=$1
   local track_name=$2
-  
+
   if [[ ! -f "$track_log" ]]; then
     log "⚠️ Track log file not found: $track_log"
     return 1
   fi
-  
+
   SUCCESSES=$(grep -c "✅" $track_log)
   WARNINGS=$(grep -c "⚠️" $track_log)
   FAILURES=$(grep -c "❌" $track_log)
-  
+
   log "$track_name Results:"
   log "  Successes: $SUCCESSES"
   log "  Warnings: $WARNINGS"
   log "  Failures: $FAILURES"
-  
+
   if [[ $FAILURES -eq 0 ]]; then
     log "  ✅ $track_name PASSED"
     return 0
@@ -173,7 +173,7 @@ DEVICES_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL
 if [[ $(echo $DEVICES_RESPONSE | jq 'type') == "array" ]]; then
   DEVICE_COUNT=$(echo $DEVICES_RESPONSE | jq '. | length')
   log "  Found $DEVICE_COUNT devices"
-  
+
   if [[ $DEVICE_COUNT -gt 0 ]]; then
     TEST_DEVICE_ID=$(echo $DEVICES_RESPONSE | jq -r '.[0].id')
     TEST_DEVICE_NAME=$(echo $DEVICES_RESPONSE | jq -r '.[0].name')
@@ -193,48 +193,48 @@ else
   # Step 2: Get temperature data from ThermoWorks
   log "Step 2: Retrieving temperature data from ThermoWorks..."
   TEMP_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices/$TEST_DEVICE_ID/temperature")
-  
+
   if [[ $(echo $TEMP_RESPONSE | jq 'has("temperature")') == "true" ]]; then
     TEMP_VALUE=$(echo $TEMP_RESPONSE | jq -r '.temperature')
     TEMP_UNIT=$(echo $TEMP_RESPONSE | jq -r '.unit')
     TIMESTAMP=$(echo $TEMP_RESPONSE | jq -r '.timestamp')
-    
+
     log "  ✅ Successfully retrieved temperature: $TEMP_VALUE°$TEMP_UNIT (at $TIMESTAMP)"
   else
     log "  ❌ Failed to retrieve temperature data: $TEMP_RESPONSE"
   fi
-  
+
   # Step 3: Trigger a sync to Home Assistant
   log "Step 3: Triggering data sync to Home Assistant..."
   SYNC_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/sync")
-  
+
   if [[ $(echo $SYNC_RESPONSE | jq -r '.status') == "success" ]]; then
     log "  ✅ Successfully triggered sync operation"
-    
+
     # Wait for sync to complete
     log "  Waiting 10 seconds for sync to complete..."
     sleep 10
   else
     log "  ❌ Failed to trigger sync operation: $SYNC_RESPONSE"
   fi
-  
+
   # Step 4: Verify data in Home Assistant (if HA token is available)
   if [[ -n "$HA_TOKEN" ]]; then
     log "Step 4: Verifying data in Home Assistant..."
-    
+
     # Calculate expected Home Assistant entity ID
     SENSOR_NAME="thermoworks_$(echo $TEST_DEVICE_NAME | tr 'A-Z ' 'a-z_')"
     log "  Expected sensor name: $SENSOR_NAME"
-    
+
     HA_ENTITY_RESPONSE=$(curl -s -H "Authorization: Bearer $HA_TOKEN" \
       "$HA_URL/api/states/sensor.$SENSOR_NAME")
-    
+
     ENTITY_STATE=$(echo $HA_ENTITY_RESPONSE | jq -r '.state')
-    
+
     if [[ "$ENTITY_STATE" != "null" && -n "$ENTITY_STATE" ]]; then
       log "  ✅ Successfully verified data in Home Assistant: $ENTITY_STATE°"
       log "    Last updated: $(echo $HA_ENTITY_RESPONSE | jq -r '.last_updated')"
-      
+
       # Compare values (allowing for slight differences due to rounding)
       if [[ $(echo "scale=1; ($ENTITY_STATE - $TEMP_VALUE)^2 < 1" | bc) -eq 1 ]]; then
         log "  ✅ Temperature values match between ThermoWorks and Home Assistant"
@@ -247,27 +247,27 @@ else
   else
     log "  ⚠️ Skipping Home Assistant verification (no HA token provided)"
   fi
-  
+
   # Step 5: Verify data is stored and retrievable
   log "Step 5: Verifying data storage..."
-  
+
   # Get recent history to verify the data point was stored
   START_TIME=$(date -u -d "1 hour ago" +"%Y-%m-%dT%H:%M:%S")
   END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
-  
+
   HISTORY_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
     "$API_BASE_URL/devices/$TEST_DEVICE_ID/history?start=$START_TIME&end=$END_TIME")
-  
+
   if [[ $(echo $HISTORY_RESPONSE | jq 'type') == "array" ]]; then
     POINTS_COUNT=$(echo $HISTORY_RESPONSE | jq '. | length')
     log "  ✅ Successfully retrieved $POINTS_COUNT historical data points"
-    
+
     if [[ $POINTS_COUNT -gt 0 ]]; then
       LATEST_TEMP=$(echo $HISTORY_RESPONSE | jq -r '.[0].temperature')
       LATEST_TS=$(echo $HISTORY_RESPONSE | jq -r '.[0].timestamp')
-      
+
       log "  Latest stored temperature: $LATEST_TEMP° at $LATEST_TS"
-      
+
       # Compare with current temperature
       if [[ $(echo "scale=1; ($LATEST_TEMP - $TEMP_VALUE)^2 < 1" | bc) -eq 1 ]]; then
         log "  ✅ Current and stored temperature values match"
@@ -278,26 +278,26 @@ else
   else
     log "  ❌ Failed to retrieve historical data: $HISTORY_RESPONSE"
   fi
-  
+
   # Step 6: Verify UI displays data properly
   log "Step 6: Verifying UI data display..."
-  
+
   # Access monitoring dashboard to check data display
   DASHBOARD_RESPONSE=$(curl -s -w "%{http_code}" -o /tmp/dashboard.html \
     -H "Authorization: Bearer $AUTH_TOKEN" \
     -H "Accept: text/html,application/xhtml+xml" \
     "$API_BASE_URL/monitoring")
-  
+
   if [[ "$DASHBOARD_RESPONSE" == "200" ]]; then
     log "  ✅ Successfully accessed monitoring dashboard"
-    
+
     # Check if temperature value appears in the dashboard HTML
     if grep -q "$TEMP_VALUE" /tmp/dashboard.html; then
       log "  ✅ Temperature value appears in dashboard"
     else
       log "  ⚠️ Temperature value may not be displayed in dashboard"
     fi
-    
+
     # Check if device name appears in the dashboard HTML
     if grep -q "$TEST_DEVICE_NAME" /tmp/dashboard.html; then
       log "  ✅ Device name appears in dashboard"
@@ -347,7 +347,7 @@ fi
 # Check temperature data
 if [[ -n "$TEST_DEVICE_ID" ]]; then
   TEMP_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/devices/$TEST_DEVICE_ID/temperature")
-  
+
   if [[ $(echo $TEMP_RESPONSE | jq 'has("temperature")') == "true" ]]; then
     log "  ✅ Temperature data retrieval functioning normally"
   else

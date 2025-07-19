@@ -178,12 +178,12 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Failed to decrypt backup file"
         exit 1
     fi
-    
+
     if ! decompress_file "$DECRYPTED_BACKUP" "$EXTRACTED_BACKUP_DIR"; then
         log_error "Failed to extract backup file"
         exit 1
     fi
-    
+
     log_info "Backup decrypted and extracted successfully"
 else
     log_info "DRY RUN: Would decrypt and extract backup"
@@ -199,17 +199,17 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Backup manifest not found: $BACKUP_MANIFEST"
         exit 1
     fi
-    
+
     if [[ ! -f "$FULL_BACKUP_FILE" ]]; then
         log_error "Full backup file not found: $FULL_BACKUP_FILE"
         exit 1
     fi
-    
+
     # Read backup information
     BACKUP_TIMESTAMP=$(jq -r '.timestamp' "$BACKUP_MANIFEST")
     BACKUP_SERVICE=$(jq -r '.service' "$BACKUP_MANIFEST")
     BACKUP_SIZE=$(jq -r '.size' "$BACKUP_MANIFEST")
-    
+
     log_info "Backup information:"
     log_info "- Timestamp: $BACKUP_TIMESTAMP"
     log_info "- Service: $BACKUP_SERVICE"
@@ -230,7 +230,7 @@ if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
     echo "Test mode: $TEST_MODE"
     echo ""
     read -p "Are you sure you want to proceed? (yes/no): " -r
-    
+
     if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
         log_info "Restore cancelled by user"
         exit 0
@@ -240,13 +240,13 @@ fi
 # Stop application services if not skipped and not in test mode
 if [[ "$SKIP_STOP_SERVICES" != "true" && "$TEST_MODE" != "true" && "$DRY_RUN" != "true" ]]; then
     log_info "Stopping application services..."
-    
+
     # Scale down deployments
     kubectl scale deployment --all --replicas=0 -n grill-stats || log_warning "Failed to scale down deployments"
-    
+
     # Wait for pods to terminate
     sleep 30
-    
+
     log_info "Application services stopped"
 elif [[ "$DRY_RUN" == "true" ]]; then
     log_info "DRY RUN: Would stop application services"
@@ -255,10 +255,10 @@ fi
 # Create target database if in test mode
 if [[ "$TEST_MODE" == "true" && "$DRY_RUN" != "true" ]]; then
     log_info "Creating test database: $POSTGRES_DB"
-    
+
     # Connect to postgres database to create new database
     PGDATABASE=postgres psql -c "CREATE DATABASE \"$POSTGRES_DB\";" || log_warning "Database may already exist"
-    
+
     log_info "Test database created"
 elif [[ "$DRY_RUN" == "true" ]]; then
     log_info "DRY RUN: Would create test database if in test mode"
@@ -278,13 +278,13 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Database restore failed"
         exit 1
     fi
-    
+
     # Restore individual critical tables if available
     for table_backup in "${EXTRACTED_BACKUP_DIR}"/*_backup.sql; do
         if [[ -f "$table_backup" ]]; then
             table_name=$(basename "$table_backup" _backup.sql)
             log_info "Restoring table: $table_name"
-            
+
             if psql -f "$table_backup" "$POSTGRES_DB"; then
                 log_info "Table $table_name restored successfully"
             else
@@ -299,7 +299,7 @@ fi
 # Verify restored database
 if [[ "$DRY_RUN" != "true" ]]; then
     log_info "Verifying restored database..."
-    
+
     # Check if database exists and is accessible
     if psql -c "SELECT 1;" "$POSTGRES_DB" > /dev/null 2>&1; then
         log_info "Database is accessible"
@@ -307,11 +307,11 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Database is not accessible after restore"
         exit 1
     fi
-    
+
     # Get table count
     TABLE_COUNT=$(psql -t -c "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'public';" "$POSTGRES_DB" | xargs)
     log_info "Number of tables in restored database: $TABLE_COUNT"
-    
+
     # Check for specific tables
     CRITICAL_TABLES=("users" "devices" "device_channels" "device_health")
     for table in "${CRITICAL_TABLES[@]}"; do
@@ -329,13 +329,13 @@ fi
 # Restart application services if not skipped and not in test mode
 if [[ "$SKIP_STOP_SERVICES" != "true" && "$TEST_MODE" != "true" && "$DRY_RUN" != "true" ]]; then
     log_info "Restarting application services..."
-    
+
     # Scale up deployments
     kubectl scale deployment --all --replicas=1 -n grill-stats || log_warning "Failed to scale up deployments"
-    
+
     # Wait for services to be ready
     sleep 30
-    
+
     log_info "Application services restarted"
 elif [[ "$DRY_RUN" == "true" ]]; then
     log_info "DRY RUN: Would restart application services"

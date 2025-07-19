@@ -38,7 +38,7 @@ Before beginning the tests, ensure you have the following:
    export TEST_EMAIL=$(op item get "op://HomeLab/grill-stats-prod-creds-1password/ADMIN_USER")
    export TEST_PASSWORD=$(op item get "op://HomeLab/grill-stats-prod-creds-1password/ADMIN_PASSWORD")
    export HA_TOKEN=$(op item get "op://HomeLab/grill-stats home assistant token/password")
-   
+
    # Test parameters (optional)
    export TEST_DURATION=12   # Long-running test duration in hours
    export CONCURRENCY=10     # Number of concurrent users for load test
@@ -84,7 +84,7 @@ Some tests have dependencies that require coordination between agents:
    ```bash
    # Example: Edit the script to update credentials
    nano TRACK1_API_CORE.sh
-   
+
    # Find and update these lines:
    TEST_EMAIL="test@example.com"
    TEST_PASSWORD="password"

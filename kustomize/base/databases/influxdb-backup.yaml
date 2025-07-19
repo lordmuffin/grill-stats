@@ -36,28 +36,28 @@ spec:
             - |
               set -e
               echo "🔄 Starting InfluxDB backup..."
-              
+
               # Create backup directory with timestamp
               BACKUP_DIR="/backup/$(date +%Y%m%d_%H%M%S)"
               mkdir -p "$BACKUP_DIR"
-              
+
               # Backup all buckets
               influx backup \
                 --host "$INFLUXDB_HOST" \
                 --token "$INFLUXDB_TOKEN" \
                 --org "$INFLUXDB_ORG" \
                 "$BACKUP_DIR"
-              
+
               # Compress backup
               cd /backup
               tar -czf "influxdb_backup_$(date +%Y%m%d_%H%M%S).tar.gz" "$(basename "$BACKUP_DIR")"
               rm -rf "$BACKUP_DIR"
-              
+
               # Cleanup old backups (keep last 7 days)
               find /backup -name "influxdb_backup_*.tar.gz" -mtime +7 -delete
-              
+
               echo "✅ Backup completed successfully!"
-              
+
               # Optional: Upload to S3 or other cloud storage
               if [ "$BACKUP_UPLOAD_ENABLED" = "true" ]; then
                 echo "📤 Uploading backup to cloud storage..."
@@ -130,24 +130,24 @@ data:
   restore.sh: |
     #!/bin/bash
     set -e
-    
+
     # InfluxDB Restore Script
     # Usage: ./restore.sh <backup-file>
-    
+
     if [ $# -ne 1 ]; then
         echo "Usage: $0 <backup-file>"
         exit 1
     fi
-    
+
     BACKUP_FILE="$1"
-    
+
     if [ ! -f "$BACKUP_FILE" ]; then
         echo "Error: Backup file $BACKUP_FILE not found!"
         exit 1
     fi
-    
+
     echo "🔄 Starting InfluxDB restore from $BACKUP_FILE..."
-    
+
     # Extract backup if it's compressed
     if [[ "$BACKUP_FILE" == *.tar.gz ]]; then
         echo "📦 Extracting compressed backup..."
@@ -157,7 +157,7 @@ data:
     else
         BACKUP_PATH="$BACKUP_FILE"
     fi
-    
+
     # Restore data
     echo "🔄 Restoring InfluxDB data..."
     influx restore \
@@ -166,47 +166,47 @@ data:
         --org "$INFLUXDB_ORG" \
         --full \
         "$BACKUP_PATH"
-    
+
     echo "✅ Restore completed successfully!"
-    
+
     # Cleanup extracted files
     if [[ "$BACKUP_FILE" == *.tar.gz ]]; then
         rm -rf "$BACKUP_DIR"
     fi
-  
+
   disaster-recovery.md: |
     # InfluxDB Disaster Recovery Guide
-    
+
     ## Overview
     This document outlines the disaster recovery procedures for InfluxDB in the grill-stats system.
-    
+
     ## Backup Strategy
     - **Frequency**: Daily automated backups at 2 AM
     - **Retention**: 7 days of local backups
     - **Location**: Local PVC storage (`influxdb-backup-pvc`)
     - **Optional**: Cloud storage upload (configurable)
-    
+
     ## Recovery Procedures
-    
+
     ### 1. Complete Database Loss
     If the entire InfluxDB instance is lost:
-    
+
     ```bash
     # 1. Deploy a new InfluxDB instance
     kubectl apply -k kustomize/overlays/prod-lab
-    
+
     # 2. Wait for the database to be ready
     kubectl wait --for=condition=ready pod -l app.kubernetes.io/name=influxdb -n grill-stats
-    
+
     # 3. Restore from backup
     kubectl exec -it influxdb-0 -n grill-stats -- /bin/sh
     cd /backup
     ./restore.sh influxdb_backup_YYYYMMDD_HHMMSS.tar.gz
     ```
-    
+
     ### 2. Partial Data Loss
     If only certain buckets are affected:
-    
+
     ```bash
     # Restore specific buckets
     influx restore \
@@ -216,31 +216,31 @@ data:
         --bucket grill-stats-realtime \
         /backup/backup_directory
     ```
-    
+
     ### 3. Point-in-Time Recovery
     For recovering to a specific point in time:
-    
+
     ```bash
     # Find the appropriate backup
     ls -la /backup/
-    
+
     # Restore using the closest backup to the desired time
     ./restore.sh influxdb_backup_YYYYMMDD_HHMMSS.tar.gz
     ```
-    
+
     ## Monitoring Backup Health
     - Check CronJob status: `kubectl get cronjob influxdb-backup -n grill-stats`
     - View backup logs: `kubectl logs job/influxdb-backup-xxxxx -n grill-stats`
     - Monitor backup storage usage: Check PVC usage in monitoring dashboards
-    
+
     ## Testing Recovery
     It's recommended to test recovery procedures monthly:
-    
+
     1. Deploy a test InfluxDB instance
     2. Restore from a recent backup
     3. Verify data integrity
     4. Document any issues found
-    
+
     ## Emergency Contacts
     - Database Administrator: [contact info]
     - System Administrator: [contact info]
@@ -283,11 +283,11 @@ spec:
             - |
               set -e
               echo "🔧 Starting InfluxDB maintenance..."
-              
+
               # Check database health
               echo "🏥 Checking database health..."
               influx ping --host "$INFLUXDB_HOST"
-              
+
               # Compact database
               echo "🗜️ Compacting database..."
               influx bucket list --host "$INFLUXDB_HOST" --token "$INFLUXDB_TOKEN" --org "$INFLUXDB_ORG" | \
@@ -298,16 +298,16 @@ spec:
                   # This is a placeholder for future maintenance tasks
                 fi
               done
-              
+
               # Cleanup old task logs
               echo "🧹 Cleaning up old task logs..."
               # Add task log cleanup logic here
-              
+
               # Verify data integrity
               echo "🔍 Verifying data integrity..."
               influx query --host "$INFLUXDB_HOST" --token "$INFLUXDB_TOKEN" --org "$INFLUXDB_ORG" \
                 'from(bucket: "grill-stats-realtime") |> range(start: -1h) |> count()'
-              
+
               echo "✅ Maintenance completed successfully!"
             env:
             - name: INFLUXDB_HOST

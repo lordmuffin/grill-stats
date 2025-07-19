@@ -13,31 +13,31 @@ const TemperatureDashboard = ({ user, onLogout }) => {
   const [selectedDeviceId, setSelectedDeviceId] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  
+
   // Chart configuration state
   const [refreshInterval, setRefreshInterval] = useState(10000); // 10 seconds
   const [historyHours, setHistoryHours] = useState(1); // 1 hour
-  
+
   // Load devices on component mount
   useEffect(() => {
     loadDevices();
   }, []);
-  
+
   // Function to load devices
   const loadDevices = async (forceRefresh = false) => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const deviceList = await getDevices(forceRefresh);
-      
+
       setDevices(deviceList);
-      
+
       // If there are devices and none is selected yet, select the first one
       if (deviceList.length > 0 && !selectedDeviceId) {
         setSelectedDeviceId(deviceList[0].device_id);
       }
-      
+
       setLoading(false);
     } catch (err) {
       console.error('Error loading devices:', err);
@@ -45,7 +45,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
       setLoading(false);
     }
   };
-  
+
   // Function to manually sync data
   const handleSync = async () => {
     try {
@@ -57,22 +57,22 @@ const TemperatureDashboard = ({ user, onLogout }) => {
       setError('Failed to sync data. Please try again.');
     }
   };
-  
+
   // Handle device selection change
   const handleDeviceChange = (event) => {
     setSelectedDeviceId(event.target.value);
   };
-  
+
   // Handle refresh interval change
   const handleRefreshIntervalChange = (event) => {
     setRefreshInterval(parseInt(event.target.value, 10));
   };
-  
+
   // Handle history hours change
   const handleHistoryHoursChange = (event) => {
     setHistoryHours(parseInt(event.target.value, 10));
   };
-  
+
   // Handle user logout
   const handleLogout = async () => {
     try {
@@ -84,7 +84,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
       onLogout();
     }
   };
-  
+
   // Render loading state
   if (loading) {
     return (
@@ -94,7 +94,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
       </div>
     );
   }
-  
+
   // Render error state
   if (error) {
     return (
@@ -105,7 +105,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
       </div>
     );
   }
-  
+
   // Render no devices state
   if (devices.length === 0) {
     return (
@@ -116,11 +116,11 @@ const TemperatureDashboard = ({ user, onLogout }) => {
       </div>
     );
   }
-  
+
   // Find the selected device name
   const selectedDevice = devices.find(device => device.device_id === selectedDeviceId);
   const deviceName = selectedDevice ? selectedDevice.name : 'Unknown Device';
-  
+
   // Render dashboard with devices
   return (
     <div className="temperature-dashboard">
@@ -134,7 +134,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
             </button>
           </div>
         </div>
-        
+
         <div className="dashboard-controls">
           {/* Device selection */}
           <div className="control-group">
@@ -151,7 +151,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
               ))}
             </select>
           </div>
-          
+
           {/* Refresh interval selection */}
           <div className="control-group">
             <label htmlFor="refresh-interval">Refresh Every:</label>
@@ -166,7 +166,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
               <option value={60000}>1 minute</option>
             </select>
           </div>
-          
+
           {/* History duration selection */}
           <div className="control-group">
             <label htmlFor="history-hours">History:</label>
@@ -183,14 +183,14 @@ const TemperatureDashboard = ({ user, onLogout }) => {
               <option value={24}>24 hours</option>
             </select>
           </div>
-          
+
           {/* Sync button */}
           <button className="sync-button" onClick={handleSync}>
             Sync Now
           </button>
         </div>
       </div>
-      
+
       {/* Real-time chart */}
       <RealTimeChart
         deviceId={selectedDeviceId}
@@ -199,7 +199,7 @@ const TemperatureDashboard = ({ user, onLogout }) => {
         height={500}
         title={`${deviceName} Temperature`}
       />
-      
+
       <div className="dashboard-footer">
         <p>
           <span className="info-icon">ℹ️</span>

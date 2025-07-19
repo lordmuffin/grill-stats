@@ -14,13 +14,13 @@ CREATE TABLE IF NOT EXISTS device_channels (
     max_temp DECIMAL(5,2) DEFAULT 500.0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Foreign key constraint
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
-    
+
     -- Unique constraint for device + channel combination
     UNIQUE(device_id, channel_id),
-    
+
     -- Check constraints
     CONSTRAINT valid_probe_type CHECK (probe_type IN ('meat', 'ambient', 'water', 'oil', 'custom')),
     CONSTRAINT valid_unit CHECK (unit IN ('F', 'C')),
@@ -37,11 +37,11 @@ CREATE TABLE IF NOT EXISTS live_temperature_readings (
     is_connected BOOLEAN DEFAULT true,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}',
-    
+
     -- Foreign key constraints
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
     FOREIGN KEY (device_id, channel_id) REFERENCES device_channels(device_id, channel_id) ON DELETE CASCADE,
-    
+
     -- Check constraints
     CONSTRAINT valid_temp_unit CHECK (unit IN ('F', 'C')),
     CONSTRAINT valid_temperature CHECK (temperature >= -40 AND temperature <= 1000)
@@ -59,10 +59,10 @@ CREATE TABLE IF NOT EXISTS device_status_log (
     last_seen TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     metadata JSONB DEFAULT '{}',
-    
+
     -- Foreign key constraint
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
-    
+
     -- Check constraints
     CONSTRAINT valid_connection_status CHECK (connection_status IN ('online', 'offline', 'error', 'unknown'))
 );
@@ -81,11 +81,11 @@ CREATE TABLE IF NOT EXISTS temperature_alerts (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     acknowledged_at TIMESTAMP,
     resolved_at TIMESTAMP,
-    
+
     -- Foreign key constraints
     FOREIGN KEY (device_id) REFERENCES devices(device_id) ON DELETE CASCADE,
     FOREIGN KEY (device_id, channel_id) REFERENCES device_channels(device_id, channel_id) ON DELETE CASCADE,
-    
+
     -- Check constraints
     CONSTRAINT valid_alert_type CHECK (alert_type IN ('high_temp', 'low_temp', 'disconnected', 'battery_low', 'signal_poor')),
     CONSTRAINT valid_alert_level CHECK (alert_level IN ('info', 'warning', 'error', 'critical'))
@@ -112,13 +112,13 @@ CREATE INDEX IF NOT EXISTS idx_temp_alerts_level ON temperature_alerts(alert_lev
 CREATE INDEX IF NOT EXISTS idx_temp_alerts_acknowledged ON temperature_alerts(acknowledged);
 
 -- Create trigger to update updated_at timestamp for device_channels
-CREATE TRIGGER update_device_channels_updated_at 
-    BEFORE UPDATE ON device_channels 
+CREATE TRIGGER update_device_channels_updated_at
+    BEFORE UPDATE ON device_channels
     FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Create view for current device status
 CREATE OR REPLACE VIEW current_device_status AS
-SELECT 
+SELECT
     d.device_id,
     d.name as device_name,
     d.device_type,
@@ -130,23 +130,23 @@ SELECT
     dsl.hardware_version,
     dsl.last_seen,
     dsl.timestamp as status_timestamp,
-    CASE 
+    CASE
         WHEN dsl.last_seen > CURRENT_TIMESTAMP - INTERVAL '5 minutes' THEN 'online'
         WHEN dsl.last_seen > CURRENT_TIMESTAMP - INTERVAL '15 minutes' THEN 'idle'
         ELSE 'offline'
     END as live_status
 FROM devices d
-LEFT JOIN device_status_log dsl ON d.device_id = dsl.device_id 
+LEFT JOIN device_status_log dsl ON d.device_id = dsl.device_id
     AND dsl.id = (
-        SELECT id FROM device_status_log dsl2 
-        WHERE dsl2.device_id = d.device_id 
+        SELECT id FROM device_status_log dsl2
+        WHERE dsl2.device_id = d.device_id
         ORDER BY timestamp DESC LIMIT 1
     )
 WHERE d.active = TRUE;
 
 -- Create view for live device data summary
 CREATE OR REPLACE VIEW live_device_data_summary AS
-SELECT 
+SELECT
     d.device_id,
     d.name as device_name,
     d.device_type,
@@ -163,16 +163,16 @@ SELECT
 FROM devices d
 LEFT JOIN current_device_status cds ON d.device_id = cds.device_id
 LEFT JOIN device_channels dc ON d.device_id = dc.device_id
-LEFT JOIN live_temperature_readings ltr ON d.device_id = ltr.device_id 
+LEFT JOIN live_temperature_readings ltr ON d.device_id = ltr.device_id
     AND ltr.timestamp > CURRENT_TIMESTAMP - INTERVAL '10 minutes'
 WHERE d.active = TRUE
 GROUP BY d.device_id, d.name, d.device_type, d.user_id,
-         cds.battery_level, cds.signal_strength, cds.connection_status, 
+         cds.battery_level, cds.signal_strength, cds.connection_status,
          cds.last_seen, cds.live_status;
 
 -- Create view for current channel temperatures
 CREATE OR REPLACE VIEW current_channel_temperatures AS
-SELECT 
+SELECT
     dc.device_id,
     dc.channel_id,
     dc.channel_name,
@@ -182,24 +182,24 @@ SELECT
     ltr.temperature,
     ltr.is_connected,
     ltr.timestamp as reading_time,
-    CASE 
+    CASE
         WHEN ltr.timestamp > CURRENT_TIMESTAMP - INTERVAL '2 minutes' THEN 'current'
         WHEN ltr.timestamp > CURRENT_TIMESTAMP - INTERVAL '10 minutes' THEN 'recent'
         ELSE 'stale'
     END as reading_status
 FROM device_channels dc
-LEFT JOIN live_temperature_readings ltr ON dc.device_id = ltr.device_id 
+LEFT JOIN live_temperature_readings ltr ON dc.device_id = ltr.device_id
     AND dc.channel_id = ltr.channel_id
     AND ltr.id = (
-        SELECT id FROM live_temperature_readings ltr2 
-        WHERE ltr2.device_id = dc.device_id 
-        AND ltr2.channel_id = dc.channel_id 
+        SELECT id FROM live_temperature_readings ltr2
+        WHERE ltr2.device_id = dc.device_id
+        AND ltr2.channel_id = dc.channel_id
         ORDER BY timestamp DESC LIMIT 1
     )
 WHERE dc.is_active = TRUE;
 
 -- Insert sample data for testing
-INSERT INTO device_channels (device_id, channel_id, channel_name, probe_type, unit) VALUES 
+INSERT INTO device_channels (device_id, channel_id, channel_name, probe_type, unit) VALUES
     ('test_device_001', 1, 'Meat Probe 1', 'meat', 'F'),
     ('test_device_001', 2, 'Ambient Probe', 'ambient', 'F'),
     ('test_device_002', 1, 'Brisket Probe', 'meat', 'F'),
@@ -209,7 +209,7 @@ INSERT INTO device_channels (device_id, channel_id, channel_name, probe_type, un
 ON CONFLICT (device_id, channel_id) DO NOTHING;
 
 -- Insert sample live readings
-INSERT INTO live_temperature_readings (device_id, channel_id, temperature, unit, is_connected) VALUES 
+INSERT INTO live_temperature_readings (device_id, channel_id, temperature, unit, is_connected) VALUES
     ('test_device_001', 1, 165.5, 'F', true),
     ('test_device_001', 2, 225.0, 'F', true),
     ('test_device_002', 1, 185.2, 'F', true),
@@ -218,7 +218,7 @@ INSERT INTO live_temperature_readings (device_id, channel_id, temperature, unit,
     ('test_device_002', 4, 180.0, 'F', true);
 
 -- Insert sample device status
-INSERT INTO device_status_log (device_id, battery_level, signal_strength, connection_status, last_seen) VALUES 
+INSERT INTO device_status_log (device_id, battery_level, signal_strength, connection_status, last_seen) VALUES
     ('test_device_001', 85, 92, 'online', CURRENT_TIMESTAMP),
     ('test_device_002', 78, 88, 'online', CURRENT_TIMESTAMP);
 
@@ -227,16 +227,16 @@ CREATE OR REPLACE FUNCTION cleanup_old_live_data()
 RETURNS void AS $$
 BEGIN
     -- Keep only last 24 hours of live temperature readings
-    DELETE FROM live_temperature_readings 
+    DELETE FROM live_temperature_readings
     WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL '24 hours';
-    
+
     -- Keep only last 7 days of device status logs
-    DELETE FROM device_status_log 
+    DELETE FROM device_status_log
     WHERE timestamp < CURRENT_TIMESTAMP - INTERVAL '7 days';
-    
+
     -- Keep only last 30 days of temperature alerts
-    DELETE FROM temperature_alerts 
-    WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '30 days' 
+    DELETE FROM temperature_alerts
+    WHERE created_at < CURRENT_TIMESTAMP - INTERVAL '30 days'
     AND is_active = false;
 END;
 $$ LANGUAGE plpgsql;

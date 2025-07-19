@@ -240,37 +240,37 @@ data:
     upstream auth_service {
         server auth-service.grill-stats.svc.cluster.local:8082;
     }
-    
+
     upstream device_service {
         server device-service.grill-stats.svc.cluster.local:8080;
     }
-    
+
     upstream temperature_service {
         server temperature-service.grill-stats.svc.cluster.local:8081;
     }
-    
+
     upstream historical_data_service {
         server historical-data-service.grill-stats.svc.cluster.local:8083;
     }
-    
+
     server {
         listen 80;
         server_name _;
-        
+
         # Security headers
         add_header X-Frame-Options "SAMEORIGIN" always;
         add_header X-Content-Type-Options "nosniff" always;
         add_header X-XSS-Protection "1; mode=block" always;
         add_header Referrer-Policy "strict-origin-when-cross-origin" always;
         add_header Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' ws: wss:;" always;
-        
+
         # Serve static files
         location / {
             root /usr/share/nginx/html;
             index index.html index.htm;
             try_files $uri $uri/ /index.html;
         }
-        
+
         # API proxy
         location /api/auth/ {
             proxy_pass http://auth_service/;
@@ -279,7 +279,7 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
         }
-        
+
         location /api/devices/ {
             proxy_pass http://device_service/;
             proxy_set_header Host $host;
@@ -287,7 +287,7 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
         }
-        
+
         location /api/temperature/ {
             proxy_pass http://temperature_service/;
             proxy_set_header Host $host;
@@ -295,7 +295,7 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
         }
-        
+
         location /api/historical/ {
             proxy_pass http://historical_data_service/;
             proxy_set_header Host $host;
@@ -303,7 +303,7 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
         }
-        
+
         # WebSocket support
         location /ws/ {
             proxy_pass http://temperature_service/ws/;
@@ -315,14 +315,14 @@ data:
             proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
             proxy_set_header X-Forwarded-Proto $scheme;
         }
-        
+
         # Health check endpoints
         location /health {
             access_log off;
             return 200 "healthy\n";
             add_header Content-Type text/plain;
         }
-        
+
         location /ready {
             access_log off;
             return 200 "ready\n";

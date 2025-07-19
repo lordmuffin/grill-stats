@@ -92,11 +92,11 @@ CRITICAL_TABLES=("users" "devices" "device_channels" "device_health" "api_keys")
 
 for table in "${CRITICAL_TABLES[@]}"; do
     TABLE_BACKUP_FILE="${BACKUP_DIR}/${table}_backup.sql"
-    
+
     # Check if table exists
     if psql -t -c "SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = '$table');" | grep -q t; then
         log_info "Backing up table: $table"
-        
+
         if pg_dump --verbose --table="$table" --data-only --no-owner --no-privileges \
             --file="$TABLE_BACKUP_FILE" \
             "$POSTGRES_DB"; then
@@ -183,7 +183,7 @@ fi
 if [[ "${BACKUP_REMOTE_SYNC:-false}" == "true" ]]; then
     log_info "Syncing to remote storage..."
     REMOTE_PATH="${BACKUP_REMOTE_BASE:-s3://grill-stats-backups}/postgresql/$(basename "$ENCRYPTED_BACKUP")"
-    
+
     if sync_to_remote "$ENCRYPTED_BACKUP" "$REMOTE_PATH" "${BACKUP_REMOTE_TYPE:-s3}"; then
         log_info "Remote sync completed"
     else

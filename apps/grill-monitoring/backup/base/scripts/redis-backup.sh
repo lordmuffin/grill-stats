@@ -74,18 +74,18 @@ DB_PROCESSED=0
 for db in $(redis-cli $REDIS_CLI_ARGS INFO keyspace | grep "^db" | cut -d: -f1); do
     DB_NUM=$(echo "$db" | sed 's/db//')
     DB_INFO=$(redis-cli $REDIS_CLI_ARGS INFO keyspace | grep "^db${DB_NUM}:" | cut -d: -f2)
-    
+
     # Parse keys, expires, avg_ttl from db info
     KEYS=$(echo "$DB_INFO" | sed 's/.*keys=\([0-9]*\).*/\1/')
     EXPIRES=$(echo "$DB_INFO" | sed 's/.*expires=\([0-9]*\).*/\1/' || echo "0")
     AVG_TTL=$(echo "$DB_INFO" | sed 's/.*avg_ttl=\([0-9]*\).*/\1/' || echo "0")
-    
+
     TOTAL_KEYS=$((TOTAL_KEYS + KEYS))
-    
+
     if [[ $DB_PROCESSED -gt 0 ]]; then
         echo ',' >> "$DB_STATS_FILE"
     fi
-    
+
     cat >> "$DB_STATS_FILE" <<EOF
     {
         "database": $DB_NUM,
@@ -94,7 +94,7 @@ for db in $(redis-cli $REDIS_CLI_ARGS INFO keyspace | grep "^db" | cut -d: -f1);
         "avg_ttl": $AVG_TTL
     }
 EOF
-    
+
     ((DB_PROCESSED++))
 done
 
@@ -142,13 +142,13 @@ AOF_ENABLED=$(redis-cli $REDIS_CLI_ARGS CONFIG GET appendonly | tail -1)
 if [[ "$AOF_ENABLED" == "yes" ]]; then
     log_info "AOF is enabled, backing up AOF file..."
     AOF_FILE="${BACKUP_DIR}/appendonly.aof"
-    
+
     # Force AOF rewrite to ensure consistency
     redis-cli $REDIS_CLI_ARGS BGREWRITEAOF
-    
+
     # Wait for AOF rewrite to complete
     sleep 5
-    
+
     # Copy AOF file (this would need to be done via kubectl cp in K8s)
     # For now, we'll create a backup using the current AOF state
     if redis-cli $REDIS_CLI_ARGS --eval "$(cat <<'EOF'
@@ -274,7 +274,7 @@ fi
 if [[ "${BACKUP_REMOTE_SYNC:-false}" == "true" ]]; then
     log_info "Syncing to remote storage..."
     REMOTE_PATH="${BACKUP_REMOTE_BASE:-s3://grill-stats-backups}/redis/$(basename "$ENCRYPTED_BACKUP")"
-    
+
     if sync_to_remote "$ENCRYPTED_BACKUP" "$REMOTE_PATH" "${BACKUP_REMOTE_TYPE:-s3}"; then
         log_info "Remote sync completed"
     else

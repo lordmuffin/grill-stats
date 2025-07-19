@@ -86,8 +86,8 @@ See the detailed [FEATURES.md](FEATURES.md) for comprehensive documentation of i
 
 ### Device Management Service
 
-**Port**: 8080  
-**Database**: PostgreSQL  
+**Port**: 8080
+**Database**: PostgreSQL
 **Purpose**: Device discovery, registration, and configuration management
 
 **Key Endpoints**:
@@ -103,8 +103,8 @@ See the detailed [FEATURES.md](FEATURES.md) for comprehensive documentation of i
 
 ### Temperature Data Service
 
-**Port**: 8080  
-**Database**: InfluxDB + Redis  
+**Port**: 8080
+**Database**: InfluxDB + Redis
 **Purpose**: Real-time temperature data collection and historical analysis
 
 **Key Endpoints**:
@@ -117,7 +117,7 @@ See the detailed [FEATURES.md](FEATURES.md) for comprehensive documentation of i
 
 ### Web UI Service
 
-**Port**: 3000  
+**Port**: 3000
 **Purpose**: React-based web interface for temperature monitoring
 
 **Key Features**:

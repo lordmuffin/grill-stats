@@ -129,4 +129,3 @@ For optimal development experience in VS Code, install these extensions:
 - isort (ms-python.isort)
 - Flake8 (ms-python.flake8)
 - mypy (matangover.mypy)
-

@@ -16,10 +16,10 @@ const Header = () => {
   };
 
   return (
-    <header className="header" style={{ 
-      display: 'flex', 
-      justifyContent: 'space-between', 
-      alignItems: 'center', 
+    <header className="header" style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
       padding: '1rem 2rem',
       backgroundColor: '#2c3e50',
       color: 'white',
@@ -76,8 +76,8 @@ const Header = () => {
       </div>
       <div className="user-info" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
         <span>Welcome, {user?.name || user?.email}</span>
-        <button 
-          onClick={handleLogout} 
+        <button
+          onClick={handleLogout}
           className="btn btn-secondary"
           style={{
             background: '#e74c3c',

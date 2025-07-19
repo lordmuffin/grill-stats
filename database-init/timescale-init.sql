@@ -116,7 +116,7 @@ SELECT add_continuous_aggregate_policy('temperature_daily',
 
 -- Insert sample data for testing
 INSERT INTO cooking_sessions (name, grill_id, start_time, end_time, user_id, metadata)
-VALUES 
+VALUES
     ('Test Brisket Cook', 'test_grill_001', NOW() - INTERVAL '2 days', NOW() - INTERVAL '1 day', 'test_user', '{"notes": "Test cook", "recipe_id": "brisket_001"}'),
     ('Test Ribs Cook', 'test_grill_001', NOW() - INTERVAL '5 days', NOW() - INTERVAL '4 days', 'test_user', '{"notes": "Test cook", "recipe_id": "ribs_001"}'),
     ('Test Chicken Cook', 'test_grill_002', NOW() - INTERVAL '7 days', NOW() - INTERVAL '6 days', 'test_user', '{"notes": "Test cook", "recipe_id": "chicken_001"}')

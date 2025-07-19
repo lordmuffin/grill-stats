@@ -19,7 +19,7 @@ commonLabels:
   version: v1alpha1
   kind: Application
 
-# Common annotations configuration  
+# Common annotations configuration
 commonAnnotations:
 - path: metadata/annotations
   create: true

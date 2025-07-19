@@ -136,7 +136,7 @@ spec:
       annotations:
         summary: "Redis instance is down"
         description: "Redis instance {{ $labels.instance }} is down for more than 2 minutes."
-    
+
     - alert: RedisHighMemoryUsage
       expr: (redis_memory_used_bytes / redis_memory_max_bytes) * 100 > 90
       for: 5m
@@ -145,7 +145,7 @@ spec:
       annotations:
         summary: "Redis memory usage is high"
         description: "Redis instance {{ $labels.instance }} memory usage is {{ $value }}% for more than 5 minutes."
-    
+
     - alert: RedisHighConnections
       expr: redis_connected_clients > 100
       for: 5m
@@ -154,7 +154,7 @@ spec:
       annotations:
         summary: "Redis has too many connections"
         description: "Redis instance {{ $labels.instance }} has {{ $value }} connections for more than 5 minutes."
-    
+
     - alert: RedisSlowQueries
       expr: increase(redis_slowlog_length[5m]) > 10
       for: 2m
@@ -163,7 +163,7 @@ spec:
       annotations:
         summary: "Redis slow queries detected"
         description: "Redis instance {{ $labels.instance }} has {{ $value }} slow queries in the last 5 minutes."
-    
+
     - alert: RedisReplicationLag
       expr: redis_master_repl_offset - redis_slave_repl_offset > 1000
       for: 5m
@@ -172,7 +172,7 @@ spec:
       annotations:
         summary: "Redis replication lag is high"
         description: "Redis slave {{ $labels.instance }} is lagging behind master by {{ $value }} bytes."
-    
+
     - alert: RedisKeyspaceHitRatio
       expr: (redis_keyspace_hits_total / (redis_keyspace_hits_total + redis_keyspace_misses_total)) * 100 < 80
       for: 10m
@@ -181,7 +181,7 @@ spec:
       annotations:
         summary: "Redis keyspace hit ratio is low"
         description: "Redis instance {{ $labels.instance }} keyspace hit ratio is {{ $value }}% for more than 10 minutes."
-    
+
     - alert: RedisSessionCacheHigh
       expr: redis_db_keys{db="db0"} > 10000
       for: 5m
@@ -190,7 +190,7 @@ spec:
       annotations:
         summary: "High number of session keys in Redis"
         description: "Redis session database (db0) has {{ $value }} keys, which indicates high user activity."
-    
+
     - alert: RedisTempDataStale
       expr: time() - redis_key_timestamp{key_name="temp:latest"} > 300
       for: 2m

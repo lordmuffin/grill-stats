@@ -39,19 +39,19 @@ info() {
 push_service() {
     local service_name=$1
     local image_name="${REGISTRY_URL}/${PROJECT_NAME}/${service_name}"
-    
+
     log "Pushing ${service_name} service images..."
-    
+
     # Check if image exists locally
     if ! docker images "${image_name}:latest" --format "{{.Repository}}" | grep -q "${image_name}"; then
         error "Image ${image_name}:latest not found locally. Please build images first."
         return 1
     fi
-    
+
     # Push all tags
     for tag in "latest" "${VERSION}" "${GIT_COMMIT}"; do
         info "Pushing ${image_name}:${tag}..."
-        
+
         if docker push "${image_name}:${tag}"; then
             log "Successfully pushed ${image_name}:${tag}"
         else
@@ -59,16 +59,16 @@ push_service() {
             return 1
         fi
     done
-    
+
     return 0
 }
 
 # Function to verify registry connectivity
 verify_registry() {
     local registry_url=$1
-    
+
     log "Verifying registry connectivity to ${registry_url}..."
-    
+
     # Try to connect to registry
     if curl -sf "${registry_url}/v2/" > /dev/null 2>&1; then
         log "Registry ${registry_url} is accessible"
@@ -89,7 +89,7 @@ verify_registry() {
 get_image_digest() {
     local image_name=$1
     local tag=$2
-    
+
     docker inspect "${image_name}:${tag}" --format='{{index .RepoDigests 0}}' 2>/dev/null || echo "N/A"
 }
 
@@ -100,10 +100,10 @@ main() {
     info "Project: ${PROJECT_NAME}"
     info "Version: ${VERSION}"
     info "Git Commit: ${GIT_COMMIT}"
-    
+
     # Verify registry connectivity
     verify_registry "${REGISTRY_URL}"
-    
+
     # Array of services to push
     declare -A services=(
         ["auth-service"]="Authentication Service"
@@ -113,16 +113,16 @@ main() {
         ["encryption-service"]="Encryption Service"
         ["web-ui"]="Web UI Service"
     )
-    
+
     # Push summary
     declare -A push_results=()
     declare -A image_digests=()
-    
+
     # Push each service
     for service in "${!services[@]}"; do
         service_description="${services[$service]}"
         image_name="${REGISTRY_URL}/${PROJECT_NAME}/${service}"
-        
+
         if push_service "${service}"; then
             push_results["${service}"]="SUCCESS"
             image_digests["${service}"]=$(get_image_digest "${image_name}" "latest")
@@ -130,52 +130,52 @@ main() {
             push_results["${service}"]="FAILED"
             error "Push failed for ${service}"
         fi
-        
+
         echo ""
     done
-    
+
     # Print push summary
     log "Push Summary:"
     echo "================================================================"
     printf "%-25s %-10s %-20s\n" "Service" "Status" "Latest Digest"
     echo "================================================================"
-    
+
     for service in "${!services[@]}"; do
         status="${push_results[$service]}"
         digest="${image_digests[$service]:-N/A}"
         # Truncate digest for display
         display_digest=$(echo "${digest}" | cut -c1-20)
-        
+
         if [ "${status}" = "SUCCESS" ]; then
             printf "%-25s ${GREEN}%-10s${NC} %-20s\n" "${service}" "${status}" "${display_digest}"
         else
             printf "%-25s ${RED}%-10s${NC} %-20s\n" "${service}" "${status}" "${display_digest}"
         fi
     done
-    
+
     echo "================================================================"
-    
+
     # Count successful pushes
     success_count=0
     total_count=${#services[@]}
-    
+
     for service in "${!services[@]}"; do
         if [ "${push_results[$service]}" = "SUCCESS" ]; then
             ((success_count++))
         fi
     done
-    
+
     if [ $success_count -eq $total_count ]; then
         log "All ${total_count} services pushed successfully!"
         info "Container images are now available at:"
-        
+
         for service in "${!services[@]}"; do
             image_name="${REGISTRY_URL}/${PROJECT_NAME}/${service}"
             echo "  - ${image_name}:latest"
             echo "  - ${image_name}:${VERSION}"
             echo "  - ${image_name}:${GIT_COMMIT}"
         done
-        
+
         echo ""
         info "Next steps:"
         echo "  1. Update Kubernetes manifests with new image tags"
@@ -191,7 +191,7 @@ main() {
 # Function to list available images
 list_images() {
     log "Available images in registry ${REGISTRY_URL}:"
-    
+
     for service in "auth-service" "device-service" "temperature-service" "historical-data-service" "encryption-service" "web-ui"; do
         image_name="${REGISTRY_URL}/${PROJECT_NAME}/${service}"
         echo ""
@@ -229,7 +229,7 @@ Examples:
 Authentication:
     # If registry requires authentication, login first:
     docker login ${REGISTRY_URL}
-    
+
     # Or use environment variables:
     export DOCKER_USERNAME=myuser
     export DOCKER_PASSWORD=mypass

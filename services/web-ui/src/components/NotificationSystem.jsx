@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import './NotificationSystem.css';
 
-const NotificationSystem = ({ 
-    enableSoundAlerts = true, 
+const NotificationSystem = ({
+    enableSoundAlerts = true,
     enableBrowserNotifications = true,
     pollingInterval = 5000 // 5 seconds
 }) => {
@@ -12,7 +12,7 @@ const NotificationSystem = ({
     const [soundEnabled, setSoundEnabled] = useState(enableSoundAlerts);
     const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
     const [isPolling, setIsPolling] = useState(true);
-    
+
     const audioRef = useRef(null);
     const pollingIntervalRef = useRef(null);
     const notificationPermissionRef = useRef(null);
@@ -25,23 +25,23 @@ const NotificationSystem = ({
                 const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 const oscillator = audioContext.createOscillator();
                 const gainNode = audioContext.createGain();
-                
+
                 oscillator.connect(gainNode);
                 gainNode.connect(audioContext.destination);
-                
+
                 oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
                 oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
                 oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-                
+
                 gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
                 gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                
+
                 oscillator.start(audioContext.currentTime);
                 oscillator.stop(audioContext.currentTime + 0.3);
-                
+
                 return audioContext;
             };
-            
+
             audioRef.current = createNotificationSound;
         }
     }, [soundEnabled]);
@@ -68,23 +68,23 @@ const NotificationSystem = ({
                 credentials: 'include'
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 const newNotifications = data.data.notifications || [];
-                
+
                 // Check for new notifications by comparing timestamps
                 setNotifications(prevNotifications => {
                     const prevTimestamps = new Set(prevNotifications.map(n => n.timestamp));
                     const actuallyNewNotifications = newNotifications.filter(n => !prevTimestamps.has(n.timestamp));
-                    
+
                     // Trigger alerts for new notifications
                     actuallyNewNotifications.forEach(notification => {
                         handleNewNotification(notification);
                     });
-                    
+
                     return newNotifications;
                 });
-                
+
                 // Update unread count
                 const unread = newNotifications.filter(n => !n.read).length;
                 setUnreadCount(unread);
@@ -104,7 +104,7 @@ const NotificationSystem = ({
                 console.warn('Could not play notification sound:', error);
             }
         }
-        
+
         // Show browser notification
         if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
             try {
@@ -124,9 +124,9 @@ const NotificationSystem = ({
     useEffect(() => {
         if (isPolling) {
             fetchNotifications(); // Initial fetch
-            
+
             pollingIntervalRef.current = setInterval(fetchNotifications, pollingInterval);
-            
+
             return () => {
                 if (pollingIntervalRef.current) {
                     clearInterval(pollingIntervalRef.current);
@@ -182,7 +182,7 @@ const NotificationSystem = ({
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
-        
+
         if (diffMins < 1) return 'Just now';
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
@@ -252,7 +252,7 @@ const NotificationSystem = ({
                             </div>
                         ) : (
                             notifications.map((notification, index) => (
-                                <div 
+                                <div
                                     key={`${notification.alert_id}-${notification.timestamp}`}
                                     className={`notification-item ${!notification.read ? 'unread' : ''}`}
                                 >

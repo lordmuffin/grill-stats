@@ -60,7 +60,7 @@ spec:
       annotations:
         summary: "Vault Transit encryption failures detected"
         description: "{{ $labels.instance }} has {{ $value }} encryption failures in the last 5 minutes"
-    
+
     - alert: VaultTransitDecryptionFailure
       expr: increase(vault_transit_decrypt_failures_total[5m]) > 0
       for: 1m
@@ -70,7 +70,7 @@ spec:
       annotations:
         summary: "Vault Transit decryption failures detected"
         description: "{{ $labels.instance }} has {{ $value }} decryption failures in the last 5 minutes"
-    
+
     - alert: VaultTransitHighLatency
       expr: histogram_quantile(0.95, rate(vault_transit_encrypt_duration_seconds_bucket[5m])) > 1
       for: 5m
@@ -80,7 +80,7 @@ spec:
       annotations:
         summary: "High Vault Transit encryption latency"
         description: "95th percentile encryption latency is {{ $value }}s"
-    
+
     - alert: VaultTransitKeyRotationDue
       expr: time() - vault_transit_key_creation_time > 7776000  # 90 days
       for: 1h
@@ -90,7 +90,7 @@ spec:
       annotations:
         summary: "Vault Transit key rotation overdue"
         description: "Key {{ $labels.key_name }} was created {{ $value }} seconds ago and should be rotated"
-    
+
     - alert: VaultAgentDown
       expr: up{job="vault-agent"} == 0
       for: 5m
@@ -100,7 +100,7 @@ spec:
       annotations:
         summary: "Vault Agent is down"
         description: "Vault Agent has been down for more than 5 minutes"
-    
+
     - alert: VaultAgentTokenExpiringSoon
       expr: vault_agent_token_ttl_seconds < 3600  # 1 hour
       for: 5m
@@ -110,7 +110,7 @@ spec:
       annotations:
         summary: "Vault Agent token expiring soon"
         description: "Vault Agent token expires in {{ $value }} seconds"
-    
+
     - alert: VaultTransitRateLimitExceeded
       expr: increase(vault_transit_rate_limit_exceeded_total[5m]) > 0
       for: 1m
@@ -120,7 +120,7 @@ spec:
       annotations:
         summary: "Vault Transit rate limit exceeded"
         description: "{{ $labels.instance }} exceeded rate limit {{ $value }} times in the last 5 minutes"
-    
+
     - alert: VaultTransitAuditLogFailure
       expr: increase(vault_audit_log_failures_total[5m]) > 0
       for: 1m
@@ -130,7 +130,7 @@ spec:
       annotations:
         summary: "Vault audit log failures detected"
         description: "{{ $labels.instance }} has {{ $value }} audit log failures in the last 5 minutes"
-    
+
     - alert: VaultTransitKeyVersionsHigh
       expr: vault_transit_key_versions > 10
       for: 1h
@@ -140,7 +140,7 @@ spec:
       annotations:
         summary: "High number of Vault Transit key versions"
         description: "Key {{ $labels.key_name }} has {{ $value }} versions, consider cleanup"
-    
+
     - alert: VaultTransitUnhealthy
       expr: vault_transit_health_status != 1
       for: 2m
@@ -164,10 +164,10 @@ data:
     global:
       scrape_interval: 30s
       evaluation_interval: 30s
-    
+
     rule_files:
     - "/etc/prometheus/rules/*.yml"
-    
+
     scrape_configs:
     - job_name: 'vault-transit'
       static_configs:
@@ -175,7 +175,7 @@ data:
       scrape_interval: 30s
       metrics_path: '/metrics'
       scheme: 'http'
-    
+
     - job_name: 'vault-agent'
       static_configs:
       - targets: ['vault-agent:8200']
@@ -184,14 +184,14 @@ data:
       scheme: 'http'
       params:
         format: ['prometheus']
-    
+
     - job_name: 'vault-key-rotation'
       static_configs:
       - targets: ['key-rotation-service:8080']
       scrape_interval: 60s
       metrics_path: '/metrics'
       scheme: 'http'
-  
+
   grafana-dashboard.json: |
     {
       "dashboard": {
@@ -317,7 +317,7 @@ data:
       time_format %Y-%m-%dT%H:%M:%S.%NZ
       time_key time
     </source>
-    
+
     <filter vault.audit>
       @type record_transformer
       <record>
@@ -326,7 +326,7 @@ data:
         namespace grill-stats
       </record>
     </filter>
-    
+
     <match vault.audit>
       @type elasticsearch
       host elasticsearch.monitoring.svc.cluster.local

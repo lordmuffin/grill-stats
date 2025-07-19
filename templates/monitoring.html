@@ -76,7 +76,7 @@
             </div>
             <div class="card-body">
                 <div id="status-message"></div>
-                
+
                 <div id="auto-refresh-container" class="d-flex align-items-center mb-3">
                     <div class="form-check form-switch me-3">
                         <input class="form-check-input" type="checkbox" id="auto-refresh" checked>
@@ -97,7 +97,7 @@
                     </button>
                     <span id="next-refresh" class="ms-3 text-muted small"></span>
                 </div>
-                
+
                 <div id="probe-container" class="probe-container">
                     <div class="loading-indicator">
                         <div class="spinner-border text-primary" role="status">
@@ -122,66 +122,66 @@
         const refreshIntervalSelect = document.getElementById('refresh-interval');
         const manualRefreshBtn = document.getElementById('manual-refresh');
         const nextRefreshSpan = document.getElementById('next-refresh');
-        
+
         // State
         let refreshTimer = null;
         let nextRefreshTime = null;
         let countdownTimer = null;
-        
+
         // Initialize
         fetchProbeData();
-        
+
         // Set up auto-refresh
         function startAutoRefresh() {
             if (refreshTimer) {
                 clearTimeout(refreshTimer);
             }
-            
+
             const interval = parseInt(refreshIntervalSelect.value) * 1000;
             nextRefreshTime = new Date(Date.now() + interval);
             updateCountdown();
-            
+
             refreshTimer = setTimeout(() => {
                 fetchProbeData();
                 startAutoRefresh();
             }, interval);
         }
-        
+
         function stopAutoRefresh() {
             if (refreshTimer) {
                 clearTimeout(refreshTimer);
                 refreshTimer = null;
             }
-            
+
             if (countdownTimer) {
                 clearInterval(countdownTimer);
                 countdownTimer = null;
             }
-            
+
             nextRefreshSpan.textContent = '';
         }
-        
+
         function updateCountdown() {
             if (countdownTimer) {
                 clearInterval(countdownTimer);
             }
-            
+
             countdownTimer = setInterval(() => {
                 if (!nextRefreshTime) return;
-                
+
                 const now = new Date();
                 const diff = Math.max(0, nextRefreshTime - now);
-                
+
                 if (diff === 0) {
                     nextRefreshSpan.textContent = 'Refreshing...';
                     return;
                 }
-                
+
                 const seconds = Math.ceil(diff / 1000);
                 nextRefreshSpan.textContent = `Next refresh in ${seconds}s`;
             }, 1000);
         }
-        
+
         // Event listeners
         autoRefreshToggle.addEventListener('change', function() {
             if (this.checked) {
@@ -190,26 +190,26 @@
                 stopAutoRefresh();
             }
         });
-        
+
         refreshIntervalSelect.addEventListener('change', function() {
             if (autoRefreshToggle.checked) {
                 startAutoRefresh();
             }
         });
-        
+
         manualRefreshBtn.addEventListener('click', function() {
             fetchProbeData();
-            
+
             if (autoRefreshToggle.checked) {
                 startAutoRefresh();
             }
         });
-        
+
         // Start auto-refresh if enabled
         if (autoRefreshToggle.checked) {
             startAutoRefresh();
         }
-        
+
         // Fetch probe data
         function fetchProbeData() {
             // Show loading if this is the first load
@@ -223,7 +223,7 @@
                     </div>
                 `;
             }
-            
+
             // Fetch data from all devices
             fetch('/api/monitoring/data')
                 .then(response => {
@@ -235,7 +235,7 @@
                 .then(data => {
                     if (data.status === 'success') {
                         displayProbes(data.data.probes);
-                        
+
                         // Update status message
                         statusMessage.innerHTML = `
                             <div class="alert alert-info">
@@ -255,7 +255,7 @@
                     `;
                 });
         }
-        
+
         // Display probes
         function displayProbes(probes) {
             if (!probes || probes.length === 0) {
@@ -266,16 +266,16 @@
                 `;
                 return;
             }
-            
+
             // Build HTML for probe cards
             let html = '<div class="row">';
-            
+
             probes.forEach(probe => {
                 const isOnline = probe.status === 'online';
                 const statusClass = isOnline ? 'status-online' : 'status-offline';
                 const offlineClass = isOnline ? '' : 'offline-indicator';
                 const formattedTemp = parseFloat(probe.temperature).toFixed(1);
-                
+
                 html += `
                     <div class="col-md-4 col-sm-6">
                         <div class="card probe-card ${offlineClass}">
@@ -305,7 +305,7 @@
                     </div>
                 `;
             });
-            
+
             html += '</div>';
             probeContainer.innerHTML = html;
         }

@@ -35,11 +35,11 @@ test_endpoint() {
     local url="$3"
     local expected_status="$4"
     local data="$5"
-    
+
     TOTAL_TESTS=$((TOTAL_TESTS + 1))
-    
+
     echo -n "Testing: $test_name ... "
-    
+
     if [ "$method" = "GET" ]; then
         response=$(curl -s -w "%{http_code}" -o /tmp/api_response "$url" 2>/dev/null || echo "000")
     elif [ "$method" = "POST" ]; then
@@ -49,11 +49,11 @@ test_endpoint() {
             response=$(curl -s -w "%{http_code}" -o /tmp/api_response -X POST "$url" 2>/dev/null || echo "000")
         fi
     fi
-    
+
     if [ "$response" = "$expected_status" ] || [ "$expected_status" = "any" ]; then
         echo -e "${GREEN}✅ PASS${NC} (Status: $response)"
         PASSED_TESTS=$((PASSED_TESTS + 1))
-        
+
         # Show response preview for successful tests
         if [ -f /tmp/api_response ] && [ -s /tmp/api_response ]; then
             echo "   Response preview: $(head -c 100 /tmp/api_response | tr '\n' ' ')..."
@@ -61,13 +61,13 @@ test_endpoint() {
     else
         echo -e "${RED}❌ FAIL${NC} (Expected: $expected_status, Got: $response)"
         FAILED_TESTS=$((FAILED_TESTS + 1))
-        
+
         # Show error details
         if [ -f /tmp/api_response ] && [ -s /tmp/api_response ]; then
             echo "   Error details: $(cat /tmp/api_response | tr '\n' ' ')"
         fi
     fi
-    
+
     echo ""
 }
 
@@ -76,9 +76,9 @@ wait_for_service() {
     local service_name="$1"
     local health_url="$2"
     local max_attempts=10
-    
+
     echo "⏳ Waiting for $service_name to be ready..."
-    
+
     for i in $(seq 1 $max_attempts); do
         if curl -f "$health_url" >/dev/null 2>&1; then
             echo -e "${GREEN}✅ $service_name is ready!${NC}"
@@ -87,7 +87,7 @@ wait_for_service() {
         echo "   Attempt $i/$max_attempts..."
         sleep 3
     done
-    
+
     echo -e "${YELLOW}⚠️ $service_name may not be fully ready, proceeding anyway...${NC}"
     return 0
 }
@@ -184,7 +184,7 @@ if [ $FAILED_TESTS -eq 0 ]; then
 else
     PASS_RATE=$((PASSED_TESTS * 100 / TOTAL_TESTS))
     echo -e "\n${YELLOW}⚠️ Some tests failed. Pass rate: $PASS_RATE%${NC}"
-    
+
     if [ $PASS_RATE -ge 80 ]; then
         echo -e "${YELLOW}This is acceptable for a development environment with missing dependencies.${NC}"
         exit 0

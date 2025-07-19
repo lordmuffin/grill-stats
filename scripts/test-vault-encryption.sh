@@ -79,7 +79,7 @@ for test_case in "${test_cases[@]}"; do
     ENCRYPTED=$(vault write -field=ciphertext "${TRANSIT_PATH}/encrypt/${KEY_NAME}" plaintext="${TEST_B64}")
     DECRYPTED=$(vault write -field=plaintext "${TRANSIT_PATH}/decrypt/${KEY_NAME}" ciphertext="${ENCRYPTED}")
     DECRYPTED_TEXT=$(echo "$DECRYPTED" | base64 -d)
-    
+
     if [ "$test_case" = "$DECRYPTED_TEXT" ]; then
         print_status "✓ Test case '$test_case' passed"
     else
@@ -141,7 +141,7 @@ test_concurrent() {
     ENCRYPTED=$(vault write -field=ciphertext "${TRANSIT_PATH}/encrypt/${KEY_NAME}" plaintext="${TEST_B64}")
     DECRYPTED=$(vault write -field=plaintext "${TRANSIT_PATH}/decrypt/${KEY_NAME}" ciphertext="${ENCRYPTED}")
     DECRYPTED_TEXT=$(echo "$DECRYPTED" | base64 -d)
-    
+
     if [ "concurrent-test-$id" = "$DECRYPTED_TEXT" ]; then
         return 0
     else

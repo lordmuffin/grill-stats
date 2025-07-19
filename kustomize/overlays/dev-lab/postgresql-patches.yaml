@@ -52,26 +52,26 @@ data:
     port = 5432
     max_connections = 50
     superuser_reserved_connections = 3
-    
+
     # Memory Settings - Reduced for dev
     shared_buffers = 128MB
     effective_cache_size = 256MB
     maintenance_work_mem = 32MB
     work_mem = 2MB
-    
+
     # Checkpoint Settings
     checkpoint_completion_target = 0.9
     wal_buffers = 8MB
-    
+
     # Query Planner Settings
     default_statistics_target = 50
     random_page_cost = 1.1
     effective_io_concurrency = 100
-    
+
     # Write Ahead Log Settings
     wal_level = minimal
     archive_mode = off
-    
+
     # Logging Settings - More verbose for dev
     logging_collector = on
     log_destination = 'stderr'
@@ -88,17 +88,17 @@ data:
     log_statement = 'all'
     log_temp_files = 0
     log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-    
+
     # Security Settings - Relaxed for dev
     ssl = off
     password_encryption = md5
-    
+
     # Performance Settings
     shared_preload_libraries = 'pg_stat_statements'
     track_activity_query_size = 1024
     pg_stat_statements.max = 1000
     pg_stat_statements.track = all
-    
+
     # Autovacuum Settings - More aggressive for dev
     autovacuum = on
     autovacuum_max_workers = 2
@@ -107,10 +107,10 @@ data:
     autovacuum_analyze_threshold = 25
     autovacuum_vacuum_scale_factor = 0.1
     autovacuum_analyze_scale_factor = 0.05
-    
+
     # Time Zone
     timezone = 'UTC'
-    
+
     # JIT Settings - Disabled for dev
     jit = off
 ---
@@ -124,19 +124,19 @@ data:
   pg_hba.conf: |
     # PostgreSQL Client Authentication Configuration File - Development
     # TYPE  DATABASE        USER            ADDRESS                 METHOD
-    
+
     # "local" is for Unix domain socket connections only
     local   all             postgres                                trust
-    
+
     # IPv4 local connections - relaxed for dev
     host    all             postgres        127.0.0.1/32            trust
     host    all             postgres        ::1/128                 trust
-    
+
     # Development connections - more permissive
     host    all             all             10.0.0.0/8              md5
     host    all             all             172.16.0.0/12           md5
     host    all             all             192.168.0.0/16          md5
-    
+
     # Allow local development
     host    all             all             127.0.0.1/32            trust
     host    all             all             ::1/128                 trust

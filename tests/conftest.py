@@ -1,23 +1,25 @@
-import pytest
 import os
 import sys
+
+import pytest
 from flask import Flask
-from flask_sqlalchemy import SQLAlchemy
 from flask_bcrypt import Bcrypt
 from flask_login import LoginManager
+from flask_sqlalchemy import SQLAlchemy
 
 # Add the parent directory to sys.path
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
+
+from auth.utils import create_test_user, generate_password_hash
 
 # Import your app modules
 from models.user import User
-from auth.utils import generate_password_hash, create_test_user
 
 
 @pytest.fixture
 def app():
     """Create and configure a Flask app for tests"""
-    app = Flask(__name__, template_folder='../templates')
+    app = Flask(__name__, template_folder="../templates")
     app.config.update(
         TESTING=True,
         SQLALCHEMY_DATABASE_URI="sqlite:///:memory:",
@@ -25,7 +27,7 @@ def app():
         SECRET_KEY="test-secret-key",
         WTF_CSRF_ENABLED=False,  # Disable CSRF for testing
     )
-    
+
     return app
 
 
@@ -50,7 +52,7 @@ def bcrypt(app):
 def login_manager(app):
     """Create a login manager instance"""
     login_manager = LoginManager(app)
-    login_manager.login_view = 'login'
+    login_manager.login_view = "login"
     return login_manager
 
 
@@ -63,16 +65,16 @@ def user_manager(db):
 @pytest.fixture
 def test_user(user_manager, bcrypt):
     """Create a test user"""
-    password_hash = generate_password_hash(bcrypt, 'password')
-    user = user_manager.create_user('test@example.com', password_hash)
+    password_hash = generate_password_hash(bcrypt, "password")
+    user = user_manager.create_user("test@example.com", password_hash)
     return user
 
 
 @pytest.fixture
 def locked_user(user_manager, bcrypt, db):
     """Create a locked test user"""
-    password_hash = generate_password_hash(bcrypt, 'password')
-    user = user_manager.create_user('locked@example.com', password_hash)
+    password_hash = generate_password_hash(bcrypt, "password")
+    user = user_manager.create_user("locked@example.com", password_hash)
     user.is_locked = True
     db.session.commit()
     return user

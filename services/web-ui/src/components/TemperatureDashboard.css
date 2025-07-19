@@ -170,22 +170,22 @@
     align-items: flex-start;
     gap: 12px;
   }
-  
+
   .user-info {
     width: 100%;
     justify-content: space-between;
   }
-  
+
   .dashboard-controls {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
   }
-  
+
   .control-group {
     justify-content: space-between;
   }
-  
+
   .sync-button {
     margin-left: 0;
     width: 100%;
@@ -198,11 +198,11 @@
     align-items: stretch;
     gap: 8px;
   }
-  
+
   .user-greeting {
     text-align: center;
   }
-  
+
   .logout-button {
     width: 100%;
   }

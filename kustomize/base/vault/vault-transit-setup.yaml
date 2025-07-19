@@ -11,22 +11,22 @@ data:
   setup-transit.sh: |
     #!/bin/bash
     set -e
-    
+
     echo "Setting up Vault Transit Secrets Engine..."
-    
+
     # Wait for Vault to be ready
     until vault status > /dev/null 2>&1; do
       echo "Waiting for Vault to be ready..."
       sleep 5
     done
-    
+
     # Enable transit secrets engine
     echo "Enabling transit secrets engine..."
     vault secrets enable -path=transit transit || echo "Transit engine already enabled"
-    
+
     # Create encryption keys for different environments
     echo "Creating encryption keys..."
-    
+
     # Production environment key
     vault write -f transit/keys/thermoworks-user-credentials-prod \
       type=aes256-gcm96 \
@@ -34,7 +34,7 @@ data:
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "Production key already exists"
-    
+
     # Development environment key
     vault write -f transit/keys/thermoworks-user-credentials-dev \
       type=aes256-gcm96 \
@@ -42,7 +42,7 @@ data:
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "Development key already exists"
-    
+
     # Staging environment key
     vault write -f transit/keys/thermoworks-user-credentials-staging \
       type=aes256-gcm96 \
@@ -50,10 +50,10 @@ data:
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "Staging key already exists"
-    
+
     # Configure key rotation policies
     echo "Configuring key rotation policies..."
-    
+
     # Production key rotation (90 days)
     vault write transit/keys/thermoworks-user-credentials-prod/config \
       min_decryption_version=1 \
@@ -62,7 +62,7 @@ data:
       exportable=false \
       allow_plaintext_backup=false \
       auto_rotate_period=2160h
-    
+
     # Development key rotation (30 days for testing)
     vault write transit/keys/thermoworks-user-credentials-dev/config \
       min_decryption_version=1 \
@@ -71,7 +71,7 @@ data:
       exportable=false \
       allow_plaintext_backup=false \
       auto_rotate_period=720h
-    
+
     # Staging key rotation (60 days)
     vault write transit/keys/thermoworks-user-credentials-staging/config \
       min_decryption_version=1 \
@@ -80,10 +80,10 @@ data:
       exportable=false \
       allow_plaintext_backup=false \
       auto_rotate_period=1440h
-    
+
     # Create additional encryption keys for different data types
     echo "Creating additional encryption keys..."
-    
+
     # API tokens encryption key
     vault write -f transit/keys/thermoworks-api-tokens-prod \
       type=aes256-gcm96 \
@@ -91,14 +91,14 @@ data:
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "API tokens prod key already exists"
-    
+
     vault write -f transit/keys/thermoworks-api-tokens-dev \
       type=aes256-gcm96 \
       allow_plaintext_backup=false \
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "API tokens dev key already exists"
-    
+
     # Device credentials encryption key
     vault write -f transit/keys/thermoworks-device-credentials-prod \
       type=aes256-gcm96 \
@@ -106,127 +106,127 @@ data:
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "Device credentials prod key already exists"
-    
+
     vault write -f transit/keys/thermoworks-device-credentials-dev \
       type=aes256-gcm96 \
       allow_plaintext_backup=false \
       deletion_allowed=false \
       derived=false \
       exportable=false || echo "Device credentials dev key already exists"
-    
+
     # Configure audit logging
     echo "Configuring audit logging..."
     vault audit enable -path=grill-stats-audit file file_path=/vault/audit/grill-stats-audit.log || echo "Audit logging already enabled"
-    
+
     echo "Vault Transit setup completed successfully!"
-  
+
   vault-policy.hcl: |
     # Vault policy for grill-stats encryption service
     # Path: /vault/policies/grill-stats-encryption.hcl
-    
+
     # Allow encryption/decryption operations for user credentials
     path "transit/encrypt/thermoworks-user-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-user-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow encryption/decryption operations for API tokens
     path "transit/encrypt/thermoworks-api-tokens-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-api-tokens-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow encryption/decryption operations for device credentials
     path "transit/encrypt/thermoworks-device-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-device-credentials-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow reading key information (for rotation status)
     path "transit/keys/thermoworks-user-credentials-*" {
       capabilities = ["read"]
     }
-    
+
     path "transit/keys/thermoworks-api-tokens-*" {
       capabilities = ["read"]
     }
-    
+
     path "transit/keys/thermoworks-device-credentials-*" {
       capabilities = ["read"]
     }
-    
+
     # Allow token renewal
     path "auth/token/renew-self" {
       capabilities = ["update"]
     }
-    
+
     # Allow token lookup for self
     path "auth/token/lookup-self" {
       capabilities = ["read"]
     }
-  
+
   vault-admin-policy.hcl: |
     # Vault policy for grill-stats key rotation service
     # Path: /vault/policies/grill-stats-key-rotation.hcl
-    
+
     # Allow key rotation operations
     path "transit/keys/thermoworks-user-credentials-*/rotate" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-api-tokens-*/rotate" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-device-credentials-*/rotate" {
       capabilities = ["update"]
     }
-    
+
     # Allow key configuration updates
     path "transit/keys/thermoworks-user-credentials-*/config" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-api-tokens-*/config" {
       capabilities = ["update"]
     }
-    
+
     path "transit/keys/thermoworks-device-credentials-*/config" {
       capabilities = ["update"]
     }
-    
+
     # Allow reading key information and status
     path "transit/keys/thermoworks-*" {
       capabilities = ["read", "list"]
     }
-    
+
     # Allow reading encryption/decryption capabilities for testing
     path "transit/encrypt/thermoworks-*" {
       capabilities = ["update"]
     }
-    
+
     path "transit/decrypt/thermoworks-*" {
       capabilities = ["update"]
     }
-    
+
     # Allow token operations
     path "auth/token/renew-self" {
       capabilities = ["update"]
     }
-    
+
     path "auth/token/lookup-self" {
       capabilities = ["read"]
     }
-    
+
     # Allow audit log access
     path "sys/audit" {
       capabilities = ["read", "list"]

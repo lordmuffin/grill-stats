@@ -1,7 +1,7 @@
 #!/bin/bash
 # =======================================================================
 # Home Assistant Integration & Data Storage Test Script
-# 
+#
 # Purpose: Verify Home Assistant sensor creation, data synchronization
 #          and data storage mechanisms
 # Environment: Production - grill-stats.lab.apj.dev
@@ -40,14 +40,14 @@ check_status() {
 
 login() {
   log "Attempting login with $TEST_EMAIL..."
-  
+
   LOGIN_RESPONSE=$(curl -s -X POST "$API_BASE_URL/auth/login" \
     -H "Content-Type: application/json" \
     -d "{\"email\":\"$TEST_EMAIL\",\"password\":\"$TEST_PASSWORD\"}")
-  
+
   # Extract token from response
   AUTH_TOKEN=$(echo $LOGIN_RESPONSE | jq -r '.data.token')
-  
+
   if [[ "$AUTH_TOKEN" == "null" || -z "$AUTH_TOKEN" ]]; then
     log "❌ Login failed. Response: $LOGIN_RESPONSE"
     return 1
@@ -92,13 +92,13 @@ DEVICES_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL
 if [[ $(echo $DEVICES_RESPONSE | jq 'type') == "array" ]]; then
   DEVICE_COUNT=$(echo $DEVICES_RESPONSE | jq '. | length')
   log "Found $DEVICE_COUNT ThermoWorks devices"
-  
+
   # Store test device info
   if [[ $DEVICE_COUNT -gt 0 ]]; then
     TEST_DEVICE_ID=$(echo $DEVICES_RESPONSE | jq -r '.[0].id')
     TEST_DEVICE_NAME=$(echo $DEVICES_RESPONSE | jq -r '.[0].name')
     log "Using device for testing: $TEST_DEVICE_NAME (ID: $TEST_DEVICE_ID)"
-    
+
     # Calculate expected HA entity ID
     SENSOR_NAME="thermoworks_$(echo $TEST_DEVICE_NAME | tr 'A-Z ' 'a-z_')"
     log "Expected Home Assistant sensor name: $SENSOR_NAME"
@@ -119,14 +119,14 @@ if [[ -n "$SENSOR_NAME" && -n "$HA_TOKEN" ]]; then
   # Check if sensor exists in Home Assistant
   HA_ENTITY_RESPONSE=$(curl -s -H "Authorization: Bearer $HA_TOKEN" \
     "$HA_URL/api/states/sensor.$SENSOR_NAME")
-  
+
   ENTITY_STATE=$(echo $HA_ENTITY_RESPONSE | jq -r '.state')
-  
+
   if [[ "$ENTITY_STATE" != "null" && -n "$ENTITY_STATE" ]]; then
     log "✅ Sensor exists in Home Assistant: sensor.$SENSOR_NAME"
     log "  Current state: $ENTITY_STATE"
     log "  Last updated: $(echo $HA_ENTITY_RESPONSE | jq -r '.last_updated')"
-    
+
     # Verify attributes
     ATTRIBUTES=$(echo $HA_ENTITY_RESPONSE | jq -r '.attributes')
     log "  Sensor attributes:"
@@ -136,7 +136,7 @@ if [[ -n "$SENSOR_NAME" && -n "$HA_TOKEN" ]]; then
     log "    Device class: $(echo $ATTRIBUTES | jq -r '.device_class // "Not set"')"
     log "    Battery level: $(echo $ATTRIBUTES | jq -r '.battery_level // "Not set"')"
     log "    Signal strength: $(echo $ATTRIBUTES | jq -r '.signal_strength // "Not set"')"
-    
+
     # Verify expected attributes
     MISSING_ATTRS=0
     for attr in "device_id" "friendly_name" "unit_of_measurement"; do
@@ -145,7 +145,7 @@ if [[ -n "$SENSOR_NAME" && -n "$HA_TOKEN" ]]; then
         MISSING_ATTRS=$((MISSING_ATTRS + 1))
       fi
     done
-    
+
     if [[ $MISSING_ATTRS -eq 0 ]]; then
       log "  ✅ All required attributes present"
     fi
@@ -166,28 +166,28 @@ if [[ -n "$SENSOR_NAME" && -n "$HA_TOKEN" ]]; then
     "$HA_URL/api/states/sensor.$SENSOR_NAME")
   BEFORE_STATE=$(echo $BEFORE_SYNC | jq -r '.state')
   BEFORE_LAST_UPDATED=$(echo $BEFORE_SYNC | jq -r '.last_updated')
-  
+
   log "State before sync: $BEFORE_STATE (updated: $BEFORE_LAST_UPDATED)"
-  
+
   # Trigger manual sync
   log "Triggering manual sync..."
   SYNC_RESPONSE=$(curl -s -X POST -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/sync")
-  
+
   if [[ $(echo $SYNC_RESPONSE | jq -r '.status') == "success" ]]; then
     log "✅ Manual sync triggered successfully"
-    
+
     # Wait for sync to complete
     log "Waiting 10 seconds for sync to complete..."
     sleep 10
-    
+
     # Check updated state
     AFTER_SYNC=$(curl -s -H "Authorization: Bearer $HA_TOKEN" \
       "$HA_URL/api/states/sensor.$SENSOR_NAME")
     AFTER_STATE=$(echo $AFTER_SYNC | jq -r '.state')
     AFTER_LAST_UPDATED=$(echo $AFTER_SYNC | jq -r '.last_updated')
-    
+
     log "State after sync: $AFTER_STATE (updated: $AFTER_LAST_UPDATED)"
-    
+
     if [[ "$BEFORE_LAST_UPDATED" != "$AFTER_LAST_UPDATED" ]]; then
       log "✅ Sensor was updated during sync"
     else
@@ -208,26 +208,26 @@ if [[ -n "$HA_TOKEN" ]]; then
   HA_STATES=$(curl -s -H "Authorization: Bearer $HA_TOKEN" "$HA_URL/api/states")
   THERMOWORKS_ENTITIES=$(echo $HA_STATES | jq '[.[] | select(.entity_id | startswith("sensor.thermoworks_"))]')
   ENTITY_COUNT=$(echo $THERMOWORKS_ENTITIES | jq '. | length')
-  
+
   log "Found $ENTITY_COUNT ThermoWorks sensor entities in Home Assistant"
-  
+
   if [[ $ENTITY_COUNT -gt 0 ]]; then
     # Check naming convention for each entity
     NAMING_ISSUES=0
-    
+
     echo $THERMOWORKS_ENTITIES | jq -c '.[]' | while read -r entity; do
       ENTITY_ID=$(echo $entity | jq -r '.entity_id')
       FRIENDLY_NAME=$(echo $entity | jq -r '.attributes.friendly_name // "Unknown"')
-      
+
       log "  Entity: $ENTITY_ID (\"$FRIENDLY_NAME\")"
-      
+
       # Check if name follows conventions (lowercase, underscores)
       if [[ ! $ENTITY_ID =~ ^sensor\.thermoworks_[a-z0-9_]+$ ]]; then
         log "  ⚠️ Entity ID does not follow naming convention: $ENTITY_ID"
         NAMING_ISSUES=$((NAMING_ISSUES + 1))
       fi
     done
-    
+
     if [[ $NAMING_ISSUES -eq 0 ]]; then
       log "✅ All entities follow proper naming conventions"
     else
@@ -248,24 +248,24 @@ if [[ $(echo $MONITORING_RESPONSE | jq -r '.status') == "success" ]]; then
   log "✅ Monitoring data retrieved successfully"
   PROBE_COUNT=$(echo $MONITORING_RESPONSE | jq -r '.data.count')
   log "  Found $PROBE_COUNT temperature probes"
-  
+
   # Look for cache indicators in the response
   CACHE_SOURCES=$(echo $MONITORING_RESPONSE | jq -r '.data.probes[].source' | grep -c "cache" || true)
-  
+
   if [[ $CACHE_SOURCES -gt 0 ]]; then
     log "✅ Redis cache is being used ($CACHE_SOURCES cached readings)"
   else
     log "⚠️ No cached readings detected - Redis may not be configured or needed"
   fi
-  
+
   # Make subsequent request to test cache performance
   START_TIME=$(date +%s.%N)
   curl -s -o /dev/null -H "Authorization: Bearer $AUTH_TOKEN" "$API_BASE_URL/api/monitoring/data"
   END_TIME=$(date +%s.%N)
-  
+
   # Calculate execution time
   EXEC_TIME=$(echo "$END_TIME - $START_TIME" | bc)
-  
+
   log "  Second request completed in ${EXEC_TIME}s (should be faster if caching works)"
 else
   log "❌ Failed to retrieve monitoring data: $(echo $MONITORING_RESPONSE | jq -r '.message')"
@@ -290,32 +290,32 @@ fi
 if [[ -n "$TEST_DEVICE_ID" ]]; then
   START_TIME=$(date -u -d "24 hours ago" +"%Y-%m-%dT%H:%M:%S")
   END_TIME=$(date -u +"%Y-%m-%dT%H:%M:%S")
-  
+
   HISTORY_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
     "$API_BASE_URL/devices/$TEST_DEVICE_ID/history?start=$START_TIME&end=$END_TIME")
-  
+
   if [[ $(echo $HISTORY_RESPONSE | jq 'type') == "array" ]]; then
     DATA_POINTS=$(echo $HISTORY_RESPONSE | jq '. | length')
     log "  Retrieved $DATA_POINTS historical data points for the last 24 hours"
-    
+
     if [[ $DATA_POINTS -gt 0 ]]; then
       log "✅ Historical data storage is working"
-      
+
       # Check data resolution to infer if data compression/downsampling is in place
       if [[ $DATA_POINTS -gt 1 ]]; then
         # Get first and second timestamp
         FIRST_TS=$(echo $HISTORY_RESPONSE | jq -r '.[0].timestamp')
         SECOND_TS=$(echo $HISTORY_RESPONSE | jq -r '.[1].timestamp')
-        
+
         # Convert to seconds
         FIRST_SEC=$(date -d "$FIRST_TS" +%s)
         SECOND_SEC=$(date -d "$SECOND_TS" +%s)
-        
+
         # Calculate difference in minutes
         DIFF_MIN=$(( (SECOND_SEC - FIRST_SEC) / 60 ))
-        
+
         log "  Data resolution: ~$DIFF_MIN minutes between points"
-        
+
         if [[ $DIFF_MIN -le 5 ]]; then
           log "  ✅ High-resolution data storage detected (intervals ≤ 5 minutes)"
         else
@@ -340,32 +340,32 @@ if [[ -n "$TEST_DEVICE_ID" ]]; then
   # Check last week
   WEEK_START=$(date -u -d "7 days ago" +"%Y-%m-%dT%H:%M:%S")
   WEEK_END=$(date -u -d "6 days ago" +"%Y-%m-%dT%H:%M:%S")
-  
+
   WEEK_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
     "$API_BASE_URL/devices/$TEST_DEVICE_ID/history?start=$WEEK_START&end=$WEEK_END")
-  
+
   if [[ $(echo $WEEK_RESPONSE | jq 'type') == "array" ]]; then
     WEEK_POINTS=$(echo $WEEK_RESPONSE | jq '. | length')
     log "  Data from 7 days ago: $WEEK_POINTS points"
-    
+
     if [[ $WEEK_POINTS -gt 0 ]]; then
       log "  ✅ Weekly data retention confirmed"
     else
       log "  ⚠️ No data found from 7 days ago"
     fi
   fi
-  
+
   # Try to get month-old data if available
   MONTH_START=$(date -u -d "30 days ago" +"%Y-%m-%dT%H:%M:%S")
   MONTH_END=$(date -u -d "29 days ago" +"%Y-%m-%dT%H:%M:%S")
-  
+
   MONTH_RESPONSE=$(curl -s -H "Authorization: Bearer $AUTH_TOKEN" \
     "$API_BASE_URL/devices/$TEST_DEVICE_ID/history?start=$MONTH_START&end=$MONTH_END")
-  
+
   if [[ $(echo $MONTH_RESPONSE | jq 'type') == "array" ]]; then
     MONTH_POINTS=$(echo $MONTH_RESPONSE | jq '. | length')
     log "  Data from 30 days ago: $MONTH_POINTS points"
-    
+
     if [[ $MONTH_POINTS -gt 0 ]]; then
       log "  ✅ Monthly data retention confirmed"
     else

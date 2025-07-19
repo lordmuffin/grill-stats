@@ -17,22 +17,22 @@ data:
     port = 5432
     max_connections = 100
     superuser_reserved_connections = 3
-    
+
     # Memory Settings
     shared_buffers = 256MB
     effective_cache_size = 512MB
     maintenance_work_mem = 64MB
     work_mem = 4MB
-    
+
     # Checkpoint Settings
     checkpoint_completion_target = 0.9
     wal_buffers = 16MB
-    
+
     # Query Planner Settings
     default_statistics_target = 100
     random_page_cost = 1.1
     effective_io_concurrency = 200
-    
+
     # Write Ahead Log Settings
     wal_level = replica
     max_wal_senders = 3
@@ -40,7 +40,7 @@ data:
     wal_keep_segments = 32
     archive_mode = on
     archive_command = 'test ! -f /var/lib/postgresql/archive/%f && cp %p /var/lib/postgresql/archive/%f'
-    
+
     # Logging Settings
     logging_collector = on
     log_destination = 'stderr'
@@ -57,19 +57,19 @@ data:
     log_statement = 'all'
     log_temp_files = 0
     log_line_prefix = '%t [%p]: [%l-1] user=%u,db=%d,app=%a,client=%h '
-    
+
     # Security Settings
     ssl = on
     ssl_ciphers = 'HIGH:MEDIUM:+3DES:!aNULL'
     ssl_prefer_server_ciphers = on
     password_encryption = scram-sha-256
-    
+
     # Performance Settings
     shared_preload_libraries = 'pg_stat_statements'
     track_activity_query_size = 2048
     pg_stat_statements.max = 10000
     pg_stat_statements.track = all
-    
+
     # Autovacuum Settings
     autovacuum = on
     autovacuum_max_workers = 3
@@ -82,34 +82,34 @@ data:
     autovacuum_multixact_freeze_max_age = 400000000
     autovacuum_vacuum_cost_delay = 20ms
     autovacuum_vacuum_cost_limit = 200
-    
+
     # Lock Settings
     deadlock_timeout = 1s
     max_locks_per_transaction = 64
-    
+
     # Error Handling
     restart_after_crash = on
-    
+
     # Locale Settings
     lc_messages = 'en_US.utf8'
     lc_monetary = 'en_US.utf8'
     lc_numeric = 'en_US.utf8'
     lc_time = 'en_US.utf8'
-    
+
     # Time Zone
     timezone = 'UTC'
-    
+
     # Statement Timeout
     statement_timeout = 0
     lock_timeout = 0
     idle_in_transaction_session_timeout = 0
-    
+
     # Background Writer Settings
     bgwriter_delay = 200ms
     bgwriter_lru_maxpages = 100
     bgwriter_lru_multiplier = 2.0
     bgwriter_flush_after = 512kB
-    
+
     # Write Ahead Log Settings
     wal_compression = on
     wal_log_hints = on
@@ -117,12 +117,12 @@ data:
     max_wal_size = 1GB
     min_wal_size = 80MB
     checkpoint_flush_after = 256kB
-    
+
     # Parallel Query Settings
     max_parallel_workers_per_gather = 2
     max_parallel_workers = 4
     max_parallel_maintenance_workers = 2
-    
+
     # JIT Settings (disable for smaller instances)
     jit = off
 ---
@@ -140,48 +140,48 @@ data:
   pg_hba.conf: |
     # PostgreSQL Client Authentication Configuration File
     # TYPE  DATABASE        USER            ADDRESS                 METHOD
-    
+
     # "local" is for Unix domain socket connections only
     local   all             postgres                                peer
-    
+
     # IPv4 local connections:
     host    all             postgres        127.0.0.1/32            scram-sha-256
     host    all             postgres        ::1/128                 scram-sha-256
-    
+
     # Allow replication connections from localhost, by a user with the
     # replication privilege.
     local   replication     postgres                                peer
     host    replication     postgres        127.0.0.1/32            scram-sha-256
     host    replication     postgres        ::1/128                 scram-sha-256
-    
+
     # Application connections
     host    grill_stats     grill_stats_user    10.0.0.0/8          scram-sha-256
     host    grill_stats     grill_stats_user    172.16.0.0/12       scram-sha-256
     host    grill_stats     grill_stats_user    192.168.0.0/16      scram-sha-256
-    
+
     # Service-specific connections
     host    grill_stats     auth_service        10.0.0.0/8          scram-sha-256
     host    grill_stats     device_service      10.0.0.0/8          scram-sha-256
     host    grill_stats     encryption_service  10.0.0.0/8          scram-sha-256
     host    grill_stats     temperature_service 10.0.0.0/8          scram-sha-256
     host    grill_stats     historical_service  10.0.0.0/8          scram-sha-256
-    
+
     # Read-only connections
     host    grill_stats     readonly_user       10.0.0.0/8          scram-sha-256
     host    grill_stats     readonly_user       172.16.0.0/12       scram-sha-256
     host    grill_stats     readonly_user       192.168.0.0/16      scram-sha-256
-    
+
     # Backup connections
     host    grill_stats     backup_user         10.0.0.0/8          scram-sha-256
-    
+
     # Monitoring connections
     host    grill_stats     monitoring_user     10.0.0.0/8          scram-sha-256
-    
+
     # Replication connections for HA
     host    replication     replication_user    10.0.0.0/8          scram-sha-256
     host    replication     replication_user    172.16.0.0/12       scram-sha-256
     host    replication     replication_user    192.168.0.0/16      scram-sha-256
-    
+
     # Deny all other connections
     host    all             all                 0.0.0.0/0           reject
     host    all             all                 ::/0                reject
@@ -206,7 +206,7 @@ data:
         - lag:
             usage: "GAUGE"
             description: "Replication lag behind master in seconds"
-    
+
     pg_postmaster:
       query: "SELECT pg_postmaster_start_time as start_time_seconds from pg_postmaster_start_time()"
       master: true
@@ -214,7 +214,7 @@ data:
         - start_time_seconds:
             usage: "GAUGE"
             description: "Time at which postmaster started"
-    
+
     pg_stat_user_tables:
       query: |
         SELECT
@@ -308,7 +308,7 @@ data:
         - autoanalyze_count:
             usage: "COUNTER"
             description: "Number of times this table has been analyzed by the autovacuum daemon"
-    
+
     pg_statio_user_tables:
       query: "SELECT current_database() datname, schemaname, relname, heap_blks_read, heap_blks_hit, idx_blks_read, idx_blks_hit, toast_blks_read, toast_blks_hit, tidx_blks_read, tidx_blks_hit FROM pg_statio_user_tables"
       metrics:

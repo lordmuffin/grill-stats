@@ -41,7 +41,7 @@ kubectl get services -n grill-stats
 
 **Expected Services & Status:**
 - [ ] **GO** - `auth-service` - 1+ pods Running
-- [ ] **GO** - `device-service` - 1+ pods Running  
+- [ ] **GO** - `device-service` - 1+ pods Running
 - [ ] **GO** - `temperature-service` - 1+ pods Running
 - [ ] **GO** - `historical-data-service` - 1+ pods Running
 - [ ] **GO** - `encryption-service` - 1+ pods Running
@@ -181,7 +181,7 @@ kubectl get pvc -n grill-stats | grep backup
 ```bash
 # Test service health endpoints
 kubectl exec -n grill-stats deployment/auth-service -- curl -f http://localhost:8082/health
-kubectl exec -n grill-stats deployment/device-service -- curl -f http://localhost:8080/health  
+kubectl exec -n grill-stats deployment/device-service -- curl -f http://localhost:8080/health
 kubectl exec -n grill-stats deployment/temperature-service -- curl -f http://localhost:8081/health
 kubectl exec -n grill-stats deployment/historical-data-service -- curl -f http://localhost:8083/health
 kubectl exec -n grill-stats deployment/encryption-service -- curl -f http://localhost:8082/health
@@ -223,7 +223,7 @@ curl -H "Authorization: Bearer <token>" \
 
 ### ✅ **PRODUCTION READY (GO)** if:
 - All core services (6/6) are Running
-- All databases (3/3) are responsive  
+- All databases (3/3) are responsive
 - Security policies are enforced
 - External access works via HTTPS
 - Monitoring is collecting metrics
@@ -264,7 +264,7 @@ kubectl get deployments -n grill-stats --no-headers | while read name ready up a
   fi
 done
 
-# Check databases  
+# Check databases
 echo "🗄️ Databases:"
 kubectl get statefulsets -n grill-stats --no-headers | while read name ready age; do
   if [[ "$ready" == "1/1" ]]; then

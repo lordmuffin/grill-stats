@@ -62,7 +62,7 @@ spec:
       annotations:
         summary: "PostgreSQL instance is down"
         description: "PostgreSQL instance {{ $labels.instance }} is down for more than 1 minute"
-    
+
     # High Connection Usage
     - alert: PostgreSQLHighConnections
       expr: sum(pg_stat_activity_count) by (instance) / sum(pg_settings_max_connections) by (instance) > 0.8
@@ -72,7 +72,7 @@ spec:
       annotations:
         summary: "PostgreSQL connection usage is high"
         description: "PostgreSQL instance {{ $labels.instance }} has {{ $value | humanizePercentage }} connections used"
-    
+
     # Replication Lag
     - alert: PostgreSQLReplicationLag
       expr: pg_replication_lag > 60
@@ -82,7 +82,7 @@ spec:
       annotations:
         summary: "PostgreSQL replication lag is high"
         description: "PostgreSQL replication lag on {{ $labels.instance }} is {{ $value }} seconds"
-    
+
     # Database Size Growth
     - alert: PostgreSQLDatabaseSizeGrowth
       expr: increase(pg_database_size_bytes[1h]) > 1e9
@@ -92,7 +92,7 @@ spec:
       annotations:
         summary: "PostgreSQL database size is growing rapidly"
         description: "PostgreSQL database {{ $labels.datname }} on {{ $labels.instance }} grew by {{ $value | humanizeBytes }} in the last hour"
-    
+
     # Dead Tuples
     - alert: PostgreSQLDeadTuples
       expr: (pg_stat_user_tables_n_dead_tup / (pg_stat_user_tables_n_live_tup + pg_stat_user_tables_n_dead_tup)) > 0.1
@@ -102,7 +102,7 @@ spec:
       annotations:
         summary: "PostgreSQL has too many dead tuples"
         description: "PostgreSQL table {{ $labels.relname }} on {{ $labels.instance }} has {{ $value | humanizePercentage }} dead tuples"
-    
+
     # Unused Indexes
     - alert: PostgreSQLUnusedIndexes
       expr: pg_stat_user_indexes_idx_scan == 0
@@ -112,7 +112,7 @@ spec:
       annotations:
         summary: "PostgreSQL has unused indexes"
         description: "PostgreSQL index {{ $labels.indexrelname }} on table {{ $labels.relname }} ({{ $labels.instance }}) hasn't been used for a day"
-    
+
     # Slow Queries
     - alert: PostgreSQLSlowQueries
       expr: rate(pg_stat_activity_max_tx_duration[5m]) > 300
@@ -122,7 +122,7 @@ spec:
       annotations:
         summary: "PostgreSQL has slow queries"
         description: "PostgreSQL instance {{ $labels.instance }} has queries running for more than 5 minutes"
-    
+
     # Checkpoint Time
     - alert: PostgreSQLCheckpointTime
       expr: pg_stat_bgwriter_checkpoint_write_time / pg_stat_bgwriter_checkpoints_timed > 10000
@@ -132,7 +132,7 @@ spec:
       annotations:
         summary: "PostgreSQL checkpoint time is high"
         description: "PostgreSQL instance {{ $labels.instance }} average checkpoint write time is {{ $value }} milliseconds"
-    
+
     # WAL Files
     - alert: PostgreSQLWALFiles
       expr: pg_stat_archiver_archived_count - pg_stat_archiver_failed_count < 0
@@ -142,7 +142,7 @@ spec:
       annotations:
         summary: "PostgreSQL WAL archiving is failing"
         description: "PostgreSQL instance {{ $labels.instance }} has {{ $value }} failed WAL archives"
-    
+
     # Backup Status
     - alert: PostgreSQLBackupFailed
       expr: time() - pg_last_backup_timestamp > 86400
@@ -350,26 +350,26 @@ spec:
         - |
           # Install required packages
           apk add --no-cache curl
-          
+
           # Create health check script
           cat > /usr/local/bin/health-check.sh << 'EOF'
           #!/bin/sh
-          
+
           # PostgreSQL Health Check Script
           POSTGRES_HOST="${POSTGRES_HOST:-postgresql-service}"
           POSTGRES_USER="${POSTGRES_USER:-postgres}"
           POSTGRES_DB="${POSTGRES_DB:-grill_stats}"
-          
+
           # Check database connectivity
           pg_isready -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB"
           CONNECTIVITY=$?
-          
+
           # Check replication status (if applicable)
           REPLICATION_STATUS=0
           if [ "$POSTGRES_REPLICATION_MODE" = "master" ]; then
             REPLICATION_STATUS=$(psql -h "$POSTGRES_HOST" -U "$POSTGRES_USER" -d "$POSTGRES_DB" -t -c "SELECT COUNT(*) FROM pg_stat_replication;" 2>/dev/null || echo "0")
           fi
-          
+
           # Check backup status
           BACKUP_STATUS=0
           if [ -f /backup/backup_metadata_*.json ]; then
@@ -379,7 +379,7 @@ spec:
               BACKUP_STATUS=1
             fi
           fi
-          
+
           # Return health status
           if [ $CONNECTIVITY -eq 0 ]; then
             echo "PostgreSQL is healthy"
@@ -392,9 +392,9 @@ spec:
             exit 1
           fi
           EOF
-          
+
           chmod +x /usr/local/bin/health-check.sh
-          
+
           # Start HTTP server for health checks
           while true; do
             echo -e "HTTP/1.1 200 OK\r\nContent-Type: text/plain\r\n\r\n$(/usr/local/bin/health-check.sh 2>&1)" | nc -l -p 8080

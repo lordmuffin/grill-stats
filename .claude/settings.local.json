@@ -37,7 +37,10 @@
       "Bash(python:*)",
       "Bash(mv:*)",
       "Bash(cat:*)",
-      "Bash(./TRACK1_API_CORE.sh:*)"
+      "Bash(./TRACK1_API_CORE.sh:*)",
+      "Bash(source:*)",
+      "Bash(pre-commit:*)",
+      "Bash(git reset:*)"
     ],
     "deny": []
   }

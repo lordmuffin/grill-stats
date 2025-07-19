@@ -131,38 +131,38 @@ done
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     # Check if kubectl is installed
     if ! command -v kubectl &> /dev/null; then
         log_error "kubectl is not installed or not in PATH"
         exit 1
     fi
-    
+
     # Check if connected to cluster
     if ! kubectl cluster-info &> /dev/null; then
         log_error "Not connected to a Kubernetes cluster"
         exit 1
     fi
-    
+
     # Check if ArgoCD namespace exists
     if ! kubectl get namespace "${ARGOCD_NAMESPACE}" &> /dev/null; then
         log_error "ArgoCD namespace '${ARGOCD_NAMESPACE}' does not exist"
         exit 1
     fi
-    
+
     # Check if ArgoCD is running
     if ! kubectl get deployment argocd-application-controller -n "${ARGOCD_NAMESPACE}" &> /dev/null; then
         log_error "ArgoCD application controller not found in namespace '${ARGOCD_NAMESPACE}'"
         exit 1
     fi
-    
+
     log_success "Prerequisites check passed"
 }
 
 # Validate configurations
 validate_configs() {
     log_info "Validating ArgoCD configurations..."
-    
+
     # Validate base configurations
     for file in "${SCRIPT_DIR}/base"/*.yaml; do
         if [[ -f "$file" ]]; then
@@ -173,7 +173,7 @@ validate_configs() {
             fi
         fi
     done
-    
+
     # Validate environment overlays
     for env in prod-lab dev-lab; do
         if [[ -d "${SCRIPT_DIR}/overlays/${env}" ]]; then
@@ -184,7 +184,7 @@ validate_configs() {
             fi
         fi
     done
-    
+
     log_success "Configuration validation passed"
 }
 
@@ -192,7 +192,7 @@ validate_configs() {
 deploy_environment() {
     local env="$1"
     log_info "Deploying grill-stats platform for environment: ${env}"
-    
+
     # Check if applications already exist
     if [[ "${FORCE}" == "false" ]]; then
         if kubectl get application "grill-stats-platform" -n "${ARGOCD_NAMESPACE}" &> /dev/null; then
@@ -200,7 +200,7 @@ deploy_environment() {
             return 0
         fi
     fi
-    
+
     # Deploy based on environment
     case "${env}" in
         prod-lab)
@@ -223,7 +223,7 @@ deploy_environment() {
 # Deploy production environment
 deploy_production() {
     log_info "Deploying production environment..."
-    
+
     if [[ "${DRY_RUN}" == "true" ]]; then
         log_info "DRY RUN: Would deploy production environment"
         kubectl apply --dry-run=client -k "${SCRIPT_DIR}/overlays/prod-lab"
@@ -236,7 +236,7 @@ deploy_production() {
 # Deploy development environment
 deploy_development() {
     log_info "Deploying development environment..."
-    
+
     if [[ "${DRY_RUN}" == "true" ]]; then
         log_info "DRY RUN: Would deploy development environment"
         kubectl apply --dry-run=client -k "${SCRIPT_DIR}/overlays/dev-lab"
@@ -249,7 +249,7 @@ deploy_development() {
 # Wait for applications to be healthy
 wait_for_applications() {
     log_info "Waiting for applications to be healthy..."
-    
+
     local apps=(
         "grill-stats-platform"
         "grill-stats-secrets"
@@ -257,23 +257,23 @@ wait_for_applications() {
         "grill-stats-core-services"
         "grill-stats-monitoring"
     )
-    
+
     for app in "${apps[@]}"; do
         log_info "Waiting for ${app} to be healthy..."
-        
+
         # Wait up to 10 minutes for each application
         local timeout=600
         local elapsed=0
-        
+
         while [[ $elapsed -lt $timeout ]]; do
             if kubectl get application "${app}" -n "${ARGOCD_NAMESPACE}" -o jsonpath='{.status.health.status}' 2>/dev/null | grep -q "Healthy"; then
                 log_success "${app} is healthy"
                 break
             fi
-            
+
             sleep 10
             elapsed=$((elapsed + 10))
-            
+
             if [[ $elapsed -ge $timeout ]]; then
                 log_warning "${app} did not become healthy within timeout"
             fi
@@ -285,32 +285,32 @@ wait_for_applications() {
 show_status() {
     log_info "Grill-Stats ArgoCD Application Status"
     echo
-    
+
     # Get all grill-stats applications
     local apps
     apps=$(kubectl get applications -n "${ARGOCD_NAMESPACE}" -o name | grep "grill-stats" | sort)
-    
+
     if [[ -z "$apps" ]]; then
         log_warning "No grill-stats applications found"
         return 0
     fi
-    
+
     printf "%-35s %-15s %-15s %-15s\n" "APPLICATION" "HEALTH" "SYNC" "ENVIRONMENT"
     printf "%-35s %-15s %-15s %-15s\n" "$(printf '%*s' 35 | tr ' ' '-')" "$(printf '%*s' 15 | tr ' ' '-')" "$(printf '%*s' 15 | tr ' ' '-')" "$(printf '%*s' 15 | tr ' ' '-')"
-    
+
     for app in $apps; do
         local app_name
         app_name=$(basename "$app")
-        
+
         local health
         health=$(kubectl get "$app" -n "${ARGOCD_NAMESPACE}" -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown")
-        
+
         local sync
         sync=$(kubectl get "$app" -n "${ARGOCD_NAMESPACE}" -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "Unknown")
-        
+
         local env
         env=$(kubectl get "$app" -n "${ARGOCD_NAMESPACE}" -o jsonpath='{.metadata.labels.app\.kubernetes\.io/environment}' 2>/dev/null || echo "N/A")
-        
+
         # Color coding
         local health_color=""
         case "$health" in
@@ -319,14 +319,14 @@ show_status() {
             "Degraded") health_color="${RED}" ;;
             *) health_color="${NC}" ;;
         esac
-        
+
         local sync_color=""
         case "$sync" in
             "Synced") sync_color="${GREEN}" ;;
             "OutOfSync") sync_color="${YELLOW}" ;;
             *) sync_color="${NC}" ;;
         esac
-        
+
         printf "%-35s ${health_color}%-15s${NC} ${sync_color}%-15s${NC} %-15s\n" "$app_name" "$health" "$sync" "$env"
     done
 }
@@ -336,14 +336,14 @@ cleanup_applications() {
     log_warning "This will remove all grill-stats applications from ArgoCD"
     read -p "Are you sure? (y/N): " -n 1 -r
     echo
-    
+
     if [[ ! $REPLY =~ ^[Yy]$ ]]; then
         log_info "Cleanup cancelled"
         return 0
     fi
-    
+
     log_info "Removing grill-stats applications..."
-    
+
     # Remove applications in reverse order of dependencies
     local apps=(
         "grill-stats-monitoring"
@@ -353,14 +353,14 @@ cleanup_applications() {
         "grill-stats-platform"
         "grill-stats-project"
     )
-    
+
     for app in "${apps[@]}"; do
         if kubectl get application "${app}" -n "${ARGOCD_NAMESPACE}" &> /dev/null; then
             log_info "Removing ${app}..."
             kubectl delete application "${app}" -n "${ARGOCD_NAMESPACE}"
         fi
     done
-    
+
     log_success "Cleanup completed"
 }
 
@@ -369,34 +369,34 @@ main() {
     log_info "Grill-Stats ArgoCD Deployment Script"
     log_info "Repository: ${REPO_URL}"
     log_info "ArgoCD Namespace: ${ARGOCD_NAMESPACE}"
-    
+
     # Handle special operations
     if [[ "${STATUS}" == "true" ]]; then
         show_status
         exit 0
     fi
-    
+
     if [[ "${CLEANUP}" == "true" ]]; then
         cleanup_applications
         exit 0
     fi
-    
+
     # Check prerequisites
     check_prerequisites
-    
+
     # Validate configurations if requested
     if [[ "${VALIDATE}" == "true" ]]; then
         validate_configs
     fi
-    
+
     # Deploy environment
     deploy_environment "${ENVIRONMENT}"
-    
+
     # Wait for applications if requested
     if [[ "${WAIT}" == "true" ]]; then
         wait_for_applications
     fi
-    
+
     # Show final status
     if [[ "${DRY_RUN}" == "false" ]]; then
         echo

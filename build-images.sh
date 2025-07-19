@@ -41,15 +41,15 @@ build_service() {
     local service_name=$1
     local service_path=$2
     local image_name="${REGISTRY_URL}/${PROJECT_NAME}/${service_name}"
-    
+
     log "Building ${service_name} service..."
-    
+
     # Check if Dockerfile exists
     if [ ! -f "${service_path}/Dockerfile" ]; then
         error "Dockerfile not found for ${service_name} at ${service_path}/Dockerfile"
         return 1
     fi
-    
+
     # Build the image
     docker build \
         --build-arg BUILD_DATE="${BUILD_DATE}" \
@@ -59,7 +59,7 @@ build_service() {
         -t "${image_name}:${VERSION}" \
         -t "${image_name}:${GIT_COMMIT}" \
         "${service_path}"
-    
+
     if [ $? -eq 0 ]; then
         log "Successfully built ${service_name} image"
         info "Tagged as: ${image_name}:latest, ${image_name}:${VERSION}, ${image_name}:${GIT_COMMIT}"
@@ -72,7 +72,7 @@ build_service() {
 # Function to scan image for vulnerabilities (if trivy is available)
 scan_image() {
     local image_name=$1
-    
+
     if command -v trivy &> /dev/null; then
         log "Scanning ${image_name} for vulnerabilities..."
         trivy image --severity HIGH,CRITICAL "${image_name}:latest" || warn "Vulnerability scan failed for ${image_name}"
@@ -95,7 +95,7 @@ main() {
     info "Version: ${VERSION}"
     info "Build Date: ${BUILD_DATE}"
     info "Git Commit: ${GIT_COMMIT}"
-    
+
     # Array of services to build
     declare -A services=(
         ["auth-service"]="services/auth-service"
@@ -105,20 +105,20 @@ main() {
         ["encryption-service"]="services/encryption-service"
         ["web-ui"]="services/web-ui"
     )
-    
+
     # Build summary
     declare -A build_results=()
     declare -A image_sizes=()
-    
+
     # Build each service
     for service in "${!services[@]}"; do
         service_path="${services[$service]}"
         image_name="${REGISTRY_URL}/${PROJECT_NAME}/${service}"
-        
+
         if build_service "${service}" "${service_path}"; then
             build_results["${service}"]="SUCCESS"
             image_sizes["${service}"]=$(get_image_size "${image_name}")
-            
+
             # Optional: Scan for vulnerabilities
             if [ "${SCAN_IMAGES}" = "true" ]; then
                 scan_image "${image_name}"
@@ -127,39 +127,39 @@ main() {
             build_results["${service}"]="FAILED"
             error "Build failed for ${service}"
         fi
-        
+
         echo ""
     done
-    
+
     # Print build summary
     log "Build Summary:"
     echo "================================================================"
     printf "%-25s %-10s %-15s\n" "Service" "Status" "Size"
     echo "================================================================"
-    
+
     for service in "${!services[@]}"; do
         status="${build_results[$service]}"
         size="${image_sizes[$service]:-N/A}"
-        
+
         if [ "${status}" = "SUCCESS" ]; then
             printf "%-25s ${GREEN}%-10s${NC} %-15s\n" "${service}" "${status}" "${size}"
         else
             printf "%-25s ${RED}%-10s${NC} %-15s\n" "${service}" "${status}" "${size}"
         fi
     done
-    
+
     echo "================================================================"
-    
+
     # Count successful builds
     success_count=0
     total_count=${#services[@]}
-    
+
     for service in "${!services[@]}"; do
         if [ "${build_results[$service]}" = "SUCCESS" ]; then
             ((success_count++))
         fi
     done
-    
+
     if [ $success_count -eq $total_count ]; then
         log "All ${total_count} services built successfully!"
         info "Next steps:"

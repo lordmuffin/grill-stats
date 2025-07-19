@@ -14,38 +14,38 @@ data:
     port 6379
     protected-mode yes
     requirepass ${REDIS_PASSWORD}
-    
+
     # Persistence configuration
     # Save snapshots for data durability
     save 900 1     # Save after 900 seconds if at least 1 key changed
     save 300 10    # Save after 300 seconds if at least 10 keys changed
     save 60 10000  # Save after 60 seconds if at least 10000 keys changed
-    
+
     # Memory management - critical for caching
     maxmemory 768mb
     maxmemory-policy allkeys-lru  # Evict least recently used keys when memory limit is reached
-    
+
     # Logging
     loglevel notice
     logfile ""
-    
+
     # Connection handling
     timeout 300            # Client idle timeout (5 minutes)
     tcp-keepalive 300     # TCP keepalive
     tcp-backlog 511       # TCP connection backlog
-    
+
     # Database configuration
     databases 16          # Support multiple databases for different use cases
-    
+
     # Keyspace notifications for session expiry management
     notify-keyspace-events "Ex"  # Enable keyspace notifications for expired events
-    
+
     # RDB persistence settings
     rdbcompression yes    # Compress RDB files
     rdbchecksum yes      # Checksum RDB files
     dbfilename dump.rdb   # RDB filename
     dir /data            # Data directory
-    
+
     # AOF persistence for durability
     appendonly yes                        # Enable AOF
     appendfilename "appendonly.aof"       # AOF filename
@@ -53,49 +53,49 @@ data:
     no-appendfsync-on-rewrite no         # Don't stop syncing during rewrites
     auto-aof-rewrite-percentage 100      # Rewrite when AOF is 100% larger
     auto-aof-rewrite-min-size 64mb       # Minimum size for rewrite
-    
+
     # Performance tuning
     stop-writes-on-bgsave-error yes      # Stop writes if save fails
     rdbcompression yes                   # Compress RDB snapshots
     lazyfree-lazy-eviction yes          # Use lazy freeing for evictions
     lazyfree-lazy-expire yes            # Use lazy freeing for expired keys
     lazyfree-lazy-server-del yes        # Use lazy freeing for server deletions
-    
+
     # Client buffer limits
     client-output-buffer-limit normal 0 0 0
     client-output-buffer-limit replica 256mb 64mb 60
     client-output-buffer-limit pubsub 32mb 8mb 60
-    
+
     # Slow log configuration
     slowlog-log-slower-than 10000       # Log queries slower than 10ms
     slowlog-max-len 128                 # Keep last 128 slow queries
-    
+
     # Hash table settings for better performance
     hash-max-ziplist-entries 512
     hash-max-ziplist-value 64
-    
+
     # Set and sorted set optimizations
     set-max-intset-entries 512
     zset-max-ziplist-entries 128
     zset-max-ziplist-value 64
-    
+
     # List optimizations
     list-max-ziplist-size -2
     list-compress-depth 0
-    
+
     # HyperLogLog settings
     hll-sparse-max-bytes 3000
-    
+
     # Streams settings
     stream-node-max-bytes 4096
     stream-node-max-entries 100
-    
+
     # Active rehashing
     activerehashing yes
-    
+
     # Jemalloc background thread
     jemalloc-bg-thread yes
-    
+
     # Lua script settings
     lua-time-limit 5000
 ---

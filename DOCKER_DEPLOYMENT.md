@@ -464,7 +464,7 @@ data:
    ```bash
    # Check Docker status
    docker info
-   
+
    # Start Docker (Linux)
    sudo systemctl start docker
    ```
@@ -489,7 +489,7 @@ data:
    ```bash
    # Check registry status
    curl -f http://localhost:5000/v2/
-   
+
    # Restart registry
    ./setup-registry.sh stop
    ./setup-registry.sh start
@@ -499,7 +499,7 @@ data:
    ```bash
    # Check insecure registry configuration
    docker info | grep -i insecure
-   
+
    # Reconfigure Docker daemon
    ./setup-registry.sh configure
    ```
@@ -510,7 +510,7 @@ data:
    ```bash
    # Check container logs
    docker logs <container-id>
-   
+
    # Run container interactively
    docker run -it --rm <image> /bin/sh
    ```
@@ -519,7 +519,7 @@ data:
    ```bash
    # Test health endpoint
    curl -f http://localhost:8082/health
-   
+
    # Check container health
    docker inspect <container-id> | grep -i health
    ```
@@ -584,24 +584,24 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
     - uses: actions/checkout@v2
-    
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v1
-    
+
     - name: Build images
       run: |
         ./build-images.sh -r ${{ secrets.REGISTRY_URL }}
-    
+
     - name: Login to registry
       uses: docker/login-action@v1
       with:
         registry: ${{ secrets.REGISTRY_URL }}
         username: ${{ secrets.REGISTRY_USERNAME }}
         password: ${{ secrets.REGISTRY_PASSWORD }}
-    
+
     - name: Push images
       run: |
         ./push-images.sh -r ${{ secrets.REGISTRY_URL }}
@@ -612,7 +612,7 @@ jobs:
 ```groovy
 pipeline {
     agent any
-    
+
     stages {
         stage('Build') {
             steps {
@@ -621,7 +621,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Test') {
             steps {
                 script {
@@ -629,7 +629,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Push') {
             steps {
                 script {
@@ -637,7 +637,7 @@ pipeline {
                 }
             }
         }
-        
+
         stage('Deploy') {
             steps {
                 script {

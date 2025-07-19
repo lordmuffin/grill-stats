@@ -51,10 +51,10 @@ spec:
         - |
           # Install required packages
           apk add --no-cache bash jq curl openssl postgresql-client redis awscli kubectl
-          
+
           # Make scripts executable
           chmod +x /scripts/*.sh
-          
+
           # This job provides a pod for manual restore operations
           # It will sleep to allow kubectl exec for restore operations
           echo "Backup restore job started. Use 'kubectl exec' to run restore operations."
@@ -70,7 +70,7 @@ spec:
           echo "kubectl exec -it backup-restore-job -- /scripts/full-restore.sh --test --dry-run"
           echo ""
           echo "Pod will remain running for 2 hours for manual operations..."
-          
+
           # Sleep for 2 hours to allow manual operations
           sleep 7200
         volumeMounts:

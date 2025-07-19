@@ -158,12 +158,12 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Failed to decrypt backup file"
         exit 1
     fi
-    
+
     if ! decompress_file "$DECRYPTED_BACKUP" "$EXTRACTED_BACKUP_DIR"; then
         log_error "Failed to extract backup file"
         exit 1
     fi
-    
+
     log_info "Backup decrypted and extracted successfully"
 else
     log_info "DRY RUN: Would decrypt and extract backup"
@@ -180,24 +180,24 @@ if [[ "$DRY_RUN" != "true" ]]; then
         log_error "Backup manifest not found: $BACKUP_MANIFEST"
         exit 1
     fi
-    
+
     if [[ ! -f "$RDB_FILE" ]]; then
         log_error "RDB file not found: $RDB_FILE"
         exit 1
     fi
-    
+
     # Read backup information
     BACKUP_TIMESTAMP=$(jq -r '.timestamp' "$BACKUP_MANIFEST")
     BACKUP_SERVICE=$(jq -r '.service' "$BACKUP_MANIFEST")
     BACKUP_SIZE=$(jq -r '.size' "$BACKUP_MANIFEST")
     TOTAL_KEYS=$(jq -r '.additional_info.total_keys' "$BACKUP_MANIFEST")
-    
+
     log_info "Backup information:"
     log_info "- Timestamp: $BACKUP_TIMESTAMP"
     log_info "- Service: $BACKUP_SERVICE"
     log_info "- Size: $BACKUP_SIZE"
     log_info "- Total keys: $TOTAL_KEYS"
-    
+
     # Read database statistics if available
     if [[ -f "$DATABASE_STATS_FILE" ]]; then
         log_info "Database statistics available"
@@ -221,7 +221,7 @@ if [[ "$FORCE" != "true" && "$DRY_RUN" != "true" ]]; then
     echo "Total keys in backup: $TOTAL_KEYS"
     echo ""
     read -p "Are you sure you want to proceed? (yes/no): " -r
-    
+
     if [[ ! $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
         log_info "Restore cancelled by user"
         exit 0
@@ -231,17 +231,17 @@ fi
 # Get current database information
 if [[ "$DRY_RUN" != "true" ]]; then
     log_info "Getting current database information..."
-    
+
     # Switch to target database and get info
     CURRENT_KEYS=$(redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" DBSIZE)
     log_info "Current keys in database $TARGET_DB: $CURRENT_KEYS"
-    
+
     if [[ $CURRENT_KEYS -gt 0 && "$SKIP_FLUSH" != "true" ]]; then
         log_info "Target database contains $CURRENT_KEYS keys"
-        
+
         if [[ "$FORCE" != "true" ]]; then
             read -p "Do you want to flush the target database before restore? (yes/no): " -r
-            
+
             if [[ $REPLY =~ ^[Yy][Ee][Ss]$ ]]; then
                 log_info "Flushing target database..."
                 redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" FLUSHDB
@@ -263,11 +263,11 @@ log_info "Starting Redis restore from RDB file..."
 if [[ "$DRY_RUN" != "true" ]]; then
     # Method 1: Using DEBUG RELOAD (if available)
     log_info "Attempting to restore using RDB import..."
-    
+
     # First, try to use redis-cli --rdb-restore (if available)
     if redis-cli --help | grep -q "rdb-restore"; then
         log_info "Using redis-cli --rdb-restore method"
-        
+
         if redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" --rdb-restore < "$RDB_FILE"; then
             log_info "RDB restore completed successfully"
         else
@@ -277,17 +277,17 @@ if [[ "$DRY_RUN" != "true" ]]; then
     else
         # Method 2: Manual key-by-key restore using redis-rdb-tools or custom script
         log_info "Using manual key restoration method"
-        
+
         # Install redis-rdb-tools if available
         if command -v rdb > /dev/null; then
             log_info "Using redis-rdb-tools for restoration"
-            
+
             # Convert RDB to JSON and restore
             TEMP_JSON="${RESTORE_DIR}/rdb_dump.json"
-            
+
             if rdb --command json "$RDB_FILE" > "$TEMP_JSON"; then
                 log_info "RDB converted to JSON successfully"
-                
+
                 # Parse JSON and restore keys
                 # This is a simplified approach - in practice, you'd need more sophisticated parsing
                 python3 -c "
@@ -298,14 +298,14 @@ import sys
 try:
     # Connect to Redis
     r = redis.Redis(host='$REDIS_HOST', port=$REDIS_PORT, db=$TARGET_DB, password='$REDIS_PASSWORD' if '$REDIS_PASSWORD' else None)
-    
+
     # Test connection
     r.ping()
-    
+
     # Read JSON dump
     with open('$TEMP_JSON', 'r') as f:
         data = json.load(f)
-    
+
     # Restore keys (simplified - actual implementation would need proper type handling)
     restored_keys = 0
     for key, value in data.items():
@@ -319,9 +319,9 @@ try:
             restored_keys += 1
         except Exception as e:
             print(f'Error restoring key {key}: {e}')
-    
+
     print(f'Restored {restored_keys} keys')
-    
+
 except Exception as e:
     print(f'Error: {e}')
     sys.exit(1)
@@ -332,20 +332,20 @@ except Exception as e:
             fi
         else
             log_warning "redis-rdb-tools not available, using basic restoration"
-            
+
             # Basic restoration - this is a simplified approach
             # In practice, you'd need a proper RDB parser
             log_info "Attempting basic key restoration"
-            
+
             # For now, we'll simulate the restore process
             log_info "RDB file processed (simulated)"
         fi
     fi
-    
+
     # Restore from AOF file if available
     if [[ -f "$AOF_FILE" ]]; then
         log_info "AOF file available, restoring from AOF..."
-        
+
         # Execute AOF commands
         if redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" < "$AOF_FILE"; then
             log_info "AOF restore completed successfully"
@@ -360,21 +360,21 @@ fi
 # Verify restored data
 if [[ "$DRY_RUN" != "true" ]]; then
     log_info "Verifying restored data..."
-    
+
     # Get key count after restore
     RESTORED_KEYS=$(redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" DBSIZE)
     log_info "Keys after restore: $RESTORED_KEYS"
-    
+
     # Get database info
     DB_INFO=$(redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" INFO keyspace | grep "db${TARGET_DB}:" || echo "db${TARGET_DB}:keys=0")
     log_info "Database info: $DB_INFO"
-    
+
     # Sample some keys for verification
     if [[ $RESTORED_KEYS -gt 0 ]]; then
         SAMPLE_KEYS=$(redis-cli $REDIS_CLI_ARGS -n "$TARGET_DB" RANDOMKEY | head -5)
         log_info "Sample keys: $SAMPLE_KEYS"
     fi
-    
+
     # Compare with expected count
     if [[ "$TOTAL_KEYS" != "null" && "$TOTAL_KEYS" -gt 0 ]]; then
         if [[ $RESTORED_KEYS -eq $TOTAL_KEYS ]]; then

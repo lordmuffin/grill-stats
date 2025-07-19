@@ -33,7 +33,7 @@ export const ApiProvider = ({ children }) => {
   const apiCall = async (endpoint, options = {}) => {
     const baseUrl = getBaseUrl(endpoint);
     const url = `${baseUrl}${endpoint}`;
-    
+
     // Add default headers
     const defaultHeaders = {
       'Content-Type': 'application/json',
@@ -55,14 +55,14 @@ export const ApiProvider = ({ children }) => {
 
     try {
       const response = await fetch(url, config);
-      
+
       // If token is expired, redirect to login
       if (response.status === 401) {
         localStorage.removeItem('jwt_token');
         localStorage.removeItem('session_token');
         window.location.href = '/login';
       }
-      
+
       return response;
     } catch (error) {
       console.error('API call failed:', error);
@@ -75,53 +75,53 @@ export const ApiProvider = ({ children }) => {
       const params = forceRefresh ? '?force_refresh=true' : '';
       return apiCall(`/api/devices${params}`);
     },
-    
+
     getDevice: async (deviceId) => {
       return apiCall(`/api/devices/${deviceId}`);
     },
-    
+
     getDeviceTemperature: async (deviceId, probeId = null) => {
       const params = probeId ? `?probe_id=${probeId}` : '';
       return apiCall(`/api/devices/${deviceId}/temperature${params}`);
     },
-    
+
     getDeviceHistory: async (deviceId, options = {}) => {
       const params = new URLSearchParams();
       if (options.probeId) params.append('probe_id', options.probeId);
       if (options.startTime) params.append('start_time', options.startTime);
       if (options.endTime) params.append('end_time', options.endTime);
       if (options.limit) params.append('limit', options.limit);
-      
+
       const queryString = params.toString();
       return apiCall(`/api/devices/${deviceId}/history${queryString ? `?${queryString}` : ''}`);
     },
-    
+
     getDeviceHealth: async (deviceId) => {
       return apiCall(`/api/devices/${deviceId}/health`);
     },
-    
+
     syncDevices: async () => {
       return apiCall('/api/sync', { method: 'POST' });
     },
-    
+
     discoverDevices: async () => {
       return apiCall('/api/devices/discover', { method: 'POST' });
     },
-    
+
     registerDevice: async (deviceId, nickname) => {
       return apiCall('/api/devices/register', {
         method: 'POST',
-        body: JSON.stringify({ 
-          device_id: deviceId, 
-          nickname: nickname 
+        body: JSON.stringify({
+          device_id: deviceId,
+          nickname: nickname
         }),
       });
     },
-    
+
     removeDevice: async (deviceId) => {
       return apiCall(`/api/devices/${deviceId}`, { method: 'DELETE' });
     },
-    
+
     getConfig: async () => {
       return apiCall('/api/config');
     }
@@ -134,22 +134,22 @@ export const ApiProvider = ({ children }) => {
         body: JSON.stringify({ email, password }),
       });
     },
-    
+
     register: async (email, password, name) => {
       return apiCall('/api/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password, name }),
       });
     },
-    
+
     logout: async () => {
       return apiCall('/api/auth/logout', { method: 'POST' });
     },
-    
+
     getStatus: async () => {
       return apiCall('/api/auth/status');
     },
-    
+
     getCurrentUser: async () => {
       return apiCall('/api/auth/me');
     }
@@ -159,11 +159,11 @@ export const ApiProvider = ({ children }) => {
     getAuthUrl: async () => {
       return apiCall('/api/auth/thermoworks');
     },
-    
+
     getAuthStatus: async () => {
       return apiCall('/api/auth/thermoworks/status');
     },
-    
+
     refreshToken: async () => {
       return apiCall('/api/auth/thermoworks/refresh', { method: 'POST' });
     }
@@ -178,17 +178,17 @@ export const ApiProvider = ({ children }) => {
       if (options.aggregation) params.append('aggregation', options.aggregation);
       if (options.interval) params.append('interval', options.interval);
       if (options.limit) params.append('limit', options.limit);
-      
+
       const queryString = params.toString();
       return apiCall(`/api/devices/${deviceId}/history${queryString ? `?${queryString}` : ''}`);
     },
-    
+
     getDeviceStatistics: async (deviceId, options = {}) => {
       const params = new URLSearchParams();
       if (options.startTime) params.append('start_time', options.startTime);
       if (options.endTime) params.append('end_time', options.endTime);
       if (options.probeId) params.append('probe_id', options.probeId);
-      
+
       const queryString = params.toString();
       return apiCall(`/api/devices/${deviceId}/statistics${queryString ? `?${queryString}` : ''}`);
     }

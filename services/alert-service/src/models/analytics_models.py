@@ -1,8 +1,19 @@
 from datetime import datetime
 from enum import Enum
-from typing import Dict, List, Optional, Any
+from typing import Any, Dict, List, Optional
+
 from pydantic import BaseModel, Field
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, Text, JSON, ForeignKey, Float
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+)
 from sqlalchemy.ext.declarative import declarative_base
 
 Base = declarative_base()
@@ -17,7 +28,7 @@ class MetricType(str, Enum):
 
 class AlertMetrics(Base):
     __tablename__ = "alert_metrics"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     metric_name = Column(String(255), nullable=False)
     metric_type = Column(String(50), nullable=False)
@@ -29,7 +40,7 @@ class AlertMetrics(Base):
 
 class AlertTrend(Base):
     __tablename__ = "alert_trends"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     metric_name = Column(String(255), nullable=False)
     time_bucket = Column(DateTime, nullable=False)
@@ -45,7 +56,7 @@ class AlertTrend(Base):
 
 class AlertAnalytics(Base):
     __tablename__ = "alert_analytics"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     analysis_type = Column(String(100), nullable=False)
     analysis_data = Column(JSON, nullable=False)
@@ -56,7 +67,7 @@ class AlertAnalytics(Base):
 
 class AlertNoiseScore(Base):
     __tablename__ = "alert_noise_scores"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     alert_rule_id = Column(Integer, nullable=False)
     noise_score = Column(Float, nullable=False)
@@ -70,7 +81,7 @@ class AlertNoiseScore(Base):
 
 class AlertPatternAnalysis(Base):
     __tablename__ = "alert_pattern_analysis"
-    
+
     id = Column(Integer, primary_key=True, index=True)
     pattern_type = Column(String(100), nullable=False)
     pattern_data = Column(JSON, nullable=False)

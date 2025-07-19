@@ -304,7 +304,7 @@ spec:
         - |
           # Setup failover configuration
           echo "Setting up PostgreSQL failover configuration..."
-          
+
           # Create failover scripts
           cat > /tmp/promote_replica.sh << 'EOF'
           #!/bin/bash
@@ -314,7 +314,7 @@ spec:
           kubectl exec postgresql-replica-0 -- pg_promote
           kubectl patch service postgresql-rw-service -p '{"spec":{"selector":{"app.kubernetes.io/role":"replica"}}}'
           EOF
-          
+
           cat > /tmp/check_primary_health.sh << 'EOF'
           #!/bin/bash
           # Check primary health
@@ -324,15 +324,15 @@ spec:
             /tmp/promote_replica.sh
           fi
           EOF
-          
+
           chmod +x /tmp/*.sh
-          
+
           # Create configmap with failover scripts
           kubectl create configmap postgresql-failover-scripts \
             --from-file=/tmp/promote_replica.sh \
             --from-file=/tmp/check_primary_health.sh \
             --dry-run=client -o yaml | kubectl apply -f -
-            
+
           echo "Failover setup completed"
         env:
         - name: KUBECONFIG

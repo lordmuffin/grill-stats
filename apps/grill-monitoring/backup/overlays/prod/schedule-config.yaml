@@ -6,27 +6,27 @@ data:
   schedules.conf: |
     # Production Backup Schedules
     # Staggered to avoid resource contention
-    
+
     # PostgreSQL - Critical data, daily backup
     POSTGRESQL_BACKUP_SCHEDULE="0 2 * * *"
     POSTGRESQL_BACKUP_RETENTION_DAYS=30
-    
-    # InfluxDB - Time-series data, daily backup  
+
+    # InfluxDB - Time-series data, daily backup
     INFLUXDB_BACKUP_SCHEDULE="0 3 * * *"
     INFLUXDB_BACKUP_RETENTION_DAYS=7
-    
+
     # Redis - Cache data, daily backup
     REDIS_BACKUP_SCHEDULE="0 4 * * *"
     REDIS_BACKUP_RETENTION_DAYS=7
-    
+
     # Verification - After all backups complete
     VERIFICATION_SCHEDULE="0 6 * * *"
-    
+
     # Weekly archival - Sunday midnight
     WEEKLY_ARCHIVE_SCHEDULE="0 0 * * 0"
-    
+
     # Monthly archival - First day of month
     MONTHLY_ARCHIVE_SCHEDULE="0 0 1 * *"
-    
+
     # Cleanup - After business hours
     CLEANUP_SCHEDULE="0 23 * * *"

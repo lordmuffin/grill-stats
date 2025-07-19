@@ -5,23 +5,23 @@
 CREATE TABLE IF NOT EXISTS thermoworks_credentials (
     id SERIAL PRIMARY KEY,
     user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    
+
     -- Encrypted credential data (stored as encrypted strings from Vault Transit)
     encrypted_email TEXT NOT NULL,
     encrypted_password TEXT NOT NULL,
-    
+
     -- Encryption metadata (stored as JSON)
     encryption_metadata JSONB NOT NULL,
-    
+
     -- Credential status and validation
     is_active BOOLEAN DEFAULT TRUE,
     last_validated TIMESTAMP,
     validation_attempts INTEGER DEFAULT 0,
-    
+
     -- Audit fields
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    
+
     -- Ensure one credential per user
     UNIQUE(user_id)
 );
@@ -56,7 +56,7 @@ COMMENT ON COLUMN thermoworks_credentials.validation_attempts IS 'Number of fail
 
 -- Create a view for credential information without sensitive data
 CREATE OR REPLACE VIEW thermoworks_credentials_info AS
-SELECT 
+SELECT
     tc.id,
     tc.user_id,
     u.email as user_email,

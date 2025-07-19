@@ -69,10 +69,10 @@ spec:
             - |
               # Install required packages
               apk add --no-cache curl openssl jq awscli
-              
+
               # Make scripts executable
               chmod +x /scripts/*.sh
-              
+
               # Run backup script
               /scripts/influxdb-backup.sh
             volumeMounts:

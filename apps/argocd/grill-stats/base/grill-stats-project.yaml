@@ -9,12 +9,12 @@ metadata:
     app.kubernetes.io/managed-by: argocd
 spec:
   description: ThermoWorks BBQ Monitoring Platform - GitOps managed microservices
-  
+
   # Source repositories
   sourceRepos:
   - 'https://github.com/lordmuffin/grill-stats.git'
   - '*'  # Allow Helm charts and other repositories
-  
+
   # Allowed destinations
   destinations:
   - namespace: grill-stats
@@ -29,7 +29,7 @@ spec:
   - namespace: argocd
     server: https://kubernetes.default.svc
     name: in-cluster
-  
+
   # Cluster-wide resources that can be managed
   clusterResourceWhitelist:
   - group: ''
@@ -46,7 +46,7 @@ spec:
     kind: ServiceMonitor
   - group: 'monitoring.coreos.com'
     kind: PrometheusRule
-  
+
   # Namespace-scoped resources
   namespaceResourceWhitelist:
   - group: ''
@@ -97,7 +97,7 @@ spec:
     kind: SecretStore
   - group: 'external-secrets.io'
     kind: ExternalSecret
-  
+
   # RBAC roles for project access
   roles:
   - name: developer
@@ -110,7 +110,7 @@ spec:
     - p, proj:grill-stats:developer, exec, create, grill-stats/*, allow
     groups:
     - grill-stats:developers
-    
+
   - name: operator
     description: Operator access for production deployments
     policies:
@@ -122,7 +122,7 @@ spec:
     - p, proj:grill-stats:operator, exec, create, grill-stats/*, allow
     groups:
     - grill-stats:operators
-    
+
   - name: admin
     description: Full admin access to grill-stats platform
     policies:
@@ -132,7 +132,7 @@ spec:
     - p, proj:grill-stats:admin, gpgkeys, *, *, allow
     groups:
     - grill-stats:admins
-    
+
   # Sync policies and restrictions
   syncWindows:
   - kind: allow
@@ -141,7 +141,7 @@ spec:
     applications:
     - grill-stats-*
     manualSync: true
-    
+
   # Prevent sync during maintenance windows
   - kind: deny
     schedule: '0 2 * * 0'  # Sunday 2 AM
@@ -150,7 +150,7 @@ spec:
     - grill-stats-core-services-prod
     - grill-stats-databases-prod
     manualSync: false
-    
+
   # Orphaned resources policy
   orphanedResources:
     warn: true
@@ -161,7 +161,7 @@ spec:
     - group: 'monitoring.coreos.com'
       kind: ServiceMonitor
       name: '*-metrics'
-      
+
   # Signature verification
   signatureKeys:
   - keyID: 4AEE18F83AFDEB23  # Example key ID for signed commits

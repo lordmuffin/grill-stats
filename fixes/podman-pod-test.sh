@@ -69,7 +69,7 @@ podman run -d --pod $POD_NAME --name device-service-pod \
   -e DEBUG=true \
   localhost/device-service-test:test
 
-# Temperature Service  
+# Temperature Service
 podman run -d --pod $POD_NAME --name temperature-service-pod \
   -e INFLUXDB_HOST=localhost \
   -e INFLUXDB_PORT=8086 \

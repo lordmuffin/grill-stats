@@ -1,7 +1,8 @@
 """The Grill Monitoring integration."""
+
 import asyncio
 import logging
-from typing import Dict, Any
+from typing import Any, Dict
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
@@ -9,13 +10,13 @@ from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 
 from .const import (
-    DOMAIN,
     CONF_DEVICE_SERVICE_URL,
-    CONF_TEMPERATURE_SERVICE_URL,
     CONF_SCAN_INTERVAL,
+    CONF_TEMPERATURE_SERVICE_URL,
     CONF_TIMEOUT,
     DEFAULT_SCAN_INTERVAL,
     DEFAULT_TIMEOUT,
+    DOMAIN,
 )
 from .coordinator import GrillMonitoringCoordinator
 
@@ -60,7 +61,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
-    
+
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
 
@@ -88,7 +89,7 @@ class GrillMonitoringDevice:
         if self._device_info is None:
             device_data = self.coordinator.get_device_data(self.device_id)
             device_info = device_data.get("device_info", {}) if device_data else {}
-            
+
             self._device_info = {
                 "identifiers": {(DOMAIN, self.device_id)},
                 "name": device_info.get("name", f"Grill Device {self.device_id}"),
@@ -97,7 +98,7 @@ class GrillMonitoringDevice:
                 "sw_version": device_info.get("firmware_version"),
                 "via_device": (DOMAIN, "grill_monitoring_hub"),
             }
-            
+
         return self._device_info
 
     @property

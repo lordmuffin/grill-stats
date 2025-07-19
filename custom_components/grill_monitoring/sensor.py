@@ -1,4 +1,5 @@
 """Sensor platform for Grill Monitoring integration."""
+
 import logging
 from typing import Any, Dict, List, Optional
 
@@ -8,29 +9,26 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import PERCENTAGE, UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfTemperature,
-)
 
+from . import GrillMonitoringDevice
 from .const import (
-    DOMAIN,
-    ATTR_DEVICE_ID,
-    ATTR_PROBE_ID,
     ATTR_BATTERY_LEVEL,
-    ATTR_SIGNAL_STRENGTH,
-    ATTR_LAST_SEEN,
+    ATTR_DEVICE_ID,
     ATTR_DEVICE_TYPE,
     ATTR_FIRMWARE_VERSION,
+    ATTR_LAST_SEEN,
+    ATTR_PROBE_ID,
+    ATTR_SIGNAL_STRENGTH,
     ATTR_TEMPERATURE_UNIT,
-    TEMP_FAHRENHEIT,
+    DOMAIN,
     TEMP_CELSIUS,
+    TEMP_FAHRENHEIT,
 )
 from .coordinator import GrillMonitoringCoordinator
-from . import GrillMonitoringDevice
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -42,14 +40,14 @@ async def async_setup_entry(
 ) -> None:
     """Set up the Grill Monitoring sensor platform."""
     coordinator: GrillMonitoringCoordinator = hass.data[DOMAIN][config_entry.entry_id]
-    
+
     entities = []
-    
+
     # Create sensors for each device
     for device_id, device_data in coordinator.data.items():
         device_info = device_data.get("device_info", {})
         temperature_data = device_data.get("temperature_data", {})
-        
+
         # Create main device temperature sensor
         entities.append(
             GrillTemperatureSensor(
@@ -59,7 +57,7 @@ async def async_setup_entry(
                 name=device_info.get("name", f"Device {device_id}"),
             )
         )
-        
+
         # Create probe-specific sensors if device has multiple probes
         if isinstance(temperature_data, dict) and "probes" in temperature_data:
             for probe_id, probe_data in temperature_data["probes"].items():
@@ -72,7 +70,7 @@ async def async_setup_entry(
                         name=f"{device_info.get('name', f'Device {device_id}')} {probe_name}",
                     )
                 )
-        
+
         # Create battery level sensor if available
         health_data = device_data.get("health_data", {})
         if health_data and "battery_level" in health_data:
@@ -83,7 +81,7 @@ async def async_setup_entry(
                     name=f"{device_info.get('name', f'Device {device_id}')} Battery",
                 )
             )
-        
+
         # Create signal strength sensor if available
         if health_data and "signal_strength" in health_data:
             entities.append(
@@ -93,7 +91,7 @@ async def async_setup_entry(
                     name=f"{device_info.get('name', f'Device {device_id}')} Signal",
                 )
             )
-    
+
     async_add_entities(entities)
 
 
@@ -113,7 +111,7 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
         self._probe_id = probe_id
         self._name = name
         self._device = GrillMonitoringDevice(coordinator, device_id)
-        
+
         # Generate unique ID
         unique_id = f"{device_id}_temperature"
         if probe_id:
@@ -138,16 +136,24 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_unit_of_measurement(self) -> str:
         """Return the native unit of measurement."""
-        temp_data = self.coordinator.get_temperature_data(self._device_id, self._probe_id)
+        temp_data = self.coordinator.get_temperature_data(
+            self._device_id, self._probe_id
+        )
         if temp_data:
             unit = temp_data.get("unit", "°F")
-            return UnitOfTemperature.FAHRENHEIT if unit == "°F" else UnitOfTemperature.CELSIUS
+            return (
+                UnitOfTemperature.FAHRENHEIT
+                if unit == "°F"
+                else UnitOfTemperature.CELSIUS
+            )
         return UnitOfTemperature.FAHRENHEIT
 
     @property
     def native_value(self) -> Optional[float]:
         """Return the native value of the sensor."""
-        temp_data = self.coordinator.get_temperature_data(self._device_id, self._probe_id)
+        temp_data = self.coordinator.get_temperature_data(
+            self._device_id, self._probe_id
+        )
         if temp_data:
             return temp_data.get("temperature")
         return None
@@ -158,16 +164,18 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
         attributes = {
             ATTR_DEVICE_ID: self._device_id,
         }
-        
+
         if self._probe_id:
             attributes[ATTR_PROBE_ID] = self._probe_id
-        
-        temp_data = self.coordinator.get_temperature_data(self._device_id, self._probe_id)
+
+        temp_data = self.coordinator.get_temperature_data(
+            self._device_id, self._probe_id
+        )
         if temp_data:
             attributes[ATTR_TEMPERATURE_UNIT] = temp_data.get("unit", "°F")
             if "timestamp" in temp_data:
                 attributes[ATTR_LAST_SEEN] = temp_data["timestamp"]
-        
+
         device_data = self.coordinator.get_device_data(self._device_id)
         if device_data:
             device_info = device_data.get("device_info", {})
@@ -175,7 +183,7 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
                 attributes[ATTR_DEVICE_TYPE] = device_info["device_type"]
             if "firmware_version" in device_info:
                 attributes[ATTR_FIRMWARE_VERSION] = device_info["firmware_version"]
-        
+
         return attributes
 
     @property
@@ -183,7 +191,8 @@ class GrillTemperatureSensor(CoordinatorEntity, SensorEntity):
         """Return True if entity is available."""
         return (
             self.coordinator.last_update_success
-            and self.coordinator.get_temperature_data(self._device_id, self._probe_id) is not None
+            and self.coordinator.get_temperature_data(self._device_id, self._probe_id)
+            is not None
         )
 
     @property
@@ -242,12 +251,12 @@ class GrillBatterySensor(CoordinatorEntity, SensorEntity):
         attributes = {
             ATTR_DEVICE_ID: self._device_id,
         }
-        
+
         health_data = self.coordinator.get_device_health(self._device_id)
         if health_data:
             if "last_seen" in health_data:
                 attributes[ATTR_LAST_SEEN] = health_data["last_seen"]
-        
+
         return attributes
 
     @property
@@ -314,12 +323,12 @@ class GrillSignalStrengthSensor(CoordinatorEntity, SensorEntity):
         attributes = {
             ATTR_DEVICE_ID: self._device_id,
         }
-        
+
         health_data = self.coordinator.get_device_health(self._device_id)
         if health_data:
             if "last_seen" in health_data:
                 attributes[ATTR_LAST_SEEN] = health_data["last_seen"]
-        
+
         return attributes
 
     @property

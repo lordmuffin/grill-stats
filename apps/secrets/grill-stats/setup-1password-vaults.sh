@@ -68,20 +68,20 @@ EOF
 # Check if required tools are installed
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     for tool in "${REQUIRED_TOOLS[@]}"; do
         if ! command -v "$tool" &> /dev/null; then
             log_error "$tool is not installed or not in PATH"
             exit 1
         fi
     done
-    
+
     # Check if 1Password CLI is authenticated
     if ! op account get &> /dev/null; then
         log_error "1Password CLI is not authenticated. Please run 'op signin'"
         exit 1
     fi
-    
+
     log_success "All prerequisites satisfied"
 }
 
@@ -89,19 +89,19 @@ check_prerequisites() {
 create_vault() {
     local vault_name="$1"
     local description="$2"
-    
+
     log_info "Creating vault: $vault_name"
-    
+
     if op vault get "$vault_name" &> /dev/null; then
         log_info "Vault already exists: $vault_name"
         return 0
     fi
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would create vault: $vault_name"
         return 0
     fi
-    
+
     if op vault create "$vault_name" --description "$description"; then
         log_success "Created vault: $vault_name"
     else
@@ -117,9 +117,9 @@ create_secret_item() {
     local category="$3"
     shift 3
     local fields=("$@")
-    
+
     log_info "Creating secret item: $item_name in vault: $vault_name"
-    
+
     # Check if item already exists
     if op item get "$item_name" --vault "$vault_name" &> /dev/null; then
         if [[ "$FORCE" == "false" ]]; then
@@ -129,23 +129,23 @@ create_secret_item() {
             log_warning "Item exists, will overwrite: $item_name"
         fi
     fi
-    
+
     if [[ "$DRY_RUN" == "true" ]]; then
         log_info "[DRY RUN] Would create item: $item_name with fields: ${fields[*]}"
         return 0
     fi
-    
+
     # Build op create command
     local cmd="op item create"
     cmd+=" --vault '$vault_name'"
     cmd+=" --category '$category'"
     cmd+=" --title '$item_name'"
-    
+
     # Add fields
     for field in "${fields[@]}"; do
         cmd+=" '$field'"
     done
-    
+
     if eval "$cmd" &> /dev/null; then
         log_success "Created item: $item_name"
     else
@@ -157,12 +157,12 @@ create_secret_item() {
 # Setup base vault (grill-stats)
 setup_base_vault() {
     local vault_name="grill-stats"
-    
+
     log_info "Setting up base vault: $vault_name"
-    
+
     # Create vault
     create_vault "$vault_name" "Grill Stats base secrets for common services"
-    
+
     # Auth service secrets
     create_secret_item "$vault_name" "auth-service-secrets" "Secure Note" \
         "jwt-secret=password:" \
@@ -182,7 +182,7 @@ setup_base_vault() {
         "thermoworks-client-secret=password:" \
         "thermoworks-base-url=text:https://api.thermoworks.com" \
         "thermoworks-auth-url=text:https://auth.thermoworks.com"
-    
+
     # Device service secrets
     create_secret_item "$vault_name" "device-service-secrets" "Secure Note" \
         "jwt-secret=password:" \
@@ -201,7 +201,7 @@ setup_base_vault() {
         "oauth2-client-secret=password:" \
         "homeassistant-url=text:" \
         "homeassistant-token=password:"
-    
+
     # Temperature service secrets
     create_secret_item "$vault_name" "temperature-service-secrets" "Secure Note" \
         "jwt-secret=password:" \
@@ -216,7 +216,7 @@ setup_base_vault() {
         "redis-password=password:" \
         "thermoworks-client-id=text:" \
         "thermoworks-client-secret=password:"
-    
+
     # Historical data service secrets
     create_secret_item "$vault_name" "historical-data-service-secrets" "Secure Note" \
         "jwt-secret=password:" \
@@ -231,7 +231,7 @@ setup_base_vault() {
         "redis-host=text:" \
         "redis-port=text:6379" \
         "redis-password=password:"
-    
+
     # Encryption service secrets
     create_secret_item "$vault_name" "encryption-service-secrets" "Secure Note" \
         "jwt-secret=password:" \
@@ -251,7 +251,7 @@ setup_base_vault() {
         "redis-host=text:" \
         "redis-port=text:6379" \
         "redis-password=password:"
-    
+
     # Web UI secrets
     create_secret_item "$vault_name" "web-ui-secrets" "Secure Note" \
         "api-base-url=text:" \
@@ -262,7 +262,7 @@ setup_base_vault() {
         "jwt-secret=password:" \
         "websocket-url=text:" \
         "cors-origins=text:"
-    
+
     # Database secrets
     create_secret_item "$vault_name" "postgresql-secrets" "Database" \
         "postgres-password=password:" \
@@ -277,7 +277,7 @@ setup_base_vault() {
         "device-service-password=password:" \
         "readonly-user=text:" \
         "readonly-password=password:"
-    
+
     create_secret_item "$vault_name" "influxdb-secrets" "Database" \
         "influxdb-admin-user=text:" \
         "influxdb-admin-password=password:" \
@@ -290,7 +290,7 @@ setup_base_vault() {
         "temperature-service-token=password:" \
         "historical-service-token=password:" \
         "web-ui-token=password:"
-    
+
     create_secret_item "$vault_name" "redis-secrets" "Database" \
         "redis-password=password:" \
         "redis-host=text:" \
@@ -298,7 +298,7 @@ setup_base_vault() {
         "redis-url=text:" \
         "redis-sentinel-password=password:" \
         "redis-sentinel-service-name=text:grill-stats-redis"
-    
+
     create_secret_item "$vault_name" "timescaledb-secrets" "Database" \
         "timescale-admin-user=text:" \
         "timescale-admin-password=password:" \
@@ -311,19 +311,19 @@ setup_base_vault() {
         "timescale-backup-password=password:" \
         "timescale-host=text:" \
         "timescale-port=text:5432"
-    
+
     log_success "Base vault setup completed: $vault_name"
 }
 
 # Setup development vault (grill-stats-dev)
 setup_dev_vault() {
     local vault_name="grill-stats-dev"
-    
+
     log_info "Setting up development vault: $vault_name"
-    
+
     # Create vault
     create_vault "$vault_name" "Grill Stats development environment secrets"
-    
+
     # Development environment secrets
     create_secret_item "$vault_name" "dev-lab-environment-secrets" "Secure Note" \
         "environment=text:dev-lab" \
@@ -353,7 +353,7 @@ setup_dev_vault() {
         "vault-url=text:http://vault-dev.grill-stats-dev.svc.cluster.local:8200" \
         "vault-token=password:" \
         "vault-namespace=text:grill-stats-dev"
-    
+
     # Development database users
     create_secret_item "$vault_name" "dev-lab-database-users" "Database" \
         "postgres-admin-user=text:postgres" \
@@ -379,22 +379,22 @@ setup_dev_vault() {
         "timescale-admin-password=password:" \
         "timescale-user=text:timescale_dev" \
         "timescale-password=password:"
-    
+
     # Copy base service secrets for dev (with dev-specific modifications)
     # This would include all the service secrets but with dev-specific values
-    
+
     log_success "Development vault setup completed: $vault_name"
 }
 
 # Setup production vault (grill-stats-prod)
 setup_prod_vault() {
     local vault_name="grill-stats-prod"
-    
+
     log_info "Setting up production vault: $vault_name"
-    
+
     # Create vault
     create_vault "$vault_name" "Grill Stats production environment secrets"
-    
+
     # Production environment secrets
     create_secret_item "$vault_name" "prod-lab-environment-secrets" "Secure Note" \
         "environment=text:prod-lab" \
@@ -429,7 +429,7 @@ setup_prod_vault() {
         "backup-enabled=text:true" \
         "monitoring-enabled=text:true" \
         "alerting-enabled=text:true"
-    
+
     # Production database users
     create_secret_item "$vault_name" "prod-lab-database-users" "Database" \
         "postgres-admin-user=text:postgres" \
@@ -459,7 +459,7 @@ setup_prod_vault() {
         "timescale-password=password:" \
         "timescale-backup-user=text:timescale_backup" \
         "timescale-backup-password=password:"
-    
+
     # Production security secrets
     create_secret_item "$vault_name" "prod-lab-security-secrets" "Secure Note" \
         "tls-cert=text:" \
@@ -473,19 +473,19 @@ setup_prod_vault() {
         "csrf-token=password:" \
         "monitoring-api-key=password:" \
         "alerting-webhook-key=password:"
-    
+
     log_success "Production vault setup completed: $vault_name"
 }
 
 # Main setup function
 main() {
     local exit_code=0
-    
+
     log_info "Starting Grill Stats 1Password vault setup"
-    
+
     # Check prerequisites
     check_prerequisites
-    
+
     # Setup vaults based on selection
     if [[ -n "$VAULT_NAME" ]]; then
         case "$VAULT_NAME" in
@@ -514,7 +514,7 @@ main() {
         setup_dev_vault || exit_code=1
         setup_prod_vault || exit_code=1
     fi
-    
+
     # Final setup summary
     if [[ $exit_code -eq 0 ]]; then
         log_success "All vaults setup completed successfully"
@@ -526,7 +526,7 @@ main() {
     else
         log_error "Some vault setups failed - check output above"
     fi
-    
+
     return $exit_code
 }
 

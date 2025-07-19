@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import io from 'socket.io-client';
 import './NotificationSystem.css';
 
-const WebSocketNotificationSystem = ({ 
-    enableSoundAlerts = true, 
+const WebSocketNotificationSystem = ({
+    enableSoundAlerts = true,
     enableBrowserNotifications = true,
     fallbackPollingInterval = 10000 // 10 seconds fallback polling
 }) => {
@@ -13,7 +13,7 @@ const WebSocketNotificationSystem = ({
     const [soundEnabled, setSoundEnabled] = useState(enableSoundAlerts);
     const [browserNotificationsEnabled, setBrowserNotificationsEnabled] = useState(false);
     const [connectionStatus, setConnectionStatus] = useState('disconnected');
-    
+
     const socketRef = useRef(null);
     const audioRef = useRef(null);
     const fallbackIntervalRef = useRef(null);
@@ -28,27 +28,27 @@ const WebSocketNotificationSystem = ({
                     const audioContext = new (window.AudioContext || window.webkitAudioContext)();
                     const oscillator = audioContext.createOscillator();
                     const gainNode = audioContext.createGain();
-                    
+
                     oscillator.connect(gainNode);
                     gainNode.connect(audioContext.destination);
-                    
+
                     oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
                     oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
                     oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-                    
+
                     gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
                     gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-                    
+
                     oscillator.start(audioContext.currentTime);
                     oscillator.stop(audioContext.currentTime + 0.3);
-                    
+
                     return audioContext;
                 } catch (error) {
                     console.warn('Could not create notification sound:', error);
                     return null;
                 }
             };
-            
+
             audioRef.current = createNotificationSound;
         }
     }, [soundEnabled]);
@@ -75,7 +75,7 @@ const WebSocketNotificationSystem = ({
                 credentials: 'include'
             });
             const data = await response.json();
-            
+
             if (data.success) {
                 const newNotifications = data.data.notifications || [];
                 setNotifications(newNotifications);
@@ -103,7 +103,7 @@ const WebSocketNotificationSystem = ({
                     console.log('Connected to notification WebSocket');
                     setConnectionStatus('connected');
                     socketRef.current.emit('join_notifications');
-                    
+
                     // Clear fallback polling when WebSocket connects
                     if (fallbackIntervalRef.current) {
                         clearInterval(fallbackIntervalRef.current);
@@ -114,7 +114,7 @@ const WebSocketNotificationSystem = ({
                 socketRef.current.on('disconnect', () => {
                     console.log('Disconnected from notification WebSocket');
                     setConnectionStatus('disconnected');
-                    
+
                     // Start fallback polling
                     if (!fallbackIntervalRef.current) {
                         fallbackIntervalRef.current = setInterval(fetchNotifications, fallbackPollingInterval);
@@ -124,7 +124,7 @@ const WebSocketNotificationSystem = ({
                 socketRef.current.on('connect_error', (error) => {
                     console.error('WebSocket connection error:', error);
                     setConnectionStatus('error');
-                    
+
                     // Start fallback polling on error
                     if (!fallbackIntervalRef.current) {
                         fallbackIntervalRef.current = setInterval(fetchNotifications, fallbackPollingInterval);
@@ -151,7 +151,7 @@ const WebSocketNotificationSystem = ({
             } catch (error) {
                 console.error('Error initializing WebSocket:', error);
                 setConnectionStatus('error');
-                
+
                 // Fall back to polling immediately
                 if (!fallbackIntervalRef.current) {
                     fallbackIntervalRef.current = setInterval(fetchNotifications, fallbackPollingInterval);
@@ -160,7 +160,7 @@ const WebSocketNotificationSystem = ({
         };
 
         const cleanup = initializeSocket();
-        
+
         // Initial fetch
         fetchNotifications();
 
@@ -171,21 +171,21 @@ const WebSocketNotificationSystem = ({
     const handleNewNotification = useCallback((notification) => {
         // Add to notifications list
         setNotifications(prev => {
-            const exists = prev.some(n => 
-                n.alert_id === notification.alert_id && 
+            const exists = prev.some(n =>
+                n.alert_id === notification.alert_id &&
                 n.timestamp === notification.timestamp
             );
-            
+
             if (!exists) {
                 const updated = [{ ...notification, read: false }, ...prev];
                 return updated.slice(0, 20); // Keep only latest 20
             }
             return prev;
         });
-        
+
         // Update unread count
         setUnreadCount(prev => prev + 1);
-        
+
         // Play sound alert
         if (soundEnabled && audioRef.current) {
             try {
@@ -194,7 +194,7 @@ const WebSocketNotificationSystem = ({
                 console.warn('Could not play notification sound:', error);
             }
         }
-        
+
         // Show browser notification
         if (browserNotificationsEnabled && 'Notification' in window && Notification.permission === 'granted') {
             try {
@@ -205,12 +205,12 @@ const WebSocketNotificationSystem = ({
                     requireInteraction: true,
                     data: notification
                 });
-                
+
                 // Auto-close after 10 seconds
                 setTimeout(() => {
                     browserNotification.close();
                 }, 10000);
-                
+
             } catch (error) {
                 console.warn('Could not show browser notification:', error);
             }
@@ -243,7 +243,7 @@ const WebSocketNotificationSystem = ({
     };
 
     const dismissNotification = (notificationId, timestamp) => {
-        setNotifications(prev => prev.filter(n => 
+        setNotifications(prev => prev.filter(n =>
             !(n.alert_id === notificationId && n.timestamp === timestamp)
         ));
     };
@@ -277,7 +277,7 @@ const WebSocketNotificationSystem = ({
         const diffMs = now - date;
         const diffMins = Math.floor(diffMs / 60000);
         const diffHours = Math.floor(diffMs / 3600000);
-        
+
         if (diffMins < 1) return 'Just now';
         if (diffMins < 60) return `${diffMins}m ago`;
         if (diffHours < 24) return `${diffHours}h ago`;
@@ -371,7 +371,7 @@ const WebSocketNotificationSystem = ({
                             </div>
                         ) : (
                             notifications.map((notification, index) => (
-                                <div 
+                                <div
                                     key={`${notification.alert_id}-${notification.timestamp}`}
                                     className={`notification-item ${!notification.read ? 'unread' : ''}`}
                                 >

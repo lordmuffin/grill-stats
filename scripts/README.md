@@ -301,15 +301,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      
+
       - name: Setup kubectl
         uses: azure/setup-kubectl@v1
-        
+
       - name: Run Production Validation
         run: |
           chmod +x scripts/run-full-validation.sh
           ./scripts/run-full-validation.sh --parallel
-          
+
       - name: Upload Results
         uses: actions/upload-artifact@v3
         with:
@@ -405,7 +405,7 @@ export DEBUG=true
 ```bash
 validate_custom_component() {
     local start_time=$(date +%s%3N)
-    
+
     # Your validation logic here
     if custom_validation_passes; then
         check_status "CUSTOM_COMPONENT" "GO" "Custom validation passed"

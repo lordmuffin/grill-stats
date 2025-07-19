@@ -34,9 +34,9 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     const result = await login(formData.email, formData.password);
-    
+
     if (result.success) {
       navigate('/');
     }
@@ -44,9 +44,9 @@ const Login = () => {
 
   const handleRegisterSubmit = async (e) => {
     e.preventDefault();
-    
+
     const result = await register(registerData.email, registerData.password, registerData.name);
-    
+
     if (result.success) {
       setIsRegistering(false);
       setRegisterData({ email: '', password: '', name: '' });
@@ -69,9 +69,9 @@ const Login = () => {
         <p style={{ textAlign: 'center', marginBottom: '1.5rem', color: '#7f8c8d' }}>
           {isRegistering ? 'Sign up to manage your ThermoWorks devices' : 'Sign in to your ThermoWorks account'}
         </p>
-        
+
         {error && <div className="error-message">{error}</div>}
-        
+
         {!isRegistering ? (
           <form onSubmit={handleSubmit}>
             <div className="form-group">
@@ -86,7 +86,7 @@ const Login = () => {
                 placeholder="Enter your email"
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="password">Password</label>
               <input
@@ -99,10 +99,10 @@ const Login = () => {
                 placeholder="Enter your password"
               />
             </div>
-            
-            <button 
-              type="submit" 
-              className="btn btn-primary" 
+
+            <button
+              type="submit"
+              className="btn btn-primary"
               disabled={loading}
               style={{ width: '100%', marginTop: '1rem' }}
             >
@@ -123,7 +123,7 @@ const Login = () => {
                 placeholder="Enter your full name"
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="email">Email</label>
               <input
@@ -136,7 +136,7 @@ const Login = () => {
                 placeholder="Enter your email"
               />
             </div>
-            
+
             <div className="form-group">
               <label htmlFor="password">Password</label>
               <input
@@ -150,10 +150,10 @@ const Login = () => {
                 minLength="6"
               />
             </div>
-            
-            <button 
-              type="submit" 
-              className="btn btn-primary" 
+
+            <button
+              type="submit"
+              className="btn btn-primary"
               disabled={loading}
               style={{ width: '100%', marginTop: '1rem' }}
             >
@@ -161,13 +161,13 @@ const Login = () => {
             </button>
           </form>
         )}
-        
+
         <div style={{ textAlign: 'center', marginTop: '1.5rem' }}>
           <p style={{ color: '#7f8c8d' }}>
             {isRegistering ? 'Already have an account?' : "Don't have an account?"}
           </p>
-          <button 
-            type="button" 
+          <button
+            type="button"
             onClick={toggleMode}
             className="btn btn-secondary"
             style={{ marginTop: '0.5rem' }}

@@ -78,4 +78,3 @@ echo -e "${YELLOW}To activate the virtual environment, run:${NC}"
 echo -e "    source venv/bin/activate"
 echo -e "${YELLOW}To deactivate the virtual environment, run:${NC}"
 echo -e "    deactivate"
-

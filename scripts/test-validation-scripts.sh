@@ -18,7 +18,7 @@ echo -e "━━━━━━━━━━━━━━━━━━━━━━━�
 # Test script existence and permissions
 test_script_files() {
     echo -e "\n${BLUE}Testing Script Files${NC}"
-    
+
     local scripts=(
         "validate-production.sh"
         "security-audit.sh"
@@ -26,12 +26,12 @@ test_script_files() {
         "integration-test.sh"
         "run-full-validation.sh"
     )
-    
+
     local all_good=true
-    
+
     for script in "${scripts[@]}"; do
         local script_path="$SCRIPTS_DIR/$script"
-        
+
         if [ -f "$script_path" ]; then
             if [ -x "$script_path" ]; then
                 echo -e "${GREEN}✅${NC} $script - exists and executable"
@@ -44,7 +44,7 @@ test_script_files() {
             all_good=false
         fi
     done
-    
+
     if [ "$all_good" = true ]; then
         echo -e "${GREEN}All validation scripts are ready${NC}"
     else
@@ -55,7 +55,7 @@ test_script_files() {
 # Test help functions
 test_help_functions() {
     echo -e "\n${BLUE}Testing Help Functions${NC}"
-    
+
     local scripts=(
         "validate-production.sh"
         "security-audit.sh"
@@ -63,10 +63,10 @@ test_help_functions() {
         "integration-test.sh"
         "run-full-validation.sh"
     )
-    
+
     for script in "${scripts[@]}"; do
         local script_path="$SCRIPTS_DIR/$script"
-        
+
         if [ -f "$script_path" ]; then
             if timeout 10 bash "$script_path" --help >/dev/null 2>&1; then
                 echo -e "${GREEN}✅${NC} $script - help function works"
@@ -80,7 +80,7 @@ test_help_functions() {
 # Test script syntax
 test_script_syntax() {
     echo -e "\n${BLUE}Testing Script Syntax${NC}"
-    
+
     local scripts=(
         "validate-production.sh"
         "security-audit.sh"
@@ -88,10 +88,10 @@ test_script_syntax() {
         "integration-test.sh"
         "run-full-validation.sh"
     )
-    
+
     for script in "${scripts[@]}"; do
         local script_path="$SCRIPTS_DIR/$script"
-        
+
         if [ -f "$script_path" ]; then
             if bash -n "$script_path" 2>/dev/null; then
                 echo -e "${GREEN}✅${NC} $script - syntax valid"
@@ -105,7 +105,7 @@ test_script_syntax() {
 # Test required commands
 test_dependencies() {
     echo -e "\n${BLUE}Testing Dependencies${NC}"
-    
+
     local required_commands=(
         "kubectl:Kubernetes CLI"
         "jq:JSON processor"
@@ -113,11 +113,11 @@ test_dependencies() {
         "bc:Calculator"
         "openssl:TLS toolkit"
     )
-    
+
     for cmd_desc in "${required_commands[@]}"; do
         local cmd="${cmd_desc%:*}"
         local desc="${cmd_desc#*:}"
-        
+
         if command -v "$cmd" >/dev/null 2>&1; then
             local version=$(command -v "$cmd" >/dev/null 2>&1 && echo "available" || echo "unknown")
             echo -e "${GREEN}✅${NC} $cmd - $desc ($version)"
@@ -130,7 +130,7 @@ test_dependencies() {
 # Test configuration
 test_configuration() {
     echo -e "\n${BLUE}Testing Configuration${NC}"
-    
+
     # Test kubectl configuration
     if kubectl config current-context >/dev/null 2>&1; then
         local context=$(kubectl config current-context)
@@ -138,14 +138,14 @@ test_configuration() {
     else
         echo -e "${RED}❌${NC} kubectl not configured"
     fi
-    
+
     # Test namespace access
     if kubectl get namespace >/dev/null 2>&1; then
         echo -e "${GREEN}✅${NC} kubectl has namespace access"
     else
         echo -e "${RED}❌${NC} kubectl cannot access namespaces"
     fi
-    
+
     # Test jq functionality
     if echo '{"test": "value"}' | jq '.test' >/dev/null 2>&1; then
         echo -e "${GREEN}✅${NC} jq functioning correctly"
@@ -157,10 +157,10 @@ test_configuration() {
 # Test dry-run capability
 test_dry_run() {
     echo -e "\n${BLUE}Testing Dry-Run Capability${NC}"
-    
+
     # Test if we can run basic validation without actual deployment
     local script_path="$SCRIPTS_DIR/validate-production.sh"
-    
+
     if [ -f "$script_path" ]; then
         # Check if script has dry-run or help mode
         if grep -q "dry-run\|help" "$script_path"; then
@@ -175,9 +175,9 @@ test_dry_run() {
 generate_test_report() {
     echo -e "\n${BLUE}Test Summary${NC}"
     echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    
+
     local report_file="/tmp/validation-scripts-test-$(date +%Y%m%d_%H%M%S).txt"
-    
+
     {
         echo "Grill Stats Validation Scripts Test Report"
         echo "Generated: $(date)"
@@ -191,7 +191,7 @@ generate_test_report() {
         echo "Scripts Ready for Use:"
         ls -la "$SCRIPTS_DIR"/*.sh
     } > "$report_file"
-    
+
     echo -e "${GREEN}✅${NC} Validation scripts test completed"
     echo -e "Test report saved: $report_file"
 }
@@ -205,7 +205,7 @@ main() {
     test_configuration
     test_dry_run
     generate_test_report
-    
+
     echo -e "\n${BLUE}Ready to Use Validation Scripts${NC}"
     echo -e "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo -e "${GREEN}✅ Production Validation:${NC} ./scripts/validate-production.sh"
