@@ -60,7 +60,12 @@
       "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/update-all-workflow-credentials.sh)",
       "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/fix-workflow-files.sh:*)",
       "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/cleanup-workflow-files.sh:*)",
-      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/fix-workflow-syntax.sh:*)"
+      "Bash(/home/lordmuffin/Claude/Git/grill-stats/scripts/fix-workflow-syntax.sh:*)",
+      "Bash(MOCK_MODE=true FLASK_ENV=development python app.py)",
+      "Bash(MOCK_MODE=true FLASK_ENV=development SECRET_KEY=dev-secret-key-for-local-testing-123456789 python app.py)",
+      "Bash(MOCK_MODE=true FLASK_ENV=development SECRET_KEY=dev-secret-key-for-local-testing-123456789 python app.py --port 5001)",
+      "Bash(MOCK_MODE=true FLASK_ENV=development LOCAL_DB=true SECRET_KEY=dev-secret-key-for-local-testing-123456789 python app.py)",
+      "Bash(echo:*)"
     ],
     "deny": [
       "Bash(git commit --no-verify:*)"

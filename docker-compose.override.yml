@@ -1,0 +1,12 @@
+version: '3.8'
+
+services:
+  grill-stats:
+    environment:
+      - ADMIN_EMAIL=admin@example.com
+      - ADMIN_PASSWORD=admin123
+      - ADMIN_NAME=Administrator
+      - MOCK_MODE=true
+      - SECRET_KEY=very-secure-secret-key-for-development-123456789
+      - FLASK_ENV=development
+      - LOCAL_DB=true

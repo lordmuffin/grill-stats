@@ -12,10 +12,13 @@ from flask_socketio import SocketIO, emit, join_room, leave_room
 from flask_sqlalchemy import SQLAlchemy
 
 # Import configuration
-from config import Config
+from config.config_loader import load_config
 from config.env_validator import EnvironmentValidator
 from homeassistant_client import HomeAssistantClient
 from thermoworks_client import ThermoWorksClient
+
+# Load configuration
+Config = load_config()
 
 # Import requests for external API calls
 try:
@@ -37,6 +40,14 @@ env_validator = EnvironmentValidator()
 # Initialize Flask app
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# Override database settings for local development without docker
+if app.config.get("MOCK_MODE") and os.environ.get('LOCAL_DB', 'true').lower() in ('true', '1', 'yes', 'on'):
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///grill_stats.db'
+    logger.info(f"Using SQLite database: {app.config['SQLALCHEMY_DATABASE_URI']}")
+else:
+    logger.info(f"Using database: {app.config.get('SQLALCHEMY_DATABASE_URI')}")
+
 
 
 # Validate critical configuration on startup
@@ -127,9 +138,11 @@ thermoworks_client = ThermoWorksClient(
     mock_mode=app.config.get("MOCK_MODE", False),
 )
 
+# Initialize HomeAssistant client with mock mode if enabled
 homeassistant_client = HomeAssistantClient(
-    base_url=app.config["HOMEASSISTANT_URL"],
-    access_token=app.config["HOMEASSISTANT_TOKEN"],
+    base_url=app.config.get("HOMEASSISTANT_URL"),
+    access_token=app.config.get("HOMEASSISTANT_TOKEN"),
+    mock_mode=app.config.get("MOCK_MODE", False),
 )
 
 scheduler = BackgroundScheduler()
@@ -1400,9 +1413,10 @@ if __name__ == "__main__":
         # Use debug=False in production deployment
         is_production = os.environ.get("FLASK_ENV") == "production"
         debug_mode = not is_production
-        logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}")
+        port = int(os.environ.get('PORT', 5001))
+        logger.info(f"Starting Flask server - Production: {is_production}, Debug: {debug_mode}, Port: {port}")
         logger.info("About to call app.run...")
-        socketio.run(app, host="0.0.0.0", port=5000, debug=debug_mode, allow_unsafe_werkzeug=True)
+        socketio.run(app, host="0.0.0.0", port=port, debug=debug_mode, allow_unsafe_werkzeug=True)
     except KeyboardInterrupt:
         logger.info("Shutting down...")
         if alert_monitor:

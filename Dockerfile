@@ -9,4 +9,6 @@ COPY . .
 
 EXPOSE 5000
 
+ENV PORT=5000
+
 CMD ["python", "app.py"]
