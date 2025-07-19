@@ -35,11 +35,11 @@ This document outlines the development tasks organized into milestones for trans
   - [ ] Enhance mock mode with better device simulation
   - [ ] Fix tests to properly isolate database operations
 - [⚠️] Add type annotations to model classes (high priority)
-  - [ ] Add type annotations to all methods in models/device.py
+  - [x] Add type annotations to all methods in models/device.py
   - [ ] Add type annotations to all methods in models/user.py
   - [ ] Add type annotations to all methods in models/temperature_alert.py
-  - [ ] Fix "db.Model" name-defined errors in model classes
-  - [ ] Configure mypy to properly handle SQLAlchemy types
+  - [x] Fix "db.Model" name-defined errors in model classes (for device.py)
+  - [x] Configure mypy to properly handle SQLAlchemy types
 
 ### CI/CD Pipeline
 - [x] Configure Gitea Actions workflow for main branch
@@ -548,17 +548,17 @@ This document outlines the development tasks organized into milestones for trans
 
 ### Overall Progress
 - Total Tasks: 418
-- Completed: 14
+- Completed: 16
 - In Progress: 1
 - Blocked: 0
 - At Risk: 3
-- Completion: 3.35%
+- Completion: 3.83%
 
 
 ### Milestone Status
 | Milestone | Tasks | Completed | Progress |
 |-----------|-------|-----------|----------|
-| M1: Foundation | 45 | 14 | 31.1% |
+| M1: Foundation | 45 | 16 | 35.6% |
 | M2: Device Service | 40 | 0 | 0% |
 | M3: Temperature Service | 40 | 0 | 0% |
 | M4: Web UI | 48 | 0 | 0% |
@@ -590,6 +590,6 @@ This document outlines the development tasks organized into milestones for trans
 
 ---
 
-**Last Updated**: 2025-07-19 (Updated with completed Device ID validation fix and added type annotation tasks)
+**Last Updated**: 2025-07-19 (Updated with completed Device ID validation fix and type annotations for device.py)
 **Next Review**: 2025-08-02
 **Owner**: Development Team

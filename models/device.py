@@ -1,18 +1,26 @@
 import re
 from datetime import datetime
+from typing import Any, Dict, List, Optional, Tuple, Type, Union
 
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String
-from sqlalchemy.orm import relationship
+from sqlalchemy.orm import Query, relationship
 
 
 class Device:
     """Device model for ThermoWorks device management"""
+    
+    model: Any  # Will be set to DeviceModel in __init__
+    db: SQLAlchemy
 
-    def __init__(self, db):
+    def __init__(self, db: SQLAlchemy) -> None:
         self.db = db
 
-        class DeviceModel(db.Model):
+        # Define DeviceModel class with type annotation
+        # This addresses the "db.Model is not defined" error
+        DeviceModel = self.db.Model
+        
+        class DeviceModel(DeviceModel):  # type: ignore
             __tablename__ = "devices"
 
             id = Column(Integer, primary_key=True)
@@ -27,10 +35,10 @@ class Device:
             # Relationship will be established when both models are loaded
             # user = relationship("UserModel", backref="devices")
 
-            def __repr__(self):
+            def __repr__(self) -> str:
                 return f'<Device {self.device_id} ({self.nickname or "No nickname"})>'
 
-            def to_dict(self):
+            def to_dict(self) -> Dict[str, Any]:
                 """Convert device to dictionary for JSON serialization"""
                 return {
                     "id": self.id,
@@ -42,10 +50,11 @@ class Device:
                     "updated_at": (self.updated_at.isoformat() if self.updated_at else None),
                 }
 
-        self.model = DeviceModel
+        # Store the model class for later use
+        self.model = DeviceModel  # type: ignore
 
     @staticmethod
-    def validate_device_id(device_id):
+    def validate_device_id(device_id: Optional[str]) -> Tuple[bool, str]:
         """Validate ThermoWorks device ID format (TW-XXX-XXX)"""
         if not device_id:
             return False, "Device ID is required"
@@ -62,7 +71,7 @@ class Device:
 
         return True, "Valid device ID format"
 
-    def create_device(self, user_id, device_id, nickname=None):
+    def create_device(self, user_id: int, device_id: str, nickname: Optional[str] = None) -> Any:
         """Create a new device for a user"""
         # Validate device ID format
         is_valid, message = self.validate_device_id(device_id)
@@ -79,22 +88,24 @@ class Device:
         self.db.session.commit()
         return device
 
-    def get_device_by_id(self, device_id):
+    def get_device_by_id(self, device_id: str) -> Optional[Any]:
         """Get device by device_id"""
         return self.model.query.filter_by(device_id=device_id.upper()).first()
 
-    def get_user_devices(self, user_id, include_inactive=False):
+    def get_user_devices(self, user_id: int, include_inactive: bool = False) -> List[Any]:
         """Get all devices for a user"""
         query = self.model.query.filter_by(user_id=user_id)
         if not include_inactive:
             query = query.filter_by(is_active=True)
-        return query.all()
+        # Explicitly cast the result to List[Any] to satisfy mypy
+        result: List[Any] = query.all()
+        return result
 
-    def get_user_device(self, user_id, device_id):
+    def get_user_device(self, user_id: int, device_id: str) -> Optional[Any]:
         """Get a specific device for a user"""
         return self.model.query.filter_by(user_id=user_id, device_id=device_id.upper(), is_active=True).first()
 
-    def soft_delete_device(self, user_id, device_id):
+    def soft_delete_device(self, user_id: int, device_id: str) -> Any:
         """Soft delete a device (set is_active=False)"""
         device = self.get_user_device(user_id, device_id)
         if not device:
@@ -105,7 +116,7 @@ class Device:
         self.db.session.commit()
         return device
 
-    def update_device_status(self, device_id, status):
+    def update_device_status(self, device_id: str, status: str) -> Optional[Any]:
         """Update device status (online/offline/error)"""
         device = self.get_device_by_id(device_id)
         if device:
@@ -114,7 +125,7 @@ class Device:
             self.db.session.commit()
         return device
 
-    def update_device_nickname(self, user_id, device_id, nickname):
+    def update_device_nickname(self, user_id: int, device_id: str, nickname: str) -> Any:
         """Update device nickname"""
         device = self.get_user_device(user_id, device_id)
         if not device:
@@ -125,7 +136,7 @@ class Device:
         self.db.session.commit()
         return device
 
-    def check_device_in_session(self, device_id):
+    def check_device_in_session(self, device_id: str) -> bool:
         """Check if device is currently in an active grilling session"""
         # TODO: This will be implemented when session tracking is added
         # For now, return False to allow deletion
