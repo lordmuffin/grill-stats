@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-service-config
+  namespace: grill-stats-dev
+data:
+  # Development-specific overrides for device service
+  THERMOWORKS_REDIRECT_URI: "http://localhost:8080/api/auth/thermoworks/callback"
+  
+  # More frequent polling for development
+  DEVICE_POLL_INTERVAL_SECONDS: "30"
+  
+  # Enable mock mode for development
+  ENABLE_MOCK_MODE: "true"
+  MOCK_DEVICE_COUNT: "3"

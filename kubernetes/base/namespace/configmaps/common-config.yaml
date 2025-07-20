@@ -1,0 +1,31 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: grill-stats
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/managed-by: kustomize
+data:
+  # Common logging configuration
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "production"
+  
+  # Common database connections (overridden in environment-specific overlays)
+  DB_HOST: "postgresql"
+  DB_PORT: "5432"
+  DB_NAME: "grill_stats"
+  
+  # InfluxDB configuration
+  INFLUXDB_HOST: "influxdb"
+  INFLUXDB_PORT: "8086"
+  INFLUXDB_DATABASE: "grill_stats"
+  
+  # Redis configuration
+  REDIS_HOST: "redis"
+  REDIS_PORT: "6379"
+  
+  # Message queue (Kafka) configuration
+  KAFKA_BOOTSTRAP_SERVERS: "kafka:9092"
+  KAFKA_TOPIC_PREFIX: "grill-stats"

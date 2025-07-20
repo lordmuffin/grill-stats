@@ -1,0 +1,23 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: common-config
+  namespace: grill-stats-staging
+data:
+  # Override common configuration for staging
+  LOG_LEVEL: "INFO"
+  ENVIRONMENT: "staging"
+  
+  # Staging database connections
+  DB_HOST: "postgresql.staging.svc.cluster.local"
+  DB_NAME: "grill_stats_staging"
+  
+  # Staging InfluxDB configuration
+  INFLUXDB_HOST: "influxdb.staging.svc.cluster.local"
+  INFLUXDB_DATABASE: "grill_stats_staging"
+  
+  # Staging Redis configuration
+  REDIS_HOST: "redis.staging.svc.cluster.local"
+  
+  # Staging Kafka configuration
+  KAFKA_BOOTSTRAP_SERVERS: "kafka.staging.svc.cluster.local:9092"

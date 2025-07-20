@@ -1,0 +1,10 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - flask-app-monitor.yaml
+  - device-service-monitor.yaml
+  - temperature-service-monitor.yaml
+  - homeassistant-service-monitor.yaml
+  - notification-service-monitor.yaml
+  - data-processing-service-monitor.yaml

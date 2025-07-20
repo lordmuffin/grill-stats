@@ -1,0 +1,48 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: standard-api-probes
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: grill-stats
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: health-probes
+data:
+  # This ConfigMap contains standard probe definitions for API services
+  # These can be referenced in Deployment manifests
+
+  # HTTP Liveness Probe - Verifies the API service is responsive
+  liveness-probe: |
+    httpGet:
+      path: /api/health
+      port: http
+      scheme: HTTP
+    initialDelaySeconds: 30
+    periodSeconds: 15
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  # HTTP Readiness Probe - Verifies the API is ready to serve requests
+  readiness-probe: |
+    httpGet:
+      path: /api/health
+      port: http
+      scheme: HTTP
+    initialDelaySeconds: 10
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+  # HTTP Startup Probe - Gives additional time for initial startup
+  startup-probe: |
+    httpGet:
+      path: /api/health
+      port: http
+      scheme: HTTP
+    initialDelaySeconds: 5
+    periodSeconds: 5
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 12  # Allow 60 seconds (12 * 5s) for startup

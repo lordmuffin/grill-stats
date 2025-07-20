@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: device-service-config
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: device-service
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/managed-by: kustomize
+data:
+  # Service-specific configuration
+  API_PORT: "8080"
+  HEALTH_CHECK_PORT: "8081"
+  SERVICE_NAME: "device-service"
+  
+  # ThermoWorks API configuration
+  # Note: Sensitive values should be in Secrets, not ConfigMaps
+  THERMOWORKS_API_URL: "https://api.thermoworks.com/v1"
+  THERMOWORKS_REDIRECT_URI: "http://api.grill-stats.local/api/auth/thermoworks/callback"
+  
+  # Device polling configuration
+  DEVICE_POLL_INTERVAL_SECONDS: "60"
+  DEVICE_CONNECTION_TIMEOUT_SECONDS: "10"
+  
+  # Device-specific kafka topics
+  KAFKA_DEVICE_TOPIC: "device-events"
+  KAFKA_TEMPERATURE_TOPIC: "temperature-events"
+  
+  # Feature flags
+  ENABLE_WEBHOOK_HANDLERS: "true"
+  ENABLE_CONNECTION_MONITORING: "true"
+  ENABLE_AUTO_DISCOVERY: "true"

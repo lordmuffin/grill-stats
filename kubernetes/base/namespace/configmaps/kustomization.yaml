@@ -1,0 +1,17 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+resources:
+  - common-config.yaml
+  - device-service-config.yaml
+  - temperature-service-config.yaml
+  - homeassistant-service-config.yaml
+  - notification-service-config.yaml
+  - data-processing-service-config.yaml
+
+commonLabels:
+  app.kubernetes.io/name: grill-stats
+  app.kubernetes.io/part-of: grill-stats
+  app.kubernetes.io/managed-by: kustomize
+
+namespace: grill-stats

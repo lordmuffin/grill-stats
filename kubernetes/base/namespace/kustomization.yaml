@@ -8,6 +8,10 @@ resources:
   - network-policies
   - service-accounts
   - rbac
+  - configmaps
+  - secrets
+  - probes
+  - monitors
 
 commonLabels:
   app.kubernetes.io/name: grill-stats

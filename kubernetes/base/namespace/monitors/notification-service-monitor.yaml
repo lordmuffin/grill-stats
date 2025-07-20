@@ -1,0 +1,29 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+  name: notification-service-monitor
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: grill-stats
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: monitoring
+    prometheus: kube-prometheus  # This label enables discovery by Prometheus
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: notification-service
+      app.kubernetes.io/part-of: grill-stats
+  endpoints:
+  - port: http  # The name of the port in the Service
+    path: /metrics
+    interval: 15s
+    scrapeTimeout: 10s
+    honorLabels: true
+    metricRelabelings:
+    - sourceLabels: [__name__]
+      regex: notification_.*
+      action: keep
+  namespaceSelector:
+    matchNames:
+    - grill-stats
+  sampleLimit: 10000

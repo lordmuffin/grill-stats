@@ -1,0 +1,72 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: standard-database-probes
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: grill-stats
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: health-probes
+data:
+  # This ConfigMap contains standard probe definitions for database services
+  # These can be referenced in Deployment/StatefulSet manifests
+
+  # PostgreSQL TCP Liveness Probe - Checks if PostgreSQL port is open
+  postgres-liveness-probe: |
+    tcpSocket:
+      port: 5432
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  # PostgreSQL TCP Readiness Probe - Checks if PostgreSQL is accepting connections
+  postgres-readiness-probe: |
+    tcpSocket:
+      port: 5432
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+  # Redis TCP Liveness Probe - Checks if Redis port is open
+  redis-liveness-probe: |
+    tcpSocket:
+      port: 6379
+    initialDelaySeconds: 30
+    periodSeconds: 20
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  # Redis TCP Readiness Probe - Checks if Redis is accepting connections
+  redis-readiness-probe: |
+    tcpSocket:
+      port: 6379
+    initialDelaySeconds: 15
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
+
+  # InfluxDB TCP Liveness Probe - Checks if InfluxDB port is open
+  influxdb-liveness-probe: |
+    tcpSocket:
+      port: 8086
+    initialDelaySeconds: 60
+    periodSeconds: 20
+    timeoutSeconds: 5
+    successThreshold: 1
+    failureThreshold: 3
+
+  # InfluxDB TCP Readiness Probe - Checks if InfluxDB is accepting connections
+  influxdb-readiness-probe: |
+    tcpSocket:
+      port: 8086
+    initialDelaySeconds: 30
+    periodSeconds: 10
+    timeoutSeconds: 3
+    successThreshold: 1
+    failureThreshold: 3
