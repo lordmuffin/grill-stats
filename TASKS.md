@@ -101,8 +101,8 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Create ThermoWorks API client with retry logic
 - [x] Implement device discovery endpoint
 - [x] Handle token refresh automatically
-- [ ] Implement rate limiting for API calls
-- [ ] Create webhook handlers for real-time updates
+- [x] Implement rate limiting for API calls
+- [x] Create webhook handlers for real-time updates
 - [x] Add connection status monitoring
 - [x] Implement error handling and recovery
 
@@ -110,31 +110,31 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Create device registration endpoint (POST /api/devices)
 - [x] Implement device listing (GET /api/devices)
 - [x] Create device details endpoint (GET /api/devices/{id})
-- [ ] Implement device update (PUT /api/devices/{id})
-- [ ] Create device deletion (DELETE /api/devices/{id})
+- [x] Implement device update (PUT /api/devices/{id})
+- [x] Create device deletion (DELETE /api/devices/{id})
 - [x] Implement device health check (GET /api/devices/{id}/health)
-- [ ] Add device configuration management
-- [ ] Create probe management endpoints
+- [x] Add device configuration management
+- [x] Create probe management endpoints
 
 ### Database Integration
 - [x] Design device database schema
 - [x] Implement repository pattern for data access
 - [x] Add database connection pooling
-- [ ] Create database migrations with Alembic
-- [ ] Implement SQLAlchemy models
-- [ ] Create indexes for performance
-- [ ] Implement soft delete functionality
-- [ ] Add audit logging for changes
+- [x] Create database migrations with Alembic
+- [x] Implement SQLAlchemy models
+- [x] Create indexes for performance
+- [x] Implement soft delete functionality
+- [x] Add audit logging for changes
 
 ### Testing & Documentation
-- [ ] Write unit tests for all endpoints (>80% coverage)
+- [x] Write unit tests for all endpoints (>80% coverage)
 - [ ] Create integration tests with mock ThermoWorks API
 - [ ] Implement performance tests
-- [ ] Generate OpenAPI/Swagger documentation
+- [x] Generate OpenAPI/Swagger documentation
 - [ ] Create API client SDK
-- [ ] Write developer documentation
+- [x] Write developer documentation
 - [ ] Create troubleshooting guide
-- [ ] Add example API calls to docs
+- [x] Add example API calls to docs
 
 ---
 
@@ -548,18 +548,18 @@ This document outlines the development tasks organized into milestones for trans
 
 ### Overall Progress
 - Total Tasks: 418
-- Completed: 60
+- Completed: 77
 - In Progress: 0
 - Blocked: 0
 - At Risk: 0
-- Completion: 14.35%
+- Completion: 18.42%
 
 
 ### Milestone Status
 | Milestone | Tasks | Completed | Progress |
 |-----------|-------|-----------|----------|
 | M1: Foundation | 45 | 40 | 88.9% |
-| M2: Device Service | 40 | 20 | 50.0% |
+| M2: Device Service | 40 | 37 | 92.5% |
 | M3: Temperature Service | 40 | 0 | 0% |
 | M4: Web UI | 48 | 0 | 0% |
 | M5: HA Integration | 32 | 0 | 0% |
@@ -585,6 +585,6 @@ This document outlines the development tasks organized into milestones for trans
 
 ---
 
-**Last Updated**: 2025-07-20 (Updated with completed ThermoWorks Integration and Device Management API tasks)
+**Last Updated**: 2025-07-20 (Updated with completed unit tests for Milestone 2)
 **Next Review**: 2025-08-02
 **Owner**: Development Team

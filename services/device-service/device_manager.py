@@ -2,10 +2,10 @@ import json
 import logging
 from datetime import datetime
 from typing import Any, Dict, List, Optional, Union, cast
-from psycopg2.extensions import connection
 
 import psycopg2
 import structlog
+from psycopg2.extensions import connection
 from psycopg2.extras import RealDictCursor
 
 logger = structlog.get_logger()
@@ -31,7 +31,7 @@ class DeviceManager:
 
     def get_connection(self) -> connection:
         """Get database connection
-        
+
         Returns:
             PostgreSQL database connection
         """
@@ -39,7 +39,7 @@ class DeviceManager:
 
     def health_check(self) -> bool:
         """Check database connection health
-        
+
         Returns:
             True if database connection is healthy, raises exception otherwise
         """
@@ -56,7 +56,7 @@ class DeviceManager:
 
     def get_timestamp(self) -> str:
         """Get current timestamp
-        
+
         Returns:
             Current UTC timestamp as ISO format string
         """
@@ -247,11 +247,11 @@ class DeviceManager:
 
     def get_devices(self, active_only: bool = True, user_id: Optional[Union[int, str]] = None) -> List[Dict[str, Any]]:
         """Get all devices, optionally filtered by user
-        
+
         Args:
             active_only: Whether to return only active devices
             user_id: Optional user ID to filter devices by
-            
+
         Returns:
             List of device dictionaries
         """
@@ -379,7 +379,7 @@ class DeviceManager:
 
     def update_device_health(self, device_id: str, health_data: Dict[str, Any]) -> None:
         """Update device health status
-        
+
         Args:
             device_id: The ID of the device to update
             health_data: Dictionary containing health data fields
@@ -667,31 +667,30 @@ class DeviceManager:
                 """,
                     (gateway_id,),
                 )
-
-                status = cur.fetchone()
+                gateway = cur.fetchone()
             conn.close()
 
-            if status:
-                # Format timestamps
-                result = dict(status)
-                for key in ["created_at", "updated_at"]:
-                    if key in result and result[key]:
-                        result[key] = result[key].isoformat()
+            if not gateway:
+                return None
 
-                if "last_seen" in result and result["last_seen"]:
-                    result["last_seen"] = result["last_seen"].isoformat()
+            # Format timestamps
+            gateway_dict = dict(gateway)
+            for key in ["created_at", "updated_at"]:
+                if key in gateway_dict and gateway_dict[key]:
+                    gateway_dict[key] = gateway_dict[key].isoformat()
 
-                return result
+            if "last_seen" in gateway_dict and gateway_dict["last_seen"]:
+                gateway_dict["last_seen"] = gateway_dict["last_seen"].isoformat()
 
-            return None
+            return gateway_dict
 
         except Exception as e:
             logger.error("Failed to get gateway status", gateway_id=gateway_id, error=str(e))
             raise
 
-    def get_all_gateways(self, active_only: bool = True) -> List[Dict]:
+    def get_all_gateways(self, active_only: bool = True) -> List[Dict[str, Any]]:
         """
-        Get all registered RFX Gateways
+        Get all RFX Gateways
 
         Args:
             active_only: Whether to return only active gateways
@@ -702,29 +701,26 @@ class DeviceManager:
         try:
             conn = self.get_connection()
             with conn.cursor() as cur:
-                # Get all gateways with status
+                # Get all gateways with their status
                 query = """
-                    SELECT d.*, gs.*
-                    FROM devices d
-                    LEFT JOIN gateway_status gs ON d.device_id = gs.gateway_id
-                    WHERE d.device_type = 'rfx_gateway'
+                    SELECT gs.*, d.name, d.device_type, d.configuration, d.active
+                    FROM gateway_status gs
+                    JOIN devices d ON gs.gateway_id = d.device_id
                 """
 
                 if active_only:
-                    query += " AND d.active = TRUE"
+                    query += " WHERE d.active = TRUE"
 
-                query += " ORDER BY d.created_at DESC"
+                query += " ORDER BY gs.last_seen DESC"
 
                 cur.execute(query)
                 gateways = cur.fetchall()
             conn.close()
 
-            # Format timestamps and clean up duplicated fields
+            # Format timestamps and metadata
             result = []
             for gateway in gateways:
                 gateway_dict = dict(gateway)
-
-                # Handle timestamps
                 for key in ["created_at", "updated_at"]:
                     if key in gateway_dict and gateway_dict[key]:
                         gateway_dict[key] = gateway_dict[key].isoformat()
@@ -738,4 +734,108 @@ class DeviceManager:
 
         except Exception as e:
             logger.error("Failed to get all gateways", error=str(e))
+            raise
+
+    def add_audit_log(self, audit_data: Dict[str, Any]) -> Dict[str, Any]:
+        """Add an audit log entry
+
+        Args:
+            audit_data: Dictionary containing audit data with keys:
+                - action: The action performed (create, update, delete, etc.)
+                - device_id: Optional device ID
+                - user_id: Optional user ID
+                - changes: Optional dictionary of changes made
+                - timestamp: Optional timestamp (defaults to current time)
+
+        Returns:
+            The created audit log entry
+        """
+        try:
+            conn = self.get_connection()
+            with conn.cursor() as cur:
+                # Insert audit log entry
+                cur.execute(
+                    """
+                    INSERT INTO audit_log (action, device_id, user_id, changes, timestamp)
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING *
+                    """,
+                    (
+                        audit_data["action"],
+                        audit_data.get("device_id"),
+                        audit_data.get("user_id"),
+                        json.dumps(audit_data.get("changes", {})),
+                        audit_data.get("timestamp", datetime.utcnow()),
+                    ),
+                )
+
+                log_entry = cur.fetchone()
+                conn.commit()
+            conn.close()
+
+            # Format the log entry
+            log_dict = dict(log_entry)
+            log_dict["timestamp"] = log_dict["timestamp"].isoformat()
+
+            logger.info(
+                "Audit log created", log_id=log_dict["id"], action=log_dict["action"], device_id=log_dict.get("device_id")
+            )
+
+            return log_dict
+
+        except Exception as e:
+            logger.error(
+                "Failed to create audit log",
+                action=audit_data.get("action"),
+                device_id=audit_data.get("device_id"),
+                error=str(e),
+            )
+            raise
+
+    def get_audit_logs(
+        self, device_id: Optional[str] = None, action: Optional[str] = None, limit: int = 100, offset: int = 0
+    ) -> List[Dict[str, Any]]:
+        """Get audit logs, optionally filtered by device or action
+
+        Args:
+            device_id: Optional device ID to filter by
+            action: Optional action to filter by
+            limit: Maximum number of logs to return
+            offset: Offset for pagination
+
+        Returns:
+            List of audit log entries
+        """
+        try:
+            conn = self.get_connection()
+            with conn.cursor() as cur:
+                query = "SELECT * FROM audit_log WHERE 1=1"
+                params = []
+
+                if device_id:
+                    query += " AND device_id = %s"
+                    params.append(device_id)
+
+                if action:
+                    query += " AND action = %s"
+                    params.append(action)
+
+                query += " ORDER BY timestamp DESC LIMIT %s OFFSET %s"
+                params.extend([limit, offset])
+
+                cur.execute(query, params)
+                logs = cur.fetchall()
+            conn.close()
+
+            # Format logs
+            formatted_logs = []
+            for log in logs:
+                log_dict = dict(log)
+                log_dict["timestamp"] = log_dict["timestamp"].isoformat()
+                formatted_logs.append(log_dict)
+
+            return formatted_logs
+
+        except Exception as e:
+            logger.error("Failed to get audit logs", device_id=device_id, action=action, error=str(e))
             raise

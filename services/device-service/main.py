@@ -13,6 +13,8 @@ import os
 import signal
 import threading
 import time
+import uuid
+from collections import defaultdict, deque
 from functools import wraps
 from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlencode
@@ -26,7 +28,7 @@ from containers import ApplicationContainer, create_container
 from dependency_injector.wiring import Provide, inject
 from device_manager import DeviceManager
 from dotenv import load_dotenv
-from flask import Flask, Response, abort, jsonify, redirect, render_template_string, request, url_for
+from flask import Flask, Response, abort, g, jsonify, redirect, render_template_string, request, url_for
 from flask_cors import CORS
 
 # OpenTelemetry imports
@@ -149,6 +151,11 @@ otel_tracer, otel_meter, api_requests_counter, device_temperature_gauge, request
 app = Flask(__name__)
 CORS(app, resources={r"/*": {"origins": "*"}})
 
+# Enable webhooks in configuration
+app.config["ENABLE_WEBHOOKS"] = os.environ.get("ENABLE_WEBHOOKS", "true").lower() in ("true", "1", "yes")
+app.config["WEBHOOK_SECRET"] = os.environ.get("WEBHOOK_SECRET", str(uuid.uuid4()))
+app.config["VERIFY_WEBHOOKS"] = os.environ.get("VERIFY_WEBHOOKS", "true").lower() in ("true", "1", "yes")
+
 # Instrument Flask app with OpenTelemetry
 FlaskInstrumentor().instrument_app(app)
 RequestsInstrumentor().instrument()
@@ -158,6 +165,15 @@ RedisInstrumentor().instrument()
 # JWT configuration
 JWT_SECRET = os.environ.get("JWT_SECRET", "your-secret-key")
 JWT_ALGORITHM = "HS256"
+
+# Rate limiting configuration
+RATE_LIMIT = int(os.environ.get("API_RATE_LIMIT", "100"))  # Requests per window
+RATE_LIMIT_WINDOW = int(os.environ.get("API_RATE_LIMIT_WINDOW", "60"))  # Window in seconds
+RATE_LIMIT_BY_IP = os.environ.get("API_RATE_LIMIT_BY_IP", "true").lower() in ("true", "1", "yes")
+
+# Store for rate limiting
+rate_limit_store = defaultdict(lambda: deque(maxlen=RATE_LIMIT))
+rate_limit_lock = threading.RLock()
 
 # Database configuration
 DATABASE_CONFIG = {
@@ -448,11 +464,84 @@ def error_response(message: str, status_code: int = 400, details: Any = None) ->
     return response
 
 
+# Rate limiting decorator
+def rate_limit(f):
+    """Rate limiting decorator for API endpoints"""
+
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        with rate_limit_lock:
+            now = time.time()
+            time_limit = now - RATE_LIMIT_WINDOW
+
+            # Determine client identifier (IP or user ID)
+            if RATE_LIMIT_BY_IP:
+                client_id = request.remote_addr
+            else:
+                client_id = get_current_user_id() or request.remote_addr
+
+            # Clean up old requests
+            client_requests = rate_limit_store[client_id]
+            while client_requests and client_requests[0] < time_limit:
+                client_requests.popleft()
+
+            # Check if rate limit is exceeded
+            if len(client_requests) >= RATE_LIMIT:
+                # Add rate limit headers
+                response = jsonify(error_response("Rate limit exceeded", 429))
+                response.headers["X-RateLimit-Limit"] = str(RATE_LIMIT)
+                response.headers["X-RateLimit-Remaining"] = "0"
+                response.headers["X-RateLimit-Reset"] = str(int(client_requests[0] + RATE_LIMIT_WINDOW))
+                response.headers["Retry-After"] = str(int(client_requests[0] + RATE_LIMIT_WINDOW - now))
+                return response, 429
+
+            # Record request time
+            client_requests.append(now)
+
+            # Add rate limit headers to the request context for later use
+            g.rate_limit = {
+                "limit": RATE_LIMIT,
+                "remaining": RATE_LIMIT - len(client_requests),
+                "reset": int(now + RATE_LIMIT_WINDOW),
+            }
+
+            # Track API request with client ID
+            api_requests_counter.add(
+                1,
+                {
+                    "endpoint": request.path,
+                    "method": request.method,
+                    "client_id": client_id[:16] if len(client_id) > 16 else client_id,  # Truncate long IDs
+                },
+            )
+
+            return f(*args, **kwargs)
+
+    return decorated_function
+
+
+# Response interceptor to add rate limit headers
+@app.after_request
+def add_rate_limit_headers(response):
+    """Add rate limit headers to the response"""
+    if hasattr(g, "rate_limit"):
+        response.headers["X-RateLimit-Limit"] = str(g.rate_limit["limit"])
+        response.headers["X-RateLimit-Remaining"] = str(g.rate_limit["remaining"])
+        response.headers["X-RateLimit-Reset"] = str(g.rate_limit["reset"])
+    return response
+
+
 # Error handlers
 @app.errorhandler(400)
 def bad_request(error: Any) -> Tuple[Any, int]:
     """Handle 400 Bad Request errors"""
     return jsonify(error_response("Bad Request", 400)), 400
+
+
+@app.errorhandler(429)
+def too_many_requests(error: Any) -> Tuple[Any, int]:
+    """Handle 429 Too Many Requests errors"""
+    return jsonify(error_response("Rate limit exceeded", 429)), 429
 
 
 @app.errorhandler(401)
@@ -698,6 +787,7 @@ def auth_thermoworks_refresh():
 
 @app.route("/api/devices", methods=["GET"])
 @jwt_required
+@rate_limit
 def get_devices() -> Any:
     """
     Get all devices for the authenticated user
@@ -878,6 +968,7 @@ def get_devices() -> Any:
 
 
 @app.route("/api/devices/<device_id>", methods=["GET"])
+@rate_limit
 def get_device(device_id):
     """
     Get a specific device
@@ -895,6 +986,21 @@ def get_device(device_id):
 
         # Get device
         device = thermoworks_client.get_device(device_id)
+
+        # Enrich with database information if available
+        if device_manager:
+            try:
+                db_device = device_manager.get_device(device_id)
+                if db_device:
+                    # Add database-specific fields
+                    device_data = device.to_dict() if hasattr(device, "to_dict") else device
+                    device_data["user_id"] = db_device.get("user_id")
+                    device_data["configuration"] = db_device.get("configuration", {})
+                    device_data["created_at"] = db_device.get("created_at")
+                    device_data["updated_at"] = db_device.get("updated_at")
+                    device = device_data
+            except Exception as e:
+                logger.warning(f"Failed to get device from database: {e}")
 
         return jsonify(
             success_response(
@@ -917,7 +1023,157 @@ def get_device(device_id):
         return jsonify(error_response(f"Error getting device: {str(e)}", 500)), 500
 
 
+@app.route("/api/devices/<device_id>", methods=["PUT"])
+@jwt_required
+@rate_limit
+def update_device(device_id):
+    """
+    Update a specific device
+
+    Args:
+        device_id: Device ID
+
+    Returns:
+        JSON with updated device details
+    """
+    with otel_tracer.start_as_current_span("update_device") as span:
+        span.set_attribute("device_id", device_id)
+
+        try:
+            # Track API request
+            api_requests_counter.add(1, {"endpoint": f"/api/devices/{device_id}", "method": "PUT"})
+
+            # Ensure authenticated
+            if not thermoworks_client.token:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("Not authenticated", 401)), 401
+
+            # Get user ID from JWT
+            user_id = get_current_user_id()
+            if not user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("User ID not found", 401)), 401
+
+            span.set_attribute("user_id", user_id)
+
+            # Get request data
+            data = request.json
+            if not data:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "invalid_request")
+                return jsonify(error_response("No data provided", 400)), 400
+
+            # Validate request data
+            if "name" not in data and "configuration" not in data:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "invalid_request")
+                return jsonify(error_response("At least one of 'name' or 'configuration' must be provided", 400)), 400
+
+            # Check if device exists in database
+            if not device_manager:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "database_error")
+                return jsonify(error_response("Database not available", 500)), 500
+
+            # Fetch device from database
+            db_device = device_manager.get_device(device_id)
+            if not db_device:
+                # Try to get from ThermoWorks API
+                try:
+                    cloud_device = thermoworks_client.get_device(device_id)
+                    # Register device in database with user association
+                    device_data = {
+                        "device_id": cloud_device.device_id,
+                        "name": cloud_device.name,
+                        "device_type": "thermoworks",
+                        "user_id": user_id,
+                        "configuration": {
+                            "model": cloud_device.model,
+                            "firmware_version": cloud_device.firmware_version,
+                            "probes": cloud_device.probes,
+                        },
+                    }
+                    device_manager.register_device(device_data)
+                    db_device = device_manager.get_device(device_id)
+                except Exception as e:
+                    span.set_attribute("error", True)
+                    span.set_attribute("error.message", str(e))
+                    logger.error(f"Device {device_id} not found in database or ThermoWorks API: {e}")
+                    return jsonify(error_response(f"Device not found: {str(e)}", 404)), 404
+
+            # Check user authorization for device
+            if db_device.get("user_id") != user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authorization_error")
+                return jsonify(error_response("Not authorized to update this device", 403)), 403
+
+            # Update device in database
+            update_data = {}
+
+            # Only update fields that were provided
+            if "name" in data:
+                update_data["name"] = data["name"]
+                span.set_attribute("update.name", True)
+
+            # Update configuration if provided
+            if "configuration" in data:
+                # Merge existing configuration with new configuration
+                existing_config = db_device.get("configuration", {})
+                updated_config = {**existing_config, **data["configuration"]}
+                update_data["configuration"] = updated_config
+                span.set_attribute("update.configuration", True)
+
+            # Add metadata
+            update_data["updated_at"] = datetime.datetime.now().isoformat()
+
+            # Perform the update
+            updated_device = device_manager.update_device(device_id, update_data)
+            span.set_attribute("update.success", True)
+
+            # Get the updated device from database
+            db_device = device_manager.get_device(device_id)
+
+            # Add audit log for the update
+            try:
+                audit_data = {
+                    "action": "update_device",
+                    "device_id": device_id,
+                    "user_id": user_id,
+                    "changes": update_data,
+                    "timestamp": datetime.datetime.now().isoformat(),
+                }
+                device_manager.add_audit_log(audit_data)
+            except Exception as e:
+                logger.warning(f"Failed to add audit log: {e}")
+
+            return jsonify(
+                success_response(
+                    {
+                        "device": db_device,
+                        "updated_at": update_data["updated_at"],
+                    },
+                    "Device updated successfully",
+                )
+            )
+
+        except ValueError as e:
+            span.set_attribute("error", True)
+            span.set_attribute("error.type", "value_error")
+            span.set_attribute("error.message", str(e))
+            logger.error(f"Value error updating device {device_id}: {e}")
+            return jsonify(error_response(f"Value error: {str(e)}", 400)), 400
+        except Exception as e:
+            span.set_attribute("error", True)
+            span.set_attribute("error.type", "unexpected_error")
+            span.set_attribute("error.message", str(e))
+            logger.error(f"Error updating device {device_id}: {e}")
+            return jsonify(error_response(f"Error updating device: {str(e)}", 500)), 500
+
+
 @app.route("/api/devices/<device_id>/temperature", methods=["GET"])
+@rate_limit
 def get_device_temperature(device_id):
     """
     Get current temperature readings for a device
@@ -1087,6 +1343,7 @@ def get_device_temperature(device_id):
 
 
 @app.route("/api/devices/<device_id>/history", methods=["GET"])
+@rate_limit
 def get_device_history(device_id):
     """
     Get historical temperature readings for a device
@@ -1144,6 +1401,7 @@ def get_device_history(device_id):
 
 
 @app.route("/api/devices/discover", methods=["POST"])
+@rate_limit
 def discover_devices():
     """
     Discover ThermoWorks devices
@@ -1179,6 +1437,7 @@ def discover_devices():
 
 
 @app.route("/api/devices/<device_id>/health", methods=["GET"])
+@rate_limit
 def get_device_health(device_id):
     """
     Get the health status of a device
@@ -1230,8 +1489,482 @@ def get_device_health(device_id):
         )
 
 
+@app.route("/api/devices/<device_id>", methods=["DELETE"])
+@jwt_required
+@rate_limit
+def delete_device(device_id):
+    """Delete a specific device (soft delete)
+
+    Args:
+        device_id: Device ID
+
+    Returns:
+        JSON response indicating success or failure
+    """
+    with otel_tracer.start_as_current_span("delete_device") as span:
+        span.set_attribute("device_id", device_id)
+
+        try:
+            # Track API request
+            api_requests_counter.add(1, {"endpoint": f"/api/devices/{device_id}", "method": "DELETE"})
+
+            # Get user ID from JWT
+            user_id = get_current_user_id()
+            if not user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("User ID not found", 401)), 401
+
+            span.set_attribute("user_id", user_id)
+
+            # Check if device exists in database
+            if not device_manager:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "database_error")
+                return jsonify(error_response("Database not available", 500)), 500
+
+            # Get device from database
+            db_device = device_manager.get_device(device_id)
+            if not db_device:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "not_found")
+                return jsonify(error_response(f"Device {device_id} not found", 404)), 404
+
+            # Check if user is authorized to delete the device
+            if db_device.get("user_id") != user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authorization_error")
+                return jsonify(error_response("Not authorized to delete this device", 403)), 403
+
+            # Soft delete the device
+            result = device_manager.delete_device(device_id)
+            if not result:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "delete_failed")
+                return jsonify(error_response(f"Failed to delete device {device_id}", 500)), 500
+
+            # Add audit log
+            try:
+                audit_data = {
+                    "action": "delete_device",
+                    "device_id": device_id,
+                    "user_id": user_id,
+                    "changes": {"active": False},
+                    "timestamp": datetime.datetime.now().isoformat(),
+                }
+                device_manager.add_audit_log(audit_data)
+            except Exception as e:
+                logger.warning(f"Failed to add audit log: {e}")
+
+            span.set_attribute("delete.success", True)
+
+            return jsonify(
+                success_response(
+                    {
+                        "device_id": device_id,
+                        "deleted": True,
+                        "timestamp": datetime.datetime.now().isoformat(),
+                    },
+                    "Device deleted successfully",
+                )
+            )
+
+        except Exception as e:
+            span.set_attribute("error", True)
+            span.set_attribute("error.type", "unexpected_error")
+            span.set_attribute("error.message", str(e))
+            logger.error(f"Error deleting device {device_id}: {e}")
+            return jsonify(error_response(f"Error deleting device: {str(e)}", 500)), 500
+    """
+    Get the health status of a device
+
+    Args:
+        device_id: Device ID
+
+    Returns:
+        JSON with device health status
+    """
+    try:
+        # Ensure authenticated
+        if not thermoworks_client.token:
+            return jsonify(error_response("Not authenticated", 401)), 401
+
+        # Get device
+        device = thermoworks_client.get_device(device_id)
+
+        # Extract health information
+        health = {
+            "battery_level": device.battery_level,
+            "signal_strength": device.signal_strength,
+            "status": "online" if device.is_online else "offline",
+            "last_seen": device.last_seen,
+        }
+
+        return jsonify(
+            success_response(
+                {
+                    "device_id": device_id,
+                    "health": health,
+                }
+            )
+        )
+    except ThermoworksAuthenticationError as e:
+        logger.error(f"Authentication error getting device health {device_id}: {e}")
+        return jsonify(error_response(f"Authentication failed: {str(e)}", 401)), 401
+    except ThermoworksAPIError as e:
+        logger.error(f"API error getting device health {device_id}: {e}")
+        return jsonify(error_response(f"API error: {str(e)}", 400)), 400
+    except ValueError as e:
+        logger.error(f"Device {device_id} not found: {e}")
+        return jsonify(error_response(f"Device not found: {str(e)}", 404)), 404
+    except Exception as e:
+        logger.error(f"Error getting device health {device_id}: {e}")
+        return (
+            jsonify(error_response(f"Error getting device health: {str(e)}", 500)),
+            500,
+        )
+
+
+@app.route("/api/devices/<device_id>/probes", methods=["GET"])
+@jwt_required
+@rate_limit
+def get_device_probes(device_id):
+    """Get all probes for a specific device
+
+    Args:
+        device_id: Device ID
+
+    Returns:
+        JSON with device probes information
+    """
+    with otel_tracer.start_as_current_span("get_device_probes") as span:
+        span.set_attribute("device_id", device_id)
+
+        try:
+            # Track API request
+            api_requests_counter.add(1, {"endpoint": f"/api/devices/{device_id}/probes", "method": "GET"})
+
+            # Ensure authenticated
+            if not thermoworks_client.token:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("Not authenticated", 401)), 401
+
+            # Get user ID from JWT
+            user_id = get_current_user_id()
+            if not user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("User ID not found", 401)), 401
+
+            span.set_attribute("user_id", user_id)
+
+            # Get device from API
+            try:
+                device = thermoworks_client.get_device(device_id)
+            except Exception as e:
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", str(e))
+                logger.error(f"Error getting device from ThermoWorks API: {e}")
+
+                # Try database fallback if API call fails
+                if device_manager:
+                    db_device = device_manager.get_device(device_id)
+                    if not db_device:
+                        return jsonify(error_response(f"Device {device_id} not found", 404)), 404
+
+                    # Check user authorization
+                    if db_device.get("user_id") != user_id:
+                        return jsonify(error_response("Not authorized to access this device", 403)), 403
+
+                    # Get probes from device configuration
+                    configuration = db_device.get("configuration", {})
+                    probes = configuration.get("probes", [])
+
+                    return jsonify(
+                        success_response(
+                            {
+                                "device_id": device_id,
+                                "probes": probes,
+                                "count": len(probes),
+                                "source": "database",
+                            }
+                        )
+                    )
+                else:
+                    return jsonify(error_response(f"Device {device_id} not found", 404)), 404
+
+            # Extract probes information
+            probes = device.probes if hasattr(device, "probes") else []
+
+            # If we got the device from API, but no probes information, check database
+            if not probes and device_manager:
+                db_device = device_manager.get_device(device_id)
+                if db_device:
+                    configuration = db_device.get("configuration", {})
+                    db_probes = configuration.get("probes", [])
+                    if db_probes:
+                        probes = db_probes
+
+            # For cleaner response, convert any DeviceProbe objects to dicts
+            formatted_probes = []
+            for probe in probes:
+                if hasattr(probe, "to_dict"):
+                    formatted_probes.append(probe.to_dict())
+                elif isinstance(probe, dict):
+                    formatted_probes.append(probe)
+                else:
+                    # Basic conversion of unknown object type
+                    formatted_probes.append({"id": str(probe), "name": f"Probe {probe}"})
+
+            return jsonify(
+                success_response(
+                    {
+                        "device_id": device_id,
+                        "probes": formatted_probes,
+                        "count": len(formatted_probes),
+                        "source": "api",
+                    }
+                )
+            )
+
+        except Exception as e:
+            span.set_attribute("error", True)
+            span.set_attribute("error.type", "unexpected_error")
+            span.set_attribute("error.message", str(e))
+            logger.error(f"Error getting probes for device {device_id}: {e}")
+            return jsonify(error_response(f"Error getting probes: {str(e)}", 500)), 500
+
+
+@app.route("/api/devices/<device_id>/probes/<probe_id>", methods=["GET"])
+@rate_limit
+def get_device_probe(device_id, probe_id):
+    """Get specific probe information for a device
+
+    Args:
+        device_id: Device ID
+        probe_id: Probe ID
+
+    Returns:
+        JSON with probe information
+    """
+    with otel_tracer.start_as_current_span("get_device_probe") as span:
+        span.set_attribute("device_id", device_id)
+        span.set_attribute("probe_id", probe_id)
+
+        try:
+            # Track API request
+            api_requests_counter.add(1, {"endpoint": f"/api/devices/{device_id}/probes/{probe_id}", "method": "GET"})
+
+            # Ensure authenticated
+            if not thermoworks_client.token:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("Not authenticated", 401)), 401
+
+            # Get device from API
+            try:
+                device = thermoworks_client.get_device(device_id)
+            except Exception as e:
+                span.set_attribute("error", True)
+                span.set_attribute("error.message", str(e))
+                logger.error(f"Error getting device from ThermoWorks API: {e}")
+                return jsonify(error_response(f"Device {device_id} not found", 404)), 404
+
+            # Find the specific probe
+            probes = device.probes if hasattr(device, "probes") else []
+            target_probe = None
+
+            for probe in probes:
+                probe_id_value = probe.get("id") if isinstance(probe, dict) else getattr(probe, "id", None)
+                if str(probe_id_value) == probe_id:
+                    target_probe = probe
+                    break
+
+            if not target_probe:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "not_found")
+                return jsonify(error_response(f"Probe {probe_id} not found for device {device_id}", 404)), 404
+
+            # Format probe data
+            if hasattr(target_probe, "to_dict"):
+                probe_data = target_probe.to_dict()
+            elif isinstance(target_probe, dict):
+                probe_data = target_probe
+            else:
+                # Basic conversion of unknown object type
+                probe_data = {"id": probe_id, "name": f"Probe {probe_id}"}
+
+            # Get current temperature for this probe if available
+            temperature = None
+            try:
+                readings = thermoworks_client.get_device_temperature(device_id, probe_id=probe_id)
+                if readings and len(readings) > 0:
+                    temperature = readings[0].to_dict() if hasattr(readings[0], "to_dict") else readings[0]
+            except Exception as e:
+                logger.warning(f"Failed to get temperature for probe {probe_id}: {e}")
+
+            # Include temperature in response if available
+            if temperature:
+                probe_data["current_temperature"] = temperature
+
+            return jsonify(
+                success_response(
+                    {
+                        "device_id": device_id,
+                        "probe_id": probe_id,
+                        "probe": probe_data,
+                    }
+                )
+            )
+
+        except Exception as e:
+            span.set_attribute("error", True)
+            span.set_attribute("error.type", "unexpected_error")
+            span.set_attribute("error.message", str(e))
+            logger.error(f"Error getting probe {probe_id} for device {device_id}: {e}")
+            return jsonify(error_response(f"Error getting probe: {str(e)}", 500)), 500
+
+
+@app.route("/api/devices/<device_id>/probes/<probe_id>", methods=["PUT"])
+@jwt_required
+@rate_limit
+def update_device_probe(device_id, probe_id):
+    """Update probe configuration
+
+    Args:
+        device_id: Device ID
+        probe_id: Probe ID
+
+    Returns:
+        JSON with updated probe information
+    """
+    with otel_tracer.start_as_current_span("update_device_probe") as span:
+        span.set_attribute("device_id", device_id)
+        span.set_attribute("probe_id", probe_id)
+
+        try:
+            # Track API request
+            api_requests_counter.add(1, {"endpoint": f"/api/devices/{device_id}/probes/{probe_id}", "method": "PUT"})
+
+            # Get user ID from JWT
+            user_id = get_current_user_id()
+            if not user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authentication_error")
+                return jsonify(error_response("User ID not found", 401)), 401
+
+            span.set_attribute("user_id", user_id)
+
+            # Get request data
+            data = request.json
+            if not data:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "invalid_request")
+                return jsonify(error_response("No data provided", 400)), 400
+
+            # Check if device exists in database
+            if not device_manager:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "database_error")
+                return jsonify(error_response("Database not available", 500)), 500
+
+            # Get device from database
+            db_device = device_manager.get_device(device_id)
+            if not db_device:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "not_found")
+                return jsonify(error_response(f"Device {device_id} not found", 404)), 404
+
+            # Check user authorization
+            if db_device.get("user_id") != user_id:
+                span.set_attribute("error", True)
+                span.set_attribute("error.type", "authorization_error")
+                return jsonify(error_response("Not authorized to update this device", 403)), 403
+
+            # Get current configuration
+            configuration = db_device.get("configuration", {})
+            probes = configuration.get("probes", [])
+
+            # Find the probe to update
+            probe_index = None
+            for i, probe in enumerate(probes):
+                if str(probe.get("id")) == probe_id:
+                    probe_index = i
+                    break
+
+            # If probe not found, add it
+            if probe_index is None:
+                # Create new probe entry
+                new_probe = {
+                    "id": probe_id,
+                    "name": data.get("name", f"Probe {probe_id}"),
+                }
+
+                # Add additional fields if provided
+                for field in ["type", "color", "target_temp", "high_alarm", "low_alarm"]:
+                    if field in data:
+                        new_probe[field] = data[field]
+
+                # Add to probes list
+                probes.append(new_probe)
+            else:
+                # Update existing probe
+                for field in ["name", "type", "color", "target_temp", "high_alarm", "low_alarm"]:
+                    if field in data:
+                        probes[probe_index][field] = data[field]
+
+            # Update configuration
+            configuration["probes"] = probes
+
+            # Update device in database
+            update_data = {"configuration": configuration, "updated_at": datetime.datetime.now().isoformat()}
+
+            device_manager.update_device(device_id, update_data)
+
+            # Add audit log
+            try:
+                audit_data = {
+                    "action": "update_probe",
+                    "device_id": device_id,
+                    "user_id": user_id,
+                    "changes": {"probe_id": probe_id, "update": data},
+                    "timestamp": datetime.datetime.now().isoformat(),
+                }
+                device_manager.add_audit_log(audit_data)
+            except Exception as e:
+                logger.warning(f"Failed to add audit log: {e}")
+
+            # Get updated probe
+            updated_probe = None
+            for probe in probes:
+                if str(probe.get("id")) == probe_id:
+                    updated_probe = probe
+                    break
+
+            return jsonify(
+                success_response(
+                    {
+                        "device_id": device_id,
+                        "probe_id": probe_id,
+                        "probe": updated_probe,
+                        "updated_at": update_data["updated_at"],
+                    },
+                    "Probe updated successfully",
+                )
+            )
+
+        except Exception as e:
+            span.set_attribute("error", True)
+            span.set_attribute("error.type", "unexpected_error")
+            span.set_attribute("error.message", str(e))
+            logger.error(f"Error updating probe {probe_id} for device {device_id}: {e}")
+            return jsonify(error_response(f"Error updating probe: {str(e)}", 500)), 500
+
+
 @app.route("/api/sync", methods=["POST"])
 @jwt_required
+@rate_limit
 def sync():
     """
     Manually trigger a data sync for the authenticated user
@@ -1363,6 +2096,11 @@ def swagger_json():
             "title": "Device Service API",
             "description": "API for managing ThermoWorks devices and retrieving temperature data",
             "version": "1.0.0",
+            "contact": {
+                "name": "Device Service Team",
+                "email": "support@grillstats.com",
+                "url": "https://grillstats.com/docs",
+            },
         },
         "servers": [
             {
@@ -1370,11 +2108,22 @@ def swagger_json():
                 "description": "Current server",
             },
         ],
+        "tags": [
+            {"name": "health", "description": "Health check endpoints"},
+            {"name": "auth", "description": "Authentication endpoints"},
+            {"name": "devices", "description": "Device management endpoints"},
+            {"name": "temperature", "description": "Temperature data endpoints"},
+            {"name": "probes", "description": "Probe management endpoints"},
+            {"name": "webhooks", "description": "Webhook endpoints for real-time updates"},
+        ],
+        "security": [{"bearerAuth": []}],
         "paths": {
             "/health": {
                 "get": {
+                    "tags": ["health"],
                     "summary": "Health check",
                     "description": "Check the health of the service",
+                    "operationId": "healthCheck",
                     "responses": {
                         "200": {
                             "description": "Service is healthy",
@@ -1388,6 +2137,16 @@ def swagger_json():
                                                 "type": "string",
                                                 "format": "date-time",
                                             },
+                                            "service": {"type": "string"},
+                                            "version": {"type": "string"},
+                                            "telemetry": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "opentelemetry": {"type": "string"},
+                                                    "tracing": {"type": "boolean"},
+                                                    "metrics": {"type": "boolean"},
+                                                },
+                                            },
                                         },
                                     },
                                 },
@@ -1395,6 +2154,20 @@ def swagger_json():
                         },
                     },
                 },
+            },
+            "/metrics": {
+                "get": {
+                    "tags": ["health"],
+                    "summary": "Prometheus metrics",
+                    "description": "Get Prometheus metrics for monitoring",
+                    "operationId": "getPrometheusMetrics",
+                    "responses": {
+                        "200": {
+                            "description": "Prometheus metrics in text format",
+                            "content": {"text/plain": {"schema": {"type": "string"}}},
+                        }
+                    },
+                }
             },
             "/api/auth/thermoworks": {
                 "get": {
@@ -1990,6 +2763,14 @@ def swagger_json():
             },
         },
         "components": {
+            "securitySchemes": {
+                "bearerAuth": {
+                    "type": "http",
+                    "scheme": "bearer",
+                    "bearerFormat": "JWT",
+                    "description": "JWT Authorization header using the Bearer scheme",
+                }
+            },
             "schemas": {
                 "DeviceInfo": {
                     "type": "object",

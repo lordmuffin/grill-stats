@@ -16,6 +16,7 @@ import secrets
 import threading
 import time
 import uuid
+from collections import defaultdict, deque
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any, Dict, List, Optional, Tuple, Union
@@ -116,6 +117,108 @@ class ThermoworksConnectionError(ThermoworksAPIError):
     pass
 
 
+class RateLimitExceededError(ThermoworksAPIError):
+    """Exception raised when API rate limit is exceeded"""
+
+    pass
+
+
+class RateLimiter:
+    """Rate limiter implementation using token bucket algorithm"""
+
+    def __init__(self, rate_limit: int = 1000, time_window: int = 3600, burst_limit: int = 10):
+        """
+        Initialize rate limiter
+
+        Args:
+            rate_limit: Maximum number of requests allowed in the time window
+            time_window: Time window in seconds
+            burst_limit: Maximum number of requests allowed in a burst
+        """
+        self.rate_limit = rate_limit  # requests per time window
+        self.time_window = time_window  # time window in seconds
+        self.burst_limit = burst_limit  # maximum tokens that can be stored
+
+        # Rate per second
+        self.rate = rate_limit / time_window
+
+        # Token bucket for each endpoint
+        self.buckets = defaultdict(lambda: {"tokens": burst_limit, "last_refill": time.time()})
+
+        # Request history for each endpoint
+        self.history = defaultdict(lambda: deque(maxlen=rate_limit))
+
+        # Lock for thread safety
+        self.lock = threading.RLock()
+
+    def _refill_tokens(self, endpoint: str) -> None:
+        """Refill tokens based on elapsed time"""
+        now = time.time()
+        bucket = self.buckets[endpoint]
+        elapsed = now - bucket["last_refill"]
+        new_tokens = elapsed * self.rate
+
+        # Add new tokens up to the burst limit
+        bucket["tokens"] = min(bucket["tokens"] + new_tokens, self.burst_limit)
+        bucket["last_refill"] = now
+
+    def check_rate_limit(self, endpoint: str) -> bool:
+        """Check if a request can be made for the given endpoint
+
+        Args:
+            endpoint: API endpoint to check
+
+        Returns:
+            True if request is allowed, False if rate limit is exceeded
+        """
+        with self.lock:
+            # Clean up old requests from history
+            now = time.time()
+            time_limit = now - self.time_window
+            history = self.history[endpoint]
+
+            # Count requests in the time window
+            while history and history[0] < time_limit:
+                history.popleft()
+
+            # Check if we've hit the rate limit
+            if len(history) >= self.rate_limit:
+                return False
+
+            # Refill tokens
+            self._refill_tokens(endpoint)
+
+            # Check if we have enough tokens
+            if self.buckets[endpoint]["tokens"] < 1:
+                return False
+
+            # Consume a token and record request time
+            self.buckets[endpoint]["tokens"] -= 1
+            history.append(now)
+
+            return True
+
+    def wait_if_needed(self, endpoint: str, max_wait: float = 10.0) -> None:
+        """Wait if rate limit is exceeded, up to max_wait seconds
+
+        Args:
+            endpoint: API endpoint to check
+            max_wait: Maximum time to wait in seconds
+
+        Raises:
+            RateLimitExceededError: If rate limit is exceeded and max_wait is reached
+        """
+        start_time = time.time()
+
+        while time.time() - start_time < max_wait:
+            if self.check_rate_limit(endpoint):
+                return
+            time.sleep(0.1)
+
+        # If we get here, we've waited too long
+        raise RateLimitExceededError(f"Rate limit exceeded for endpoint {endpoint}")
+
+
 class ThermoworksClient:
     """
     ThermoWorks Cloud API Client
@@ -213,6 +316,14 @@ class ThermoworksClient:
         self._device_cache: Dict[str, DeviceInfo] = {}
         self._device_cache_timestamp = 0
         self._device_cache_lock = threading.Lock()
+
+        # Rate limiter
+        # Default rate limit: 1000 requests per hour, 10 burst
+        self.rate_limiter = RateLimiter(
+            rate_limit=int(os.environ.get("THERMOWORKS_RATE_LIMIT", "1000")),
+            time_window=int(os.environ.get("THERMOWORKS_RATE_WINDOW", "3600")),
+            burst_limit=int(os.environ.get("THERMOWORKS_BURST_LIMIT", "10")),
+        )
 
         # Load token if available
         self._load_token()
@@ -510,7 +621,7 @@ class ThermoworksClient:
         """
         if not self.token:
             raise ThermoworksAuthenticationError("No token available")
-        
+
         # Get the token object and check for refresh_token to satisfy type checker
         token = self.token
         if not token.refresh_token:
@@ -638,6 +749,14 @@ class ThermoworksClient:
             ThermoworksConnectionError: If there is a connection error
         """
         self._ensure_authenticated()
+
+        # Apply rate limiting
+        api_endpoint = endpoint.split("?")[0]  # Remove query params for rate limiting
+        try:
+            self.rate_limiter.wait_if_needed(api_endpoint)
+        except RateLimitExceededError as e:
+            logger.warning(f"Rate limit exceeded: {e}")
+            # We'll still try the request, but log the warning
 
         url = f"{self.base_url}/{endpoint.lstrip('/')}"
         request_headers = {
