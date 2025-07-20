@@ -113,3 +113,6 @@ temp/
 .Trashes
 ehthumbs.db
 Thumbs.db
+
+# Claude
+trees/
