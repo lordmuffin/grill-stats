@@ -131,7 +131,7 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Create integration tests with mock ThermoWorks API
 - [x] Implement performance tests
 - [x] Generate OpenAPI/Swagger documentation
-- [ ] Create API client SDK
+- [x] Create API client SDK
 - [x] Write developer documentation
 - [ ] Create troubleshooting guide
 - [x] Add example API calls to docs
