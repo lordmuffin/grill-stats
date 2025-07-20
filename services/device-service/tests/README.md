@@ -1,6 +1,6 @@
 # Device Service Tests
 
-This directory contains tests for the Device Service, including unit tests, integration tests, and database tests.
+This directory contains tests for the Device Service, including unit tests, integration tests, database tests, and performance tests.
 
 ## Test Organization
 
@@ -12,6 +12,7 @@ The tests are organized into several files, each testing a specific aspect of th
 - `test_thermoworks_client.py`: Tests for the ThermoWorks API client, including rate limiting
 - `test_webhook_handler.py`: Tests for webhook handling functionality
 - `test_database.py`: Tests for database models, migrations, and audit logging
+- `test_performance.py`: Performance tests for all device service operations
 
 ## Running Tests
 
@@ -63,6 +64,7 @@ Tests require the following dependencies:
 - pytest-cov (for coverage reports)
 - SQLAlchemy
 - Flask
+- statistics (for performance test analysis)
 
 Install testing dependencies with:
 
@@ -77,6 +79,22 @@ The tests use a combination of:
 1. **Mocks**: For external dependencies like the ThermoWorks API
 2. **In-memory databases**: For testing database models and operations
 3. **Flask test client**: For testing API endpoints
+
+## Performance Testing
+
+Performance tests ensure the service meets the performance requirements specified in the project documentation. These tests measure:
+
+- Response times for various operations
+- Throughput under different load conditions
+- Scalability with increasing device counts and concurrent users
+
+See [PERFORMANCE_TESTING.md](PERFORMANCE_TESTING.md) for detailed information about performance tests.
+
+To run only performance tests:
+
+```bash
+./run_tests.py tests/test_performance.py
+```
 
 ## Adding New Tests
 
