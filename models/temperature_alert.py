@@ -19,7 +19,7 @@ class AlertType(enum.Enum):
 class TemperatureAlert:
     """Temperature Alert model for monitoring probe temperatures"""
 
-    model: Any  # Will be set to TemperatureAlertModel in __init__
+    model: Type[Any]  # Will be set to TemperatureAlertModel in __init__
     db: SQLAlchemy
 
     def __init__(self, db: SQLAlchemy) -> None:
@@ -27,7 +27,7 @@ class TemperatureAlert:
 
         # Define TemperatureAlertModel class with type annotation
         # This addresses the "db.Model is not defined" error
-        TemperatureAlertModel = self.db.Model
+        TemperatureAlertModel: Type[Any] = self.db.Model
 
         class TemperatureAlertModel(TemperatureAlertModel):  # type: ignore
             __tablename__ = "temperature_alerts"
@@ -43,7 +43,7 @@ class TemperatureAlert:
             max_temperature = Column(Float, nullable=True)  # For range alerts
             threshold_value = Column(Float, nullable=True)  # For rising/falling alerts
 
-            alert_type: Any = Column(Enum(AlertType), nullable=False, default=AlertType.TARGET)
+            alert_type: AlertType = Column(Enum(AlertType), nullable=False, default=AlertType.TARGET)
             temperature_unit = Column(String(1), default="F")  # F or C
 
             # Alert state
@@ -137,7 +137,9 @@ class TemperatureAlert:
 
         self.model = TemperatureAlertModel  # type: ignore
 
-    def create_alert(self, user_id: int, device_id: str, probe_id: str, alert_type: AlertType, **kwargs: Any) -> Any:
+    def create_alert(
+        self, user_id: int, device_id: str, probe_id: str, alert_type: AlertType, **kwargs: Any
+    ) -> Any:  # Returns TemperatureAlertModel
         """Create a new temperature alert"""
         alert = self.model(
             user_id=user_id,
@@ -150,7 +152,7 @@ class TemperatureAlert:
         self.db.session.commit()
         return alert
 
-    def get_user_alerts(self, user_id: int, active_only: bool = True) -> List[Any]:
+    def get_user_alerts(self, user_id: int, active_only: bool = True) -> List[Any]:  # Returns List[TemperatureAlertModel]
         """Get all alerts for a user"""
         query = self.model.query.filter_by(user_id=user_id)
         if active_only:
@@ -158,14 +160,18 @@ class TemperatureAlert:
         result: List[Any] = query.all()
         return result
 
-    def get_alert_by_id(self, alert_id: int, user_id: Optional[int] = None) -> Optional[Any]:
+    def get_alert_by_id(
+        self, alert_id: int, user_id: Optional[int] = None
+    ) -> Optional[Any]:  # Returns Optional[TemperatureAlertModel]
         """Get a specific alert by ID"""
         query = self.model.query.filter_by(id=alert_id)
         if user_id:
             query = query.filter_by(user_id=user_id)
         return query.first()
 
-    def get_alerts_for_device_probe(self, device_id: str, probe_id: str, active_only: bool = True) -> List[Any]:
+    def get_alerts_for_device_probe(
+        self, device_id: str, probe_id: str, active_only: bool = True
+    ) -> List[Any]:  # Returns List[TemperatureAlertModel]
         """Get all alerts for a specific device/probe combination"""
         query = self.model.query.filter_by(device_id=device_id, probe_id=probe_id)
         if active_only:
@@ -173,12 +179,14 @@ class TemperatureAlert:
         result: List[Any] = query.all()
         return result
 
-    def get_active_alerts(self) -> List[Any]:
+    def get_active_alerts(self) -> List[Any]:  # Returns List[TemperatureAlertModel]
         """Get all active alerts for monitoring"""
         result: List[Any] = self.model.query.filter_by(is_active=True).all()
         return result
 
-    def update_alert(self, alert_id: int, user_id: int, **kwargs: Any) -> Optional[Any]:
+    def update_alert(
+        self, alert_id: int, user_id: int, **kwargs: Any
+    ) -> Optional[Any]:  # Returns Optional[TemperatureAlertModel]
         """Update an existing alert"""
         alert = self.get_alert_by_id(alert_id, user_id)
         if alert:

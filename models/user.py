@@ -19,8 +19,8 @@ class User(UserMixin):
     failed_login_attempts: Optional[int] = None
     last_login: Optional[datetime] = None
     created_at: Optional[datetime] = None
-    model: Any  # Will be set to UserModel in __init__
-    UserModel: Any  # Will be set in __init__
+    model: Type[Any]  # Will be set to UserModel in __init__
+    UserModel: Type[Any]  # Will be set in __init__
     db: SQLAlchemy
 
     def __init__(self, db: SQLAlchemy) -> None:
@@ -28,7 +28,7 @@ class User(UserMixin):
 
         # Define UserModel class with type annotation
         # This addresses the "db.Model is not defined" error
-        UserModel = self.db.Model
+        UserModel: Type[Any] = self.db.Model
 
         class UserModel(UserModel, UserMixin):  # type: ignore
             __tablename__ = "users"
@@ -60,22 +60,22 @@ class User(UserMixin):
         # Make UserModel accessible from outside
         self.UserModel = UserModel  # type: ignore
 
-    def create_user(self, email: str, password_hash: str, name: Optional[str] = None) -> Any:
+    def create_user(self, email: str, password_hash: str, name: Optional[str] = None) -> Any:  # Returns UserModel
         """Create a new user"""
         user = self.model(email=email, password=password_hash, name=name)
         self.db.session.add(user)
         self.db.session.commit()
         return user
 
-    def get_user_by_email(self, email: str) -> Optional[Any]:
+    def get_user_by_email(self, email: str) -> Optional[Any]:  # Returns Optional[UserModel]
         """Get a user by email"""
         return self.model.query.filter_by(email=email).first()
 
-    def get_user_by_id(self, user_id: Union[str, int]) -> Optional[Any]:
+    def get_user_by_id(self, user_id: Union[str, int]) -> Optional[Any]:  # Returns Optional[UserModel]
         """Get a user by ID"""
         return self.model.query.get(int(user_id))
 
-    def increment_failed_login(self, user: Any) -> None:
+    def increment_failed_login(self, user: Any) -> None:  # user is UserModel
         """Increment failed login attempts"""
         user.failed_login_attempts += 1
         # Lock account after 5 failed attempts
@@ -83,13 +83,13 @@ class User(UserMixin):
             user.is_locked = True
         self.db.session.commit()
 
-    def reset_failed_login(self, user: Any) -> None:
+    def reset_failed_login(self, user: Any) -> None:  # user is UserModel
         """Reset failed login attempts after successful login"""
         user.failed_login_attempts = 0
         user.last_login = datetime.utcnow()
         self.db.session.commit()
 
-    def check_if_locked(self, user: Optional[Any]) -> bool:
+    def check_if_locked(self, user: Optional[Any]) -> bool:  # user is Optional[UserModel]
         """Check if user account is locked"""
         result = user.is_locked if user else False
         return result
