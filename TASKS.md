@@ -90,7 +90,7 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Create device-service project structure
 - [x] Implement health check endpoint (/health)
 - [x] Set up structured logging with correlation IDs
-- [ ] Configure OpenTelemetry instrumentation
+- [x] Configure OpenTelemetry instrumentation
 - [x] Implement graceful shutdown handling
 - [x] Create Dockerfile with multi-stage build
 - [ ] Set up dependency injection framework
@@ -548,18 +548,18 @@ This document outlines the development tasks organized into milestones for trans
 
 ### Overall Progress
 - Total Tasks: 418
-- Completed: 45
+- Completed: 46
 - In Progress: 0
 - Blocked: 0
 - At Risk: 0
-- Completion: 10.76%
+- Completion: 11.00%
 
 
 ### Milestone Status
 | Milestone | Tasks | Completed | Progress |
 |-----------|-------|-----------|----------|
 | M1: Foundation | 45 | 40 | 88.9% |
-| M2: Device Service | 40 | 5 | 12.5% |
+| M2: Device Service | 40 | 6 | 15.0% |
 | M3: Temperature Service | 40 | 0 | 0% |
 | M4: Web UI | 48 | 0 | 0% |
 | M5: HA Integration | 32 | 0 | 0% |
@@ -585,6 +585,6 @@ This document outlines the development tasks organized into milestones for trans
 
 ---
 
-**Last Updated**: 2025-07-20 (Updated with completed device-service structure and health check implementation)
+**Last Updated**: 2025-07-20 (Updated with completed OpenTelemetry instrumentation for device-service)
 **Next Review**: 2025-08-02
 **Owner**: Development Team
