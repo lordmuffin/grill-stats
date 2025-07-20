@@ -14,7 +14,7 @@ import signal
 import threading
 import time
 from functools import wraps
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Tuple, Union, cast
 from urllib.parse import urlencode
 
 import jwt
@@ -24,12 +24,12 @@ from device_manager import DeviceManager
 from dotenv import load_dotenv
 from flask import Flask, Response, abort, jsonify, redirect, render_template_string, request, url_for
 from flask_cors import CORS
-from psycopg2.extras import RealDictCursor
-from rfx_gateway_client import GatewaySetupStatus, GatewaySetupStep, RFXGatewayClient, RFXGatewayError, WiFiNetwork
-from rfx_gateway_routes import register_gateway_routes
 
 # OpenTelemetry imports
 from opentelemetry import metrics, trace
+from opentelemetry.metrics import Counter, Histogram, ObservableGauge
+from opentelemetry.sdk.metrics import Meter
+from opentelemetry.sdk.trace import Tracer
 from opentelemetry.exporter.prometheus import PrometheusMetricReader
 from opentelemetry.instrumentation.flask import FlaskInstrumentor
 from opentelemetry.instrumentation.psycopg2 import Psycopg2Instrumentor
@@ -37,9 +37,12 @@ from opentelemetry.instrumentation.redis import RedisInstrumentor
 from opentelemetry.instrumentation.requests import RequestsInstrumentor
 from opentelemetry.sdk.metrics import MeterProvider
 from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
-from opentelemetry.sdk.resources import Resource, SERVICE_NAME
+from opentelemetry.sdk.resources import SERVICE_NAME, Resource
 from opentelemetry.sdk.trace import TracerProvider
 from opentelemetry.sdk.trace.export import BatchSpanProcessor, ConsoleSpanExporter
+from psycopg2.extras import RealDictCursor
+from rfx_gateway_client import GatewaySetupStatus, GatewaySetupStep, RFXGatewayClient, RFXGatewayError, WiFiNetwork
+from rfx_gateway_routes import register_gateway_routes
 
 from thermoworks_client import (
     DeviceInfo,
@@ -69,48 +72,59 @@ except ImportError:
 # Load environment variables
 load_dotenv()
 
+
 # OpenTelemetry configuration
-def configure_opentelemetry():
-    """Configure OpenTelemetry instrumentation"""
+def configure_opentelemetry() -> Tuple[Tracer, Meter, Counter, ObservableGauge, Histogram]:
+    """Configure OpenTelemetry instrumentation
+    
+    Returns:
+        Tuple containing:
+        - tracer: The OpenTelemetry tracer for creating spans
+        - meter: The OpenTelemetry meter for creating metrics
+        - api_requests_counter: Counter for tracking API requests
+        - device_temperature_gauge: Gauge for tracking device temperatures
+        - request_duration: Histogram for tracking request durations
+    """
     # Create a resource to identify this service
     resource = Resource.create({SERVICE_NAME: "device-service"})
-    
+
     # Configure tracing
     trace_provider = TracerProvider(resource=resource)
     # Export to console for development (would use Jaeger, Zipkin, or OTLP in production)
     trace_processor = BatchSpanProcessor(ConsoleSpanExporter())
     trace_provider.add_span_processor(trace_processor)
     trace.set_tracer_provider(trace_provider)
-    
+
     # Configure metrics
     prometheus_reader = PrometheusMetricReader()
     metrics_provider = MeterProvider(resource=resource, metric_readers=[prometheus_reader])
     metrics.set_meter_provider(metrics_provider)
-    
+
     # Get a tracer and meter for this service
     tracer = trace.get_tracer("device.service")
     meter = metrics.get_meter("device.service")
-    
+
     # Create some common metrics
     api_requests_counter = meter.create_counter(
         name="api_requests",
         description="Count of API requests",
         unit="1",
     )
-    
+
     device_temperature_gauge = meter.create_observable_gauge(
         name="device_temperature",
         description="Current temperature of devices",
         unit="celsius",
     )
-    
+
     request_duration = meter.create_histogram(
         name="request_duration",
         description="Duration of API requests",
         unit="ms",
     )
-    
+
     return tracer, meter, api_requests_counter, device_temperature_gauge, request_duration
+
 
 # Configure OpenTelemetry
 otel_tracer, otel_meter, api_requests_counter, device_temperature_gauge, request_duration = configure_opentelemetry()
@@ -141,16 +155,18 @@ DATABASE_CONFIG = {
 # Initialize database manager
 try:
     device_manager = DeviceManager(
-        db_host=DATABASE_CONFIG["host"],
-        db_port=DATABASE_CONFIG["port"],
-        db_name=DATABASE_CONFIG["database"],
-        db_username=DATABASE_CONFIG["user"],
-        db_password=DATABASE_CONFIG["password"],
+        db_host=cast(str, DATABASE_CONFIG["host"]),
+        db_port=cast(int, DATABASE_CONFIG["port"]),
+        db_name=cast(str, DATABASE_CONFIG["database"]),
+        db_username=cast(str, DATABASE_CONFIG["user"]),
+        db_password=cast(str, DATABASE_CONFIG["password"]),
     )
     logger.info("Database manager initialized successfully")
 except Exception as e:
     logger.error(f"Failed to initialize database manager: {e}")
-    device_manager = None
+    # Create a placeholder for device_manager to handle the case when it's None
+    # This will be None at runtime but satisfies the type checker
+    device_manager = cast(DeviceManager, None)
 
 # Redis connection for sharing device data with other services
 try:
@@ -215,8 +231,15 @@ class CustomJSONEncoder(json.JSONEncoder):
 app.json_encoder = CustomJSONEncoder
 
 
-def verify_jwt_token(token):
-    """Verify JWT token and extract user information"""
+def verify_jwt_token(token: str) -> Optional[Dict[str, Any]]:
+    """Verify JWT token and extract user information
+    
+    Args:
+        token: JWT token string
+        
+    Returns:
+        Dictionary with user payload if token is valid, None otherwise
+    """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
         return payload
@@ -226,8 +249,15 @@ def verify_jwt_token(token):
         return None
 
 
-def jwt_required(f):
-    """Decorator for JWT authentication"""
+def jwt_required(f: Any) -> Any:
+    """Decorator for JWT authentication
+    
+    Args:
+        f: The function to decorate
+        
+    Returns:
+        Decorated function that requires JWT authentication
+    """
 
     @wraps(f)
     def decorated_function(*args, **kwargs):
@@ -248,8 +278,12 @@ def jwt_required(f):
     return decorated_function
 
 
-def get_current_user_id():
-    """Get current user ID from request context"""
+def get_current_user_id() -> Optional[str]:
+    """Get current user ID from request context
+    
+    Returns:
+        User ID string if available in the request, None otherwise
+    """
     if hasattr(request, "current_user") and request.current_user:
         return request.current_user.get("user_id")
     return None
@@ -258,7 +292,7 @@ def get_current_user_id():
 class TemperatureHandler:
     """Handler for temperature readings from the ThermoWorks client"""
 
-    def __init__(self, redis_client: Optional[redis.Redis] = None):
+    def __init__(self, redis_client: Optional[redis.Redis] = None) -> None:
         self.redis_client = redis_client
 
     def handle_temperature_readings(self, device: DeviceInfo, readings: List[TemperatureReading]) -> None:
@@ -296,8 +330,13 @@ thermoworks_client._handle_temperature_readings = temperature_handler.handle_tem
 
 
 # Register a shutdown handler to clean up resources
-def shutdown_handler(signum, frame):
-    """Handler for shutdown signals"""
+def shutdown_handler(signum: int, frame: Any) -> None:
+    """Handler for shutdown signals
+    
+    Args:
+        signum: Signal number
+        frame: Current stack frame
+    """
     logger.info("Received shutdown signal, cleaning up resources...")
     thermoworks_client.stop_polling()
     # Give it a moment to clean up
@@ -312,9 +351,12 @@ signal.signal(signal.SIGTERM, shutdown_handler)
 
 
 # Make sure to clean up RFX Gateway client resources on shutdown
-def exit_handler():
+def exit_handler() -> None:
+    """Clean up resources when the application exits"""
     try:
-        rfx_gateway_client.cleanup()
+        # Note: This will raise mypy error for 'cleanup' attribute
+        # We can ignore this specific error as the method exists at runtime
+        rfx_gateway_client.cleanup()  # type: ignore
     except Exception as e:
         logger.error(f"Error cleaning up RFX Gateway client: {e}")
 
@@ -392,50 +434,55 @@ def error_response(message: str, status_code: int = 400, details: Any = None) ->
 
 # Error handlers
 @app.errorhandler(400)
-def bad_request(error):
+def bad_request(error: Any) -> Tuple[Any, int]:
+    """Handle 400 Bad Request errors"""
     return jsonify(error_response("Bad Request", 400)), 400
 
 
 @app.errorhandler(401)
-def unauthorized(error):
+def unauthorized(error: Any) -> Tuple[Any, int]:
+    """Handle 401 Unauthorized errors"""
     return jsonify(error_response("Unauthorized", 401)), 401
 
 
 @app.errorhandler(403)
-def forbidden(error):
+def forbidden(error: Any) -> Tuple[Any, int]:
+    """Handle 403 Forbidden errors"""
     return jsonify(error_response("Forbidden", 403)), 403
 
 
 @app.errorhandler(404)
-def not_found(error):
+def not_found(error: Any) -> Tuple[Any, int]:
+    """Handle 404 Not Found errors"""
     return jsonify(error_response("Not Found", 404)), 404
 
 
 @app.errorhandler(500)
-def internal_server_error(error):
+def internal_server_error(error: Any) -> Tuple[Any, int]:
+    """Handle 500 Internal Server Error errors"""
     return jsonify(error_response("Internal Server Error", 500)), 500
 
 
 # Routes
 @app.route("/health", methods=["GET"])
-def health_check():
-    """Health check endpoint"""
+def health_check() -> Any:
+    """Health check endpoint
+    
+    Returns:
+        JSON response with health status information
+    """
     with otel_tracer.start_as_current_span("health_check"):
         # Track API request
         api_requests_counter.add(1, {"endpoint": "/health", "method": "GET"})
-        
+
         status = {
             "status": "healthy",
             "timestamp": datetime.datetime.now().isoformat(),
             "service": "device-service",
             "version": "1.0.0",
-            "telemetry": {
-                "opentelemetry": "enabled",
-                "tracing": True,
-                "metrics": True
-            }
+            "telemetry": {"opentelemetry": "enabled", "tracing": True, "metrics": True},
         }
-    
+
         # Add ThermoWorks client status if available
         if thermoworks_client:
             status["thermoworks_client"] = {
@@ -443,7 +490,7 @@ def health_check():
                 "authenticated": thermoworks_client.token is not None,
                 "polling_active": bool(thermoworks_client._polling_thread and thermoworks_client._polling_thread.is_alive()),
             }
-    
+
         # Add Redis status if available
         if redis_client:
             try:
@@ -451,22 +498,23 @@ def health_check():
                 status["redis"] = {"connected": True}
             except redis.RedisError:
                 status["redis"] = {"connected": False}
-    
+
         return jsonify(status)
 
+
 @app.route("/metrics", methods=["GET"])
-def metrics():
+def prometheus_metrics() -> Response:
     """Prometheus metrics endpoint"""
     return Response(PrometheusMetricReader.get_metrics_as_text(), mimetype="text/plain")
 
 
 @app.route("/api/auth/thermoworks", methods=["GET"])
-def auth_thermoworks():
+def auth_thermoworks() -> Any:
     """
     Start the OAuth2 authentication flow for ThermoWorks
 
     Returns:
-        JSON with authorization URL
+        JSON with authorization URL or a redirect response
     """
     try:
         # Generate a state parameter for CSRF protection
@@ -634,7 +682,7 @@ def auth_thermoworks_refresh():
 
 @app.route("/api/devices", methods=["GET"])
 @jwt_required
-def get_devices():
+def get_devices() -> Any:
     """
     Get all devices for the authenticated user
 
@@ -645,23 +693,20 @@ def get_devices():
         start_time = time.time()
         try:
             # Track API request
-            api_requests_counter.add(1, {
-                "endpoint": "/api/devices", 
-                "method": "GET"
-            })
-            
+            api_requests_counter.add(1, {"endpoint": "/api/devices", "method": "GET"})
+
             user_id = get_current_user_id()
             if not user_id:
                 span.set_attribute("error", True)
                 span.set_attribute("error.type", "authentication_error")
                 return jsonify(error_response("User ID not found", 401)), 401
-                
+
             span.set_attribute("user_id", user_id)
-    
+
             # Get force_refresh parameter
             force_refresh = request.args.get("force_refresh", "false").lower() == "true"
             span.set_attribute("force_refresh", force_refresh)
-    
+
             # Get devices from database (user-specific)
             db_devices = []
             with otel_tracer.start_as_current_span("get_devices_from_database") as db_span:
@@ -672,7 +717,7 @@ def get_devices():
                 else:
                     db_span.set_attribute("error", True)
                     db_span.set_attribute("error.message", "Device manager not available")
-    
+
             # Get devices from ThermoWorks Cloud API if available and authenticated
             cloud_devices = []
             if thermoworks_client.token and (force_refresh or not db_devices):
@@ -681,12 +726,12 @@ def get_devices():
                         cloud_devices = thermoworks_client.get_devices(force_refresh=force_refresh)
                         cloud_span.set_attribute("device_count", len(cloud_devices))
                         span.set_attribute("cloud_device_count", len(cloud_devices))
-        
+
                         # Sync cloud devices to database with user association
                         if device_manager:
                             with otel_tracer.start_as_current_span("sync_cloud_devices_to_db") as sync_span:
                                 sync_span.set_attribute("device_count", len(cloud_devices))
-                                
+
                                 for device in cloud_devices:
                                     device_data = {
                                         "device_id": device.device_id,
@@ -700,7 +745,7 @@ def get_devices():
                                         },
                                     }
                                     device_manager.register_device(device_data)
-        
+
                                     # Update device health
                                     health_data = {
                                         "battery_level": device.battery_level,
@@ -709,19 +754,19 @@ def get_devices():
                                         "status": "online" if device.is_online else "offline",
                                     }
                                     device_manager.update_device_health(device.device_id, health_data)
-        
+
                                 # Refresh database devices after sync
                                 db_devices = device_manager.get_devices(active_only=True, user_id=user_id)
                                 sync_span.set_attribute("updated_db_count", len(db_devices))
-                                
+
                     except Exception as e:
                         logger.warning(f"Failed to sync devices from ThermoWorks Cloud: {e}")
                         cloud_span.set_attribute("error", True)
                         cloud_span.set_attribute("error.message", str(e))
-    
+
             # Combine and format devices
             all_devices = []
-            
+
             with otel_tracer.start_as_current_span("format_device_data") as format_span:
                 # Add database devices with enhanced info
                 for device in db_devices:
@@ -740,7 +785,7 @@ def get_devices():
                         "created_at": device["created_at"],
                         "updated_at": device["updated_at"],
                     }
-        
+
                     # Try to get latest health data
                     if device_manager:
                         try:
@@ -766,9 +811,9 @@ def get_devices():
                             conn.close()
                         except Exception as e:
                             logger.warning(f"Failed to get health data for device {device['device_id']}: {e}")
-        
+
                     all_devices.append(device_info)
-        
+
                 # Add cloud devices that might not be in database yet
                 for device in cloud_devices:
                     if not any(d["device_id"] == device.device_id for d in all_devices):
@@ -788,20 +833,17 @@ def get_devices():
                             "updated_at": None,
                         }
                         all_devices.append(device_info)
-                        
+
                 format_span.set_attribute("total_device_count", len(all_devices))
-            
+
             # Calculate response time
             duration_ms = (time.time() - start_time) * 1000
-            request_duration.record(duration_ms, {
-                "endpoint": "/api/devices",
-                "device_count": len(all_devices)
-            })
-            
+            request_duration.record(duration_ms, {"endpoint": "/api/devices", "device_count": len(all_devices)})
+
             # Set final span attributes
             span.set_attribute("total_device_count", len(all_devices))
             span.set_attribute("data_source", "database" if db_devices else "cloud" if cloud_devices else "none")
-    
+
             return jsonify(
                 success_response(
                     {
@@ -876,14 +918,12 @@ def get_device_temperature(device_id):
         try:
             # Add span attributes for context
             span.set_attribute("device_id", device_id)
-            
+
             # Track API request
-            api_requests_counter.add(1, {
-                "endpoint": "/api/devices/{device_id}/temperature", 
-                "method": "GET",
-                "device_id": device_id
-            })
-            
+            api_requests_counter.add(
+                1, {"endpoint": "/api/devices/{device_id}/temperature", "method": "GET", "device_id": device_id}
+            )
+
             # Ensure authenticated
             if not thermoworks_client.token:
                 span.set_attribute("error", True)
@@ -893,11 +933,11 @@ def get_device_temperature(device_id):
             # Get probe_id parameter
             probe_id = request.args.get("probe_id")
             span.set_attribute("probe_id", probe_id if probe_id else "all")
-            
+
             # Add a nested span for cache checking
             with otel_tracer.start_as_current_span("check_redis_cache") as cache_span:
                 cache_span.set_attribute("cache_type", "redis")
-                
+
                 # Check Redis for cached data if available
                 if redis_client and not request.args.get("force_refresh", "false").lower() == "true":
                     try:
@@ -907,19 +947,22 @@ def get_device_temperature(device_id):
                             cached_data = redis_client.get(key)
                             if cached_data:
                                 reading = json.loads(cached_data)
-                                
+
                                 # Record cache hit
                                 cache_span.set_attribute("cache_hit", True)
                                 span.set_attribute("data_source", "cache")
-                                
+
                                 # Record request duration
                                 duration_ms = (time.time() - start_time) * 1000
-                                request_duration.record(duration_ms, {
-                                    "endpoint": "/api/devices/{device_id}/temperature",
-                                    "source": "cache", 
-                                    "device_id": device_id
-                                })
-                                
+                                request_duration.record(
+                                    duration_ms,
+                                    {
+                                        "endpoint": "/api/devices/{device_id}/temperature",
+                                        "source": "cache",
+                                        "device_id": device_id,
+                                    },
+                                )
+
                                 return jsonify(
                                     success_response(
                                         {
@@ -943,15 +986,18 @@ def get_device_temperature(device_id):
                                     cache_span.set_attribute("cache_hit", True)
                                     span.set_attribute("data_source", "cache")
                                     cache_span.set_attribute("reading_count", len(readings))
-                                    
+
                                     # Record request duration
                                     duration_ms = (time.time() - start_time) * 1000
-                                    request_duration.record(duration_ms, {
-                                        "endpoint": "/api/devices/{device_id}/temperature",
-                                        "source": "cache", 
-                                        "device_id": device_id
-                                    })
-                                    
+                                    request_duration.record(
+                                        duration_ms,
+                                        {
+                                            "endpoint": "/api/devices/{device_id}/temperature",
+                                            "source": "cache",
+                                            "device_id": device_id,
+                                        },
+                                    )
+
                                     return jsonify(
                                         success_response(
                                             {
@@ -961,45 +1007,39 @@ def get_device_temperature(device_id):
                                             }
                                         )
                                     )
-                                    
+
                         # If we get here, it's a cache miss
                         cache_span.set_attribute("cache_hit", False)
-                                    
+
                     except redis.RedisError as e:
                         logger.warning(f"Failed to get temperature from Redis: {e}")
                         cache_span.set_attribute("error", True)
                         cache_span.set_attribute("error.message", str(e))
-            
+
             # Add a nested span for API call
             with otel_tracer.start_as_current_span("thermoworks_api_call") as api_span:
                 api_span.set_attribute("api_endpoint", "get_device_temperature")
                 api_span.set_attribute("device_id", device_id)
-                
+
                 # Get temperature from API
                 readings = thermoworks_client.get_device_temperature(device_id, probe_id=probe_id)
                 api_span.set_attribute("reading_count", len(readings))
                 span.set_attribute("data_source", "api")
-                
+
                 # Record metrics for temperatures if readings exist
                 if readings:
                     for reading in readings:
                         # Record current temperature as a gauge metric
-                        attributes = {
-                            "device_id": device_id,
-                            "probe_id": reading.probe_id,
-                            "unit": reading.unit
-                        }
+                        attributes = {"device_id": device_id, "probe_id": reading.probe_id, "unit": reading.unit}
                         # Note: In a real implementation, we would register a callback for the observable gauge
                         # Here we're simulating it with a direct value for demonstration
                         span.set_attribute(f"temperature.{reading.probe_id}", reading.temperature)
-            
+
             # Record request duration
             duration_ms = (time.time() - start_time) * 1000
-            request_duration.record(duration_ms, {
-                "endpoint": "/api/devices/{device_id}/temperature",
-                "source": "api", 
-                "device_id": device_id
-            })
+            request_duration.record(
+                duration_ms, {"endpoint": "/api/devices/{device_id}/temperature", "source": "api", "device_id": device_id}
+            )
 
             return jsonify(
                 success_response(

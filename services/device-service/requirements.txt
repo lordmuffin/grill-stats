@@ -16,5 +16,7 @@ opentelemetry-instrumentation-flask==0.56b0
 opentelemetry-instrumentation-requests==0.56b0
 opentelemetry-instrumentation-redis==0.56b0
 opentelemetry-instrumentation-psycopg2==0.56b0
+# Type stubs
+types-redis==4.6.0.7
 # Optional dependencies
 # python-thermoworks-cloud==1.0.0  # Uncomment if available from a private repository
