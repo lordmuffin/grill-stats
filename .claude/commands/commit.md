@@ -9,11 +9,6 @@ To create a commit, just type:
 /commit
 ```
 
-Or with options:
-```
-/commit --no-verify
-```
-
 ## What This Command Does
 
 1. Unless specified with `--no-verify`, automatically runs pre-commit checks:
@@ -152,10 +147,11 @@ Example of splitting commits:
 ## Important Notes
 
 - By default, pre-commit checks (`pnpm lint`, `pnpm build`, `pnpm generate:docs`) will run to ensure code quality
-- If these checks fail, you'll be asked if you want to proceed with the commit anyway or fix the issues first
+- If these checks fail, you must fix the issues first
 - If specific files are already staged, the command will only commit those files
 - If no files are staged, it will automatically stage all modified and new files
 - The commit message will be constructed based on the changes detected
 - Before committing, the command will review the diff to identify if multiple commits would be more appropriate
 - If suggesting multiple commits, it will help you stage and commit the changes separately
 - Always reviews the commit diff to ensure the message matches the changes
+- Never use "🤖 Generated with [Claude Code](https://claude.ai/code)" or "Co-Authored-By: Claude <noreply@anthropic.com>" to a commit message.
