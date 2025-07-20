@@ -1,0 +1,72 @@
+services:
+  # PostgreSQL for device management
+  postgres:
+    image: postgres:15-alpine
+    environment:
+      POSTGRES_DB: grill_stats
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d grill_stats"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: unless-stopped
+    networks:
+      - grill-stats-network
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - grill-stats-network
+
+  # Device Service using Dependency Injection
+  device-service:
+    build:
+      context: ./services/device-service
+      dockerfile: Dockerfile.simple
+    command: ["python", "simple_app.py"]
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MESSAGE="Device Service with Dependency Injection Successfully Running!"
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - grill-stats-network
+
+volumes:
+  postgres_data:
+  redis_data:
+
+networks:
+  grill-stats-network:
+    driver: bridge

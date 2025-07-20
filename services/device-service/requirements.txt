@@ -22,3 +22,5 @@ opentelemetry-instrumentation-psycopg2==0.56b0
 types-redis==4.6.0.7
 # Optional dependencies
 # python-thermoworks-cloud==1.0.0  # Uncomment if available from a private repository
+# Home Assistant integration
+homeassistant-api==5.0.0

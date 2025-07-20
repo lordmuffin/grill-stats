@@ -21,7 +21,46 @@ from enum import Enum
 from typing import Any, Dict, List, Optional, Set, Tuple, Union
 
 import requests
-from ha_bluetooth_client import BluetoothDevice, BluetoothDeviceState, HomeAssistantBluetoothClient
+
+try:
+    from ha_bluetooth_client import BluetoothDevice, BluetoothDeviceState, HomeAssistantBluetoothClient
+except ImportError:
+    # Mock classes for development/testing
+    print("WARNING: Unable to import HomeAssistantBluetoothClient, using mock implementation")
+
+    class BluetoothDeviceState(Enum):
+        """State of a Bluetooth device."""
+
+        DISCONNECTED = "disconnected"
+        CONNECTING = "connecting"
+        CONNECTED = "connected"
+        ERROR = "error"
+
+    @dataclass
+    class BluetoothDevice:
+        """Represents a Bluetooth device discovered by Home Assistant."""
+
+        id: str
+        name: str
+        address: str
+        rssi: int
+        state: BluetoothDeviceState
+        attributes: Dict[str, Any]
+
+    class HomeAssistantBluetoothClient:
+        """Mock client for testing"""
+
+        def __init__(self, ha_url: str, ha_token: str):
+            print(f"Using mock HomeAssistantBluetoothClient (URL: {ha_url})")
+
+        def discover_devices(self, scan_duration: int = 10) -> List[BluetoothDevice]:
+            print(f"Mock: Scanning for Bluetooth devices for {scan_duration}s")
+            return []
+
+        def connect_device(self, device_id: str) -> bool:
+            print(f"Mock: Connecting to device {device_id}")
+            return True
+
 
 # Configure logging
 logging.basicConfig(

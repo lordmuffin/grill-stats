@@ -98,11 +98,11 @@ class ServicesContainer(containers.DeclarativeContainer):
 
     # Database configuration
     db_config = providers.Dict(
-        host=config.db.host.as_str(default="localhost"),
-        port=config.db.port.as_int(default=5432),
-        database=config.db.name.as_str(default="grill_stats"),
-        username=config.db.username.as_str(default="postgres"),
-        password=config.db.password.as_str(default=""),
+        host=config.db.host.as_(str, "localhost"),
+        port=config.db.port.as_(int, 5432),
+        database=config.db.name.as_(str, "grill_stats"),
+        username=config.db.username.as_(str, "postgres"),
+        password=config.db.password.as_(str, ""),
     )
 
     # Device Manager
@@ -115,16 +115,40 @@ class ServicesContainer(containers.DeclarativeContainer):
         db_password=db_config.provided["password"],
     )
 
+    # Temperature Handler
+    try:
+        from temperature_handler import TemperatureHandler
+
+        temperature_handler = providers.Factory(
+            TemperatureHandler,
+            redis_client=providers.Resource(
+                lambda config: (
+                    redis.Redis(
+                        host=config.redis.host.as_(str, "localhost"),
+                        port=config.redis.port.as_(int, 6379),
+                        password=config.redis.password.as_(str, None),
+                        decode_responses=True,
+                    )
+                    if not config.redis.mock.as_(bool, False)
+                    else None
+                ),
+                config=config,
+            ),
+        )
+    except ImportError:
+        # Mock for testing
+        temperature_handler = providers.Object(None)
+
     # Redis client
     redis_client = providers.Resource(
         lambda config: (
             redis.Redis(
-                host=config.redis.host.as_str(default="localhost"),
-                port=config.redis.port.as_int(default=6379),
-                password=config.redis.password.as_str(default=None),
+                host=config.redis.host.as_(str, "localhost"),
+                port=config.redis.port.as_(int, 6379),
+                password=config.redis.password.as_(str, None),
                 decode_responses=True,
             )
-            if not config.redis.mock.as_bool(default=False)
+            if not config.redis.mock.as_(bool, False)
             else None
         ),
         config=config,
@@ -133,25 +157,25 @@ class ServicesContainer(containers.DeclarativeContainer):
     # ThermoWorks client
     thermoworks_client = providers.Singleton(
         ThermoworksClient,
-        client_id=config.thermoworks.client_id.as_str(default=None),
-        client_secret=config.thermoworks.client_secret.as_str(default=None),
-        redirect_uri=config.thermoworks.redirect_uri.as_str(default=None),
-        base_url=config.thermoworks.base_url.as_str(default=None),
-        auth_url=config.thermoworks.auth_url.as_str(default=None),
-        token_storage_path=config.thermoworks.token_storage_path.as_str(default=None),
-        polling_interval=config.thermoworks.polling_interval.as_int(default=60),
-        auto_start_polling=config.thermoworks.auto_start_polling.as_bool(default=False),
+        client_id=config.thermoworks.client_id.as_(str, None),
+        client_secret=config.thermoworks.client_secret.as_(str, None),
+        redirect_uri=config.thermoworks.redirect_uri.as_(str, None),
+        base_url=config.thermoworks.base_url.as_(str, None),
+        auth_url=config.thermoworks.auth_url.as_(str, None),
+        token_storage_path=config.thermoworks.token_storage_path.as_(str, None),
+        polling_interval=config.thermoworks.polling_interval.as_(int, 60),
+        auto_start_polling=config.thermoworks.auto_start_polling.as_(bool, False),
     )
 
     # RFX Gateway client
     rfx_gateway_client = providers.Singleton(
         RFXGatewayClient,
         thermoworks_client=thermoworks_client,
-        ha_url=config.homeassistant.url.as_str(default="http://localhost:8123"),
-        ha_token=config.homeassistant.token.as_str(default=None),
-        max_scan_duration=config.rfx.scan_duration.as_int(default=30),
-        connection_timeout=config.rfx.connection_timeout.as_int(default=15),
-        setup_timeout=config.rfx.setup_timeout.as_int(default=300),
+        ha_url=config.homeassistant.url.as_(str, "http://localhost:8123"),
+        ha_token=config.homeassistant.token.as_(str, None),
+        max_scan_duration=config.rfx.scan_duration.as_(int, 30),
+        connection_timeout=config.rfx.connection_timeout.as_(int, 15),
+        setup_timeout=config.rfx.setup_timeout.as_(int, 300),
     )
 
 

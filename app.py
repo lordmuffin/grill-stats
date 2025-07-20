@@ -22,7 +22,7 @@ Config = load_config()
 
 # Import requests for external API calls
 try:
-    from typing import Any, Dict, List, Optional, Union, cast, Callable
+    from typing import Any, Callable, Dict, List, Optional, Union, cast
 
     import requests
 except ImportError:
@@ -106,14 +106,15 @@ socketio = SocketIO(app, cors_allowed_origins="*")
 
 # Initialize database connection pooling
 if init_connection_pool is not None:
-    init_connection_pool(app, db)
-    logger.info("Database connection pooling initialized")
-    # Log pool status
-    try:
-        pool_status = get_pool_status(db)
-        logger.info(f"Database connection pool status: {pool_status}")
-    except Exception as e:
-        logger.warning(f"Could not get connection pool status: {e}")
+    with app.app_context():
+        init_connection_pool(app, db)
+        logger.info("Database connection pooling initialized")
+        # Log pool status
+        try:
+            pool_status = get_pool_status(db)
+            logger.info(f"Database connection pool status: {pool_status}")
+        except Exception as e:
+            logger.warning(f"Could not get connection pool status: {e}")
 
 # Initialize User model
 from models.user import User

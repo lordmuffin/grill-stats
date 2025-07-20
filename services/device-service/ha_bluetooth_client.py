@@ -6,7 +6,25 @@ from dataclasses import dataclass
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
-from homeassistant_api import Client as HAClient
+try:
+    from homeassistant_api import Client as HAClient
+except ImportError:
+    print("WARNING: homeassistant_api module not available, mocking HAClient")
+
+    # Mock HAClient for development/testing
+    class HAClient:
+        def __init__(self, *args, **kwargs):
+            print("Using mock HAClient")
+
+        def get_state(self, *args, **kwargs):
+            return None
+
+        def get(self, *args, **kwargs):
+            return {"devices": []}
+
+        def post(self, *args, **kwargs):
+            return {"success": True}
+
 
 logger = logging.getLogger(__name__)
 

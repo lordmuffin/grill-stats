@@ -10,7 +10,12 @@ import logging
 from typing import Any, Dict, List, Optional
 
 import redis
-from containers import ServicesContainer
+
+try:
+    from containers import ServicesContainer
+except ImportError:
+    # For static type checking
+    ServicesContainer = None
 from dependency_injector.wiring import Provide, inject
 
 from thermoworks_client import DeviceInfo, TemperatureReading
