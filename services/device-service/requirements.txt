@@ -8,6 +8,8 @@ requests==2.31.0
 psycopg2-binary==2.9.7
 structlog==23.1.0
 PyJWT==2.8.0
+# Dependency Injection
+dependency-injector==4.48.1
 # OpenTelemetry packages
 opentelemetry-api==1.35.0
 opentelemetry-sdk==1.35.0
