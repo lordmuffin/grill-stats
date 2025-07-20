@@ -133,7 +133,7 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Generate OpenAPI/Swagger documentation
 - [x] Create API client SDK
 - [x] Write developer documentation
-- [ ] Create troubleshooting guide
+- [x] Create troubleshooting guide
 - [x] Add example API calls to docs
 
 ---

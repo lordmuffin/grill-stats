@@ -134,11 +134,19 @@ Run tests with pytest:
 pytest tests/
 ```
 
-## API Documentation
+## Documentation
+
+### API Documentation
 
 API documentation is available at `/api/docs` when the service is running.
+
+### Reference Documentation
+
+- [API Examples](docs/api_examples.md) - Examples of how to use the API endpoints
+- [Rate Limiting](docs/rate_limiting.md) - Information about rate limiting implementation
+- [Webhooks](docs/webhooks.md) - Documentation for webhook integration
+- [Troubleshooting Guide](docs/troubleshooting.md) - Comprehensive guide for diagnosing and resolving issues
 
 ## License
 
 MIT
-
