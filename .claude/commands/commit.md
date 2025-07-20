@@ -149,10 +149,6 @@ Example of splitting commits:
 - Seventh commit: ✅ test: add unit tests for new solc version features
 - Eighth commit: 🔒️ fix: update dependencies with security vulnerabilities
 
-## Command Options
-
-- `--no-verify`: Skip running the pre-commit checks (lint, build, generate:docs)
-
 ## Important Notes
 
 - By default, pre-commit checks (`pnpm lint`, `pnpm build`, `pnpm generate:docs`) will run to ensure code quality
