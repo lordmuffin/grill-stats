@@ -7,7 +7,7 @@ data:
   # Development-specific overrides for temperature service
   TEMPERATURE_POLL_INTERVAL_SECONDS: "30"
   TEMPERATURE_DATA_RETENTION_DAYS: "30"
-  
+
   # Enable more verbose debugging for development
   ENABLE_DEBUG_LOGGING: "true"
   ENABLE_DATA_SIMULATION: "true"

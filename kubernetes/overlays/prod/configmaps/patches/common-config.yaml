@@ -7,17 +7,17 @@ data:
   # Override common configuration for production
   LOG_LEVEL: "WARN"
   ENVIRONMENT: "production"
-  
+
   # Production database connections - using DNS for high availability
   DB_HOST: "postgresql.prod.svc.cluster.local"
   DB_NAME: "grill_stats_prod"
-  
+
   # Production InfluxDB configuration - using DNS for high availability
   INFLUXDB_HOST: "influxdb.prod.svc.cluster.local"
   INFLUXDB_DATABASE: "grill_stats_prod"
-  
+
   # Production Redis configuration - using DNS for high availability
   REDIS_HOST: "redis.prod.svc.cluster.local"
-  
+
   # Production Kafka configuration - using DNS for high availability
   KAFKA_BOOTSTRAP_SERVERS: "kafka-0.kafka-headless.prod.svc.cluster.local:9092,kafka-1.kafka-headless.prod.svc.cluster.local:9092,kafka-2.kafka-headless.prod.svc.cluster.local:9092"

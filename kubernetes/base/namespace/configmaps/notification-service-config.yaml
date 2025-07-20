@@ -12,33 +12,33 @@ data:
   API_PORT: "8080"
   HEALTH_CHECK_PORT: "8081"
   SERVICE_NAME: "notification-service"
-  
+
   # Notification channels configuration
   ENABLE_EMAIL_NOTIFICATIONS: "true"
   ENABLE_SMS_NOTIFICATIONS: "true"
   ENABLE_PUSH_NOTIFICATIONS: "true"
-  
+
   # Email provider configuration
   # Note: Credentials should be in Secrets, not ConfigMaps
   EMAIL_PROVIDER: "smtp"
   SMTP_HOST: "smtp.example.com"
   SMTP_PORT: "587"
   FROM_EMAIL: "notifications@grill-stats.com"
-  
+
   # SMS provider configuration
   SMS_PROVIDER: "twilio"
-  
+
   # Push notification configuration
   PUSH_PROVIDER: "firebase"
-  
+
   # Alert configuration
   ALERT_DEBOUNCE_SECONDS: "60"
   MAX_ALERTS_PER_HOUR: "10"
-  
+
   # Kafka configuration
   KAFKA_CONSUMER_GROUP: "notification-service"
   KAFKA_ALERT_TOPIC: "alert-events"
-  
+
   # Feature flags
   ENABLE_ALERT_THROTTLING: "true"
   ENABLE_DELIVERY_TRACKING: "true"

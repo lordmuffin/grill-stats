@@ -12,26 +12,26 @@ data:
   API_PORT: "8080"
   HEALTH_CHECK_PORT: "8081"
   SERVICE_NAME: "data-processing-service"
-  
+
   # Analytics configuration
   ENABLE_REALTIME_ANALYTICS: "true"
   ENABLE_BATCH_ANALYTICS: "true"
   BATCH_PROCESSING_INTERVAL_MINUTES: "60"
-  
+
   # Machine learning model configuration
   ML_MODEL_PATH: "/models"
   ANOMALY_DETECTION_THRESHOLD: "0.8"
   PREDICTION_CONFIDENCE_THRESHOLD: "0.7"
-  
+
   # Data storage configuration
   ANALYTICS_DATABASE: "analytics"
   ANALYTICS_RETENTION_DAYS: "365"
-  
+
   # Kafka configuration
   KAFKA_CONSUMER_GROUP: "data-processing-service"
   KAFKA_TEMPERATURE_TOPIC: "temperature-events"
   KAFKA_ANALYTICS_TOPIC: "analytics-events"
-  
+
   # Feature flags
   ENABLE_ANOMALY_DETECTION: "true"
   ENABLE_PREDICTIVE_MODELING: "true"

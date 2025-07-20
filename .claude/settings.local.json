@@ -82,7 +82,9 @@
       "Bash(FLASK_DEBUG=true python app.py)",
       "Bash(SKIP=mypy git commit -m \"$(cat <<''EOF''\n🏷️ fix: Add type annotations to fix mypy errors\n\n- Added Type[Any] annotations to model class variables\n- Improved method return type annotations with descriptive comments\n- Fixed AlertType annotation in temperature_alert.py\n- Reformatted code with black\n\n🤖 Generated with [Claude Code](https://claude.ai/code)\n\nCo-Authored-By: Claude <noreply@anthropic.com>\nEOF\n)\")",
       "Bash(SKIP=fix-end-of-files,mypy git commit -m \"🔧 chore: Fix missing newline at end of settings.local.json\")",
-      "Bash(SKIP=mypy git commit -m \"🔧 chore: Fix missing newline at end of settings.local.json\")"
+      "Bash(SKIP=mypy git commit -m \"🔧 chore: Fix missing newline at end of settings.local.json\")",
+      "Bash(MOCK_MODE=true python app.py)",
+      "Bash(MOCK_MODE=true python3 app.py)"
     ],
     "deny": [
       "Bash(git commit --no-verify:*)"

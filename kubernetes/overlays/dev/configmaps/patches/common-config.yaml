@@ -7,20 +7,20 @@ data:
   # Override common configuration for development
   LOG_LEVEL: "DEBUG"
   ENVIRONMENT: "development"
-  
+
   # Development database connections
   DB_HOST: "localhost"
   DB_PORT: "5432"
   DB_NAME: "grill_stats_dev"
-  
+
   # Development InfluxDB configuration
   INFLUXDB_HOST: "localhost"
   INFLUXDB_PORT: "8086"
   INFLUXDB_DATABASE: "grill_stats_dev"
-  
+
   # Development Redis configuration
   REDIS_HOST: "localhost"
   REDIS_PORT: "6379"
-  
+
   # Development Kafka configuration
   KAFKA_BOOTSTRAP_SERVERS: "localhost:9092"

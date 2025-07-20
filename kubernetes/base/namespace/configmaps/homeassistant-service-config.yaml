@@ -12,24 +12,24 @@ data:
   API_PORT: "8080"
   HEALTH_CHECK_PORT: "8081"
   SERVICE_NAME: "homeassistant-service"
-  
+
   # Home Assistant connection configuration
   # Note: Token should be in Secrets, not ConfigMaps
   HOMEASSISTANT_URL: "http://homeassistant:8123"
-  
+
   # Entity configuration
   ENTITY_PREFIX: "thermoworks_"
   ENTITY_DOMAIN: "sensor"
   ENTITY_DEVICE_CLASS: "temperature"
-  
+
   # State synchronization configuration
   SYNC_INTERVAL_SECONDS: "30"
   STATE_CACHE_TTL_SECONDS: "120"
-  
+
   # Kafka configuration
   KAFKA_CONSUMER_GROUP: "homeassistant-service"
   KAFKA_TEMPERATURE_TOPIC: "temperature-events"
-  
+
   # Feature flags
   ENABLE_BIDIRECTIONAL_SYNC: "true"
   ENABLE_EVENT_HANDLING: "true"
