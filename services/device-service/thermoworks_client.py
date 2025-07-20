@@ -194,7 +194,7 @@ class ThermoworksClient:
         # Connection state
         self.session = requests.Session()
         self.token: Optional[AuthToken] = None
-        self.connection_state = {
+        self.connection_state: Dict[str, Any] = {
             "connected": False,
             "last_connection_attempt": None,
             "last_successful_connection": None,
@@ -231,7 +231,8 @@ class ThermoworksClient:
                 logger.info("Loaded token from storage")
 
                 # Check if token is expired and try to refresh
-                if self.token.is_expired and self.token.refresh_token:
+                token = self.token  # Get local reference for type checker
+                if token and token.is_expired and token.refresh_token:
                     try:
                         self.refresh_token()
                     except Exception as e:
@@ -507,7 +508,12 @@ class ThermoworksClient:
             ThermoworksAuthenticationError: If the token refresh fails
             ThermoworksConnectionError: If there is a connection error
         """
-        if not self.token or not self.token.refresh_token:
+        if not self.token:
+            raise ThermoworksAuthenticationError("No token available")
+        
+        # Get the token object and check for refresh_token to satisfy type checker
+        token = self.token
+        if not token.refresh_token:
             raise ThermoworksAuthenticationError("No refresh token available")
 
         if not self.client_id or not self.client_secret:
@@ -591,7 +597,9 @@ class ThermoworksClient:
 
         # Check if token is expired and refresh if needed
         if self.token.is_expired:
-            if self.token.refresh_token:
+            # Get the token object to satisfy type checker
+            token = self.token
+            if token and token.refresh_token:
                 self.refresh_token()
             else:
                 # For client credentials, we can just get a new token

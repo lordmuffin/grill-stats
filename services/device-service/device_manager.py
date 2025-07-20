@@ -1,7 +1,8 @@
 import json
 import logging
 from datetime import datetime
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Union, cast
+from psycopg2.extensions import connection
 
 import psycopg2
 import structlog
@@ -28,12 +29,20 @@ class DeviceManager:
             "cursor_factory": RealDictCursor,
         }
 
-    def get_connection(self):
-        """Get database connection"""
+    def get_connection(self) -> connection:
+        """Get database connection
+        
+        Returns:
+            PostgreSQL database connection
+        """
         return psycopg2.connect(**self.db_config)
 
-    def health_check(self):
-        """Check database connection health"""
+    def health_check(self) -> bool:
+        """Check database connection health
+        
+        Returns:
+            True if database connection is healthy, raises exception otherwise
+        """
         try:
             conn = self.get_connection()
             with conn.cursor() as cur:
@@ -45,11 +54,15 @@ class DeviceManager:
             logger.error("Database health check failed", error=str(e))
             raise
 
-    def get_timestamp(self):
-        """Get current timestamp"""
+    def get_timestamp(self) -> str:
+        """Get current timestamp
+        
+        Returns:
+            Current UTC timestamp as ISO format string
+        """
         return datetime.utcnow().isoformat()
 
-    def init_db(self):
+    def init_db(self) -> None:
         """Initialize database tables"""
         try:
             conn = self.get_connection()
@@ -232,8 +245,16 @@ class DeviceManager:
             )
             raise
 
-    def get_devices(self, active_only: bool = True, user_id: Optional[int] = None) -> List[Dict]:
-        """Get all devices, optionally filtered by user"""
+    def get_devices(self, active_only: bool = True, user_id: Optional[Union[int, str]] = None) -> List[Dict[str, Any]]:
+        """Get all devices, optionally filtered by user
+        
+        Args:
+            active_only: Whether to return only active devices
+            user_id: Optional user ID to filter devices by
+            
+        Returns:
+            List of device dictionaries
+        """
         try:
             conn = self.get_connection()
             with conn.cursor() as cur:
@@ -356,8 +377,13 @@ class DeviceManager:
             logger.error("Failed to delete device", device_id=device_id, error=str(e))
             raise
 
-    def update_device_health(self, device_id: str, health_data: Dict):
-        """Update device health status"""
+    def update_device_health(self, device_id: str, health_data: Dict[str, Any]) -> None:
+        """Update device health status
+        
+        Args:
+            device_id: The ID of the device to update
+            health_data: Dictionary containing health data fields
+        """
         try:
             conn = self.get_connection()
             with conn.cursor() as cur:
@@ -618,7 +644,7 @@ class DeviceManager:
             logger.error("Failed to update gateway status", gateway_id=gateway_id, error=str(e))
             raise
 
-    def get_gateway_status(self, gateway_id: str) -> Optional[Dict]:
+    def get_gateway_status(self, gateway_id: str) -> Optional[Dict[str, Any]]:
         """
         Get the status of an RFX Gateway
 

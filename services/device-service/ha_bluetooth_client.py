@@ -160,7 +160,8 @@ class HomeAssistantBluetoothClient:
 
         try:
             response = self.client.post(f"/api/bluetooth/write", {"device_id": device_id, "data": data.hex()})
-            return response.get("success", False)
+            # Convert Any to bool with explicit cast
+            return bool(response.get("success", False))
 
         except Exception as e:
             logger.error(f"Error sending data to device {device_id}: {e}")

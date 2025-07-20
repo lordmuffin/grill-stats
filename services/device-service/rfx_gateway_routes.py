@@ -18,7 +18,7 @@ logger = logging.getLogger("rfx_gateway_routes")
 rfx_gateway_bp = Blueprint("rfx_gateway", __name__, url_prefix="/api/gateways")
 
 
-def register_gateway_routes(app, rfx_gateway_client: RFXGatewayClient, thermoworks_client: Any):
+def register_gateway_routes(app, rfx_gateway_client: RFXGatewayClient, thermoworks_client: Any) -> None:
     """
     Register RFX Gateway routes with the Flask app
 
@@ -65,7 +65,7 @@ def error_response(message: str, status_code: int = 400, details: Any = None) ->
 
 
 @rfx_gateway_bp.route("", methods=["GET"])
-def get_gateways():
+def get_gateways() -> Any:
     """
     Get all registered RFX Gateways
 
@@ -86,7 +86,7 @@ def get_gateways():
 
 
 @rfx_gateway_bp.route("/<gateway_id>", methods=["GET"])
-def get_gateway(gateway_id):
+def get_gateway(gateway_id: str) -> Any:
     """
     Get information for a specific gateway
 
@@ -113,7 +113,7 @@ def get_gateway(gateway_id):
 
 
 @rfx_gateway_bp.route("/discover", methods=["POST"])
-def discover_gateways():
+def discover_gateways() -> Any:
     """
     Discover nearby RFX Gateways using Bluetooth
 
@@ -137,7 +137,7 @@ def discover_gateways():
 
 
 @rfx_gateway_bp.route("/<gateway_id>/connect", methods=["POST"])
-def connect_to_gateway(gateway_id):
+def connect_to_gateway(gateway_id: str) -> Any:
     """
     Connect to an RFX Gateway via Bluetooth
 
@@ -175,7 +175,7 @@ def connect_to_gateway(gateway_id):
 
 
 @rfx_gateway_bp.route("/<gateway_id>/wifi/scan", methods=["POST"])
-def scan_wifi_networks(gateway_id):
+def scan_wifi_networks(gateway_id: str) -> Any:
     """
     Scan for available Wi-Fi networks
 
@@ -213,7 +213,7 @@ def scan_wifi_networks(gateway_id):
 
 
 @rfx_gateway_bp.route("/<gateway_id>/wifi/configure", methods=["POST"])
-def configure_wifi(gateway_id):
+def configure_wifi(gateway_id: str) -> Any:
     """
     Configure the gateway to connect to a Wi-Fi network
 
@@ -259,7 +259,7 @@ def configure_wifi(gateway_id):
 
 
 @rfx_gateway_bp.route("/<gateway_id>/link", methods=["POST"])
-def link_to_account(gateway_id):
+def link_to_account(gateway_id: str) -> Any:
     """
     Link the gateway to the user's ThermoWorks Cloud account
 
@@ -304,7 +304,7 @@ def link_to_account(gateway_id):
 
 
 @rfx_gateway_bp.route("/<gateway_id>/setup/complete", methods=["POST"])
-def complete_setup(gateway_id):
+def complete_setup(gateway_id: str) -> Any:
     """
     Complete the gateway setup process
 
@@ -333,7 +333,7 @@ def complete_setup(gateway_id):
 
 
 @rfx_gateway_bp.route("/<gateway_id>/setup/status", methods=["GET"])
-def get_setup_status(gateway_id):
+def get_setup_status(gateway_id: str) -> Any:
     """
     Get the current setup status for a gateway
 
@@ -363,7 +363,7 @@ def get_setup_status(gateway_id):
 
 
 @rfx_gateway_bp.route("/<gateway_id>/setup/cancel", methods=["POST"])
-def cancel_setup(gateway_id):
+def cancel_setup(gateway_id: str) -> Any:
     """
     Cancel an in-progress gateway setup
 
