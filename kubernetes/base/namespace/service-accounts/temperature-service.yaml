@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: temperature-service
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: temperature-service
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/component: microservice
+    app.kubernetes.io/managed-by: kustomize
+automountServiceAccountToken: true

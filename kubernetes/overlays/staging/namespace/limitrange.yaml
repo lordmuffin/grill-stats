@@ -1,0 +1,19 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: grill-stats-limits
+  namespace: grill-stats-staging
+spec:
+  limits:
+  - default:
+      cpu: "750m"
+      memory: "768Mi"
+    defaultRequest:
+      cpu: "150m"
+      memory: "192Mi"
+    type: Container
+  - default:
+      storage: "15Gi"
+    defaultRequest:
+      storage: "3Gi"
+    type: PersistentVolumeClaim

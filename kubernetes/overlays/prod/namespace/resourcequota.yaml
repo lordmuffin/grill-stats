@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: grill-stats-quota
+  namespace: grill-stats-prod
+spec:
+  hard:
+    requests.cpu: "12"
+    requests.memory: 24Gi
+    limits.cpu: "24"
+    limits.memory: 48Gi
+    persistentvolumeclaims: "30"
+    pods: "60"
+    services: "25"
+    services.loadbalancers: "3"
+    secrets: "40"
+    configmaps: "40"

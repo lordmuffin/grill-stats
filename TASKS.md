@@ -58,8 +58,8 @@ This document outlines the development tasks organized into milestones for trans
 - [x] Configure database backup strategies
 - [x] Set up database monitoring and alerts
 - [x] Create database initialization scripts
-- [ ] Configure connection pooling
-- [ ] Document database schemas
+- [x] Configure connection pooling
+- [x] Document database schemas
 - [x] Refactor SQLAlchemy model architecture (critical)
   - [x] Separate models from manager classes
   - [x] Define models as top-level classes

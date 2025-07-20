@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: temperature-service-binding
+  namespace: grill-stats
+  labels:
+    app.kubernetes.io/name: temperature-service
+    app.kubernetes.io/part-of: grill-stats
+    app.kubernetes.io/managed-by: kustomize
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: temperature-service-role
+subjects:
+  - kind: ServiceAccount
+    name: temperature-service
+    namespace: grill-stats
