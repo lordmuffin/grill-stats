@@ -240,6 +240,19 @@ INFLUXDB_HOST: "influxdb-service"
 
 ## 📚 API Documentation
 
+### Development Tools
+
+#### Mock Data Service
+
+The project includes a comprehensive mock data service for ThermoWorks integration, providing simulated device data for development and testing.
+
+- **Realistic simulation** of ThermoWorks devices and temperature patterns
+- **Pre-configured devices** with multiple probe types
+- **Dynamic temperature changes** that follow cooking profiles
+- **Simulated cooking events** like lid opening and temperature adjustments
+
+[View Mock Data Service Documentation](docs/api/mock_data_service.md)
+
 ### Device Service API
 
 #### Discover Devices
