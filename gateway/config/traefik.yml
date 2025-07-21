@@ -1,0 +1,161 @@
+# Traefik Static Configuration
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+api:
+  dashboard: true
+  insecure: true
+
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+  websecure:
+    address: ":443"
+  traefik:
+    address: ":8080"
+
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: admin@grillstats.local
+      storage: /acme.json
+      httpChallenge:
+        entryPoint: web
+
+providers:
+  docker:
+    exposedByDefault: false
+    network: grill-stats-gateway
+  file:
+    directory: /config
+    watch: true
+
+log:
+  level: INFO
+  filePath: "/var/log/traefik.log"
+
+accessLog:
+  filePath: "/var/log/access.log"
+  format: json
+  filters:
+    statusCodes:
+      - "200"
+      - "300-302"
+      - "400-499"
+      - "500-599"
+    retryAttempts: true
+    minDuration: "10ms"
+
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+tracing:
+  jaeger:
+    samplingParam: 1.0
+    traceContextHeaderName: uber-trace-id
+
+# Rate limiting
+http:
+  middlewares:
+    # Global rate limiting
+    global-ratelimit:
+      rateLimit:
+        average: 1000
+        burst: 2000
+        period: "1m"
+        
+    # API rate limiting
+    api-ratelimit:
+      rateLimit:
+        average: 500
+        burst: 1000
+        period: "1m"
+        
+    # Auth rate limiting
+    auth-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: "1m"
+        
+    # Security headers
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "DENY"
+          X-XSS-Protection: "1; mode=block"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+          
+    # CORS for API
+    api-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "*"
+        accessControlAllowOriginList:
+          - "http://localhost:3000"
+          - "https://grillstats.local"
+          - "https://www.grillstats.local"
+        accessControlMaxAge: 86400
+        
+    # IP whitelist for admin
+    admin-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+          
+    # Basic auth for admin
+    admin-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$10$DkVsn0XcEXfQJ9SDO9oKjOFB0OlShlnE1G1KiAXWbVcQJqJMtPfqK"  # admin:admin
+          
+    # Circuit breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30"
+        
+    # Request size limit
+    request-limit:
+      buffering:
+        maxRequestBodyBytes: 10485760  # 10MB
+        memRequestBodyBytes: 2097152   # 2MB
+        
+    # Retry
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: "100ms"

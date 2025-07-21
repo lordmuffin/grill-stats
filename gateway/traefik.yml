@@ -1,0 +1,108 @@
+# Traefik Static Configuration
+# API Gateway for Grill Stats Temperature Monitoring Service
+# Security-first configuration with comprehensive protection
+
+global:
+  checkNewVersion: false
+  sendAnonymousUsage: false
+
+# API Configuration
+api:
+  dashboard: true
+  insecure: false
+  debug: false
+
+# Certificate Resolvers for TLS
+certificatesResolvers:
+  letsencrypt:
+    acme:
+      email: ${ACME_EMAIL:-admin@example.com}
+      storage: /data/acme.json
+      httpChallenge:
+        entryPoint: web
+      # DNS challenge for wildcard certificates
+      dnsChallenge:
+        provider: cloudflare
+        delayBeforeCheck: 10s
+
+# Entry Points
+entryPoints:
+  web:
+    address: ":80"
+    http:
+      redirections:
+        entrypoint:
+          to: websecure
+          scheme: https
+          permanent: true
+  websecure:
+    address: ":443"
+    http:
+      # Security Headers
+      middlewares:
+        - security-headers@file
+        - rate-limit@file
+      tls:
+        options: modern@file
+        certResolver: letsencrypt
+  traefik:
+    address: ":8080"
+    http:
+      middlewares:
+        - auth-admin@file
+        - security-headers@file
+
+# Providers
+providers:
+  docker:
+    endpoint: "unix:///var/run/docker.sock"
+    exposedByDefault: false
+    watch: true
+    network: grill-stats-network
+  file:
+    filename: /etc/traefik/dynamic.yml
+    watch: true
+
+# Logging
+log:
+  level: INFO
+  format: json
+  filePath: /var/log/traefik/traefik.log
+
+# Access Logs
+accessLog:
+  filePath: /var/log/traefik/access.log
+  format: json
+  fields:
+    defaultMode: keep
+    headers:
+      defaultMode: drop
+      names:
+        User-Agent: keep
+        Authorization: drop
+        X-Forwarded-For: keep
+
+# Metrics for monitoring
+metrics:
+  prometheus:
+    addEntryPointsLabels: true
+    addServicesLabels: true
+    addRoutersLabels: true
+    buckets:
+      - 0.1
+      - 0.3
+      - 1.2
+      - 5.0
+
+# Pilot/Tracing (optional)
+tracing:
+  jaeger:
+    samplingParam: 1.0
+    localAgentHostPort: jaeger:6831
+
+# Plugin Configuration
+experimental:
+  plugins:
+    geoblock:
+      moduleName: github.com/PascalMinder/geoblock
+      version: v0.2.7

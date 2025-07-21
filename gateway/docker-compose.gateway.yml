@@ -1,0 +1,214 @@
+version: '3.8'
+
+services:
+  # Traefik API Gateway
+  traefik:
+    image: traefik:v3.0
+    container_name: traefik-gateway
+    command:
+      # Global configuration
+      - --global.checknewversion=false
+      - --global.sendanonymoususage=false
+      
+      # API and Dashboard
+      - --api.dashboard=true
+      - --api.insecure=true
+      
+      # Entrypoints
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --entrypoints.traefik.address=:8080
+      
+      # Certificate resolver
+      - --certificatesresolvers.letsencrypt.acme.email=admin@grillstats.local
+      - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      
+      # Providers
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=grill-stats-gateway
+      - --providers.file.directory=/config
+      - --providers.file.watch=true
+      
+      # Logging
+      - --log.level=INFO
+      - --log.filepath=/var/log/traefik.log
+      - --accesslog=true
+      - --accesslog.filepath=/var/log/access.log
+      
+      # Metrics
+      - --metrics.prometheus=true
+      - --metrics.prometheus.addentrypointslabels=true
+      - --metrics.prometheus.addserviceslabels=true
+      
+      # Tracing
+      - --tracing.jaeger=true
+      - --tracing.jaeger.samplingparam=1.0
+      - --tracing.jaeger.tracecontextheadername=uber-trace-id
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./config:/config:ro
+      - ./acme.json:/acme.json
+      - ./logs:/var/log
+    environment:
+      - TRAEFIK_PILOT_TOKEN=${TRAEFIK_PILOT_TOKEN:-}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`traefik.grillstats.local`)"
+      - "traefik.http.routers.dashboard.service=api@internal"
+      - "traefik.http.routers.dashboard.middlewares=auth"
+      - "traefik.http.middlewares.auth.basicauth.users=admin:$$2y$$10$$DkVsn0XcEXfQJ9SDO9oKjOFB0OlShlnE1G1KiAXWbVcQJqJMtPfqK"  # admin:admin
+    networks:
+      - grill-stats-gateway
+      - grill-stats-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+
+  # Auth Service with JWT
+  auth-gateway-service:
+    build:
+      context: ./auth-service
+      dockerfile: Dockerfile
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_NAME=grill_stats
+      - DB_USER=postgres
+      - DB_PASSWORD=postgres
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - JWT_SECRET=${JWT_SECRET:-grill-stats-jwt-secret-key-2024}
+      - JWT_ALGORITHM=HS256
+      - JWT_ACCESS_TOKEN_EXPIRE_MINUTES=30
+      - JWT_REFRESH_TOKEN_EXPIRE_DAYS=7
+      - SECRET_KEY=${SECRET_KEY:-grill-stats-secret-key-2024}
+      - RATE_LIMIT_ENABLED=true
+      - RATE_LIMIT_REQUESTS=100
+      - RATE_LIMIT_WINDOW=3600
+      - CORS_ORIGINS=http://localhost:3000,https://grillstats.local
+      - LOG_LEVEL=INFO
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth.rule=Host(`api.grillstats.local`) && PathPrefix(`/auth`)"
+      - "traefik.http.routers.auth.entrypoints=websecure"
+      - "traefik.http.routers.auth.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.auth.middlewares=auth-ratelimit,auth-cors,security-headers"
+      - "traefik.http.services.auth.loadbalancer.server.port=8000"
+      
+      # Rate limiting
+      - "traefik.http.middlewares.auth-ratelimit.ratelimit.average=100"
+      - "traefik.http.middlewares.auth-ratelimit.ratelimit.burst=200"
+      - "traefik.http.middlewares.auth-ratelimit.ratelimit.period=1m"
+      
+      # CORS
+      - "traefik.http.middlewares.auth-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
+      - "traefik.http.middlewares.auth-cors.headers.accesscontrolallowheaders=*"
+      - "traefik.http.middlewares.auth-cors.headers.accesscontrolalloworiginlist=http://localhost:3000,https://grillstats.local"
+      - "traefik.http.middlewares.auth-cors.headers.accesscontrolmaxage=86400"
+      
+      # Security headers
+      - "traefik.http.middlewares.security-headers.headers.framedeny=true"
+      - "traefik.http.middlewares.security-headers.headers.sslredirect=true"
+      - "traefik.http.middlewares.security-headers.headers.browserxssfilter=true"
+      - "traefik.http.middlewares.security-headers.headers.contenttypenosniff=true"
+      - "traefik.http.middlewares.security-headers.headers.referrerpolicy=strict-origin-when-cross-origin"
+      - "traefik.http.middlewares.security-headers.headers.permissionspolicy=camera=(), microphone=(), geolocation=()"
+    networks:
+      - grill-stats-gateway
+      - grill-stats-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # API Gateway Rate Limiting Service
+  rate-limiter:
+    build:
+      context: ./rate-limiter
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=1
+      - DEFAULT_RATE_LIMIT=1000
+      - DEFAULT_WINDOW=3600
+      - BURST_MULTIPLIER=2
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - grill-stats-gateway
+      - grill-stats-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # Security Monitoring Service
+  security-monitor:
+    build:
+      context: ./security-monitor
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=2
+      - LOG_LEVEL=INFO
+      - ALERT_THRESHOLD_401=50
+      - ALERT_THRESHOLD_403=25
+      - ALERT_THRESHOLD_429=100
+      - ALERT_WINDOW=300
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.security.rule=Host(`api.grillstats.local`) && PathPrefix(`/security`)"
+      - "traefik.http.routers.security.entrypoints=websecure"
+      - "traefik.http.routers.security.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.security.middlewares=admin-auth,security-headers"
+      - "traefik.http.services.security.loadbalancer.server.port=8001"
+      - "traefik.http.middlewares.admin-auth.basicauth.users=admin:$$2y$$10$$DkVsn0XcEXfQJ9SDO9oKjOFB0OlShlnE1G1KiAXWbVcQJqJMtPfqK"
+    networks:
+      - grill-stats-gateway
+      - grill-stats-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  # WAF Service (Web Application Firewall)
+  waf-service:
+    build:
+      context: ./waf-service
+      dockerfile: Dockerfile
+    environment:
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=3
+      - LOG_LEVEL=INFO
+      - BLOCK_MALICIOUS_IPS=true
+      - RATE_LIMIT_SUSPICIOUS=true
+    labels:
+      - "traefik.enable=false"
+    networks:
+      - grill-stats-gateway
+      - grill-stats-network
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  gateway_data:
+
+networks:
+  grill-stats-gateway:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
+  grill-stats-network:
+    external: true

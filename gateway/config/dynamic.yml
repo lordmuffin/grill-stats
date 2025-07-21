@@ -1,0 +1,327 @@
+# Traefik Dynamic Configuration
+http:
+  routers:
+    # Main API Gateway Router
+    api-gateway:
+      rule: "Host(`api.grillstats.local`)"
+      service: api-gateway
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - api-auth
+        - api-ratelimit
+        - api-cors
+        - security-headers
+        - waf-protection
+    
+    # Auth Service Router
+    auth-service:
+      rule: "Host(`api.grillstats.local`) && PathPrefix(`/auth`)"
+      service: auth-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - auth-ratelimit
+        - auth-cors
+        - security-headers
+    
+    # Device Service Router
+    device-service:
+      rule: "Host(`api.grillstats.local`) && PathPrefix(`/devices`)"
+      service: device-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - api-auth
+        - api-ratelimit
+        - api-cors
+        - security-headers
+        - waf-protection
+    
+    # Temperature Service Router
+    temperature-service:
+      rule: "Host(`api.grillstats.local`) && PathPrefix(`/temperature`)"
+      service: temperature-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - api-auth
+        - api-ratelimit
+        - api-cors
+        - security-headers
+    
+    # Home Assistant Service Router
+    homeassistant-service:
+      rule: "Host(`api.grillstats.local`) && PathPrefix(`/homeassistant`)"
+      service: homeassistant-service
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - api-auth
+        - api-ratelimit
+        - api-cors
+        - security-headers
+    
+    # Web UI Router
+    web-ui:
+      rule: "Host(`grillstats.local`)"
+      service: web-ui
+      entryPoints:
+        - websecure
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - web-ratelimit
+        - security-headers
+        - web-cors
+
+  services:
+    # API Gateway Load Balancer
+    api-gateway:
+      loadBalancer:
+        servers:
+          - url: "http://grill-stats:5000"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+    
+    # Auth Service
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-gateway-service:8000"
+        healthCheck:
+          path: "/auth/health"
+          interval: "30s"
+          timeout: "10s"
+    
+    # Device Service
+    device-service:
+      loadBalancer:
+        servers:
+          - url: "http://device-service:8080"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+    
+    # Temperature Service
+    temperature-service:
+      loadBalancer:
+        servers:
+          - url: "http://temperature-service:8080"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+    
+    # Home Assistant Service
+    homeassistant-service:
+      loadBalancer:
+        servers:
+          - url: "http://homeassistant-service:8000"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+    
+    # Web UI Service
+    web-ui:
+      loadBalancer:
+        servers:
+          - url: "http://web-ui:3000"
+        healthCheck:
+          path: "/"
+          interval: "30s"
+          timeout: "10s"
+
+  middlewares:
+    # Authentication Middleware
+    api-auth:
+      forwardAuth:
+        address: "http://auth-gateway-service:8000/auth/verify"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Email"
+          - "X-User-Permissions"
+        trustForwardHeader: true
+    
+    # Rate Limiting Middlewares
+    api-ratelimit:
+      rateLimit:
+        average: 500
+        burst: 1000
+        period: "1m"
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+    
+    auth-ratelimit:
+      rateLimit:
+        average: 100
+        burst: 200
+        period: "1m"
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+    
+    web-ratelimit:
+      rateLimit:
+        average: 1000
+        burst: 2000
+        period: "1m"
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+    
+    # CORS Middlewares
+    api-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Authorization"
+          - "Content-Type"
+          - "X-Requested-With"
+          - "X-API-Key"
+        accessControlAllowOriginList:
+          - "https://grillstats.local"
+          - "https://www.grillstats.local"
+          - "http://localhost:3000"
+        accessControlMaxAge: 86400
+        accessControlAllowCredentials: true
+    
+    auth-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Authorization"
+          - "Content-Type"
+          - "X-Requested-With"
+        accessControlAllowOriginList:
+          - "https://grillstats.local"
+          - "https://www.grillstats.local"
+          - "http://localhost:3000"
+        accessControlMaxAge: 86400
+        accessControlAllowCredentials: true
+    
+    web-cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - OPTIONS
+        accessControlAllowHeaders:
+          - "Content-Type"
+          - "X-Requested-With"
+        accessControlAllowOriginList:
+          - "https://grillstats.local"
+          - "https://www.grillstats.local"
+        accessControlMaxAge: 86400
+    
+    # Security Headers
+    security-headers:
+      headers:
+        frameDeny: true
+        sslRedirect: true
+        browserXssFilter: true
+        contentTypeNosniff: true
+        forceSTSHeader: true
+        stsIncludeSubdomains: true
+        stsPreload: true
+        stsSeconds: 31536000
+        customRequestHeaders:
+          X-Forwarded-Proto: "https"
+        customResponseHeaders:
+          X-Content-Type-Options: "nosniff"
+          X-Frame-Options: "DENY"
+          X-XSS-Protection: "1; mode=block"
+          Referrer-Policy: "strict-origin-when-cross-origin"
+          Permissions-Policy: "camera=(), microphone=(), geolocation=()"
+          Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' wss: https:;"
+    
+    # WAF Protection
+    waf-protection:
+      forwardAuth:
+        address: "http://waf-service:8002/analyze"
+        authRequestHeaders:
+          - "X-Forwarded-For"
+          - "X-Real-IP"
+          - "User-Agent"
+          - "Content-Type"
+        trustForwardHeader: true
+    
+    # Circuit Breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30"
+    
+    # Request Size Limit
+    request-limit:
+      buffering:
+        maxRequestBodyBytes: 10485760  # 10MB
+        memRequestBodyBytes: 2097152   # 2MB
+        retryExpression: "IsNetworkError() && Attempts() <= 2"
+    
+    # Retry Middleware
+    retry:
+      retry:
+        attempts: 3
+        initialInterval: "100ms"
+    
+    # IP Whitelist for Admin
+    admin-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "10.0.0.0/8"
+          - "172.16.0.0/12"
+          - "192.168.0.0/16"
+    
+    # Basic Auth for Admin
+    admin-auth:
+      basicAuth:
+        users:
+          - "admin:$2y$10$DkVsn0XcEXfQJ9SDO9oKjOFB0OlShlnE1G1KiAXWbVcQJqJMtPfqK"  # admin:admin
+
+# TCP Services (if needed)
+tcp:
+  routers: {}
+  services: {}
+
+# TLS Configuration
+tls:
+  options:
+    default:
+      minVersion: "VersionTLS12"
+      maxVersion: "VersionTLS13"
+      sslStrategies:
+        - "tls.SniStrict"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_RSA_WITH_AES_128_GCM_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+        - "CurveP256"

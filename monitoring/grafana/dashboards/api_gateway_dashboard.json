@@ -1,0 +1,240 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "API Gateway Security Dashboard",
+    "tags": ["grill-stats", "api-gateway", "security"],
+    "style": "dark",
+    "timezone": "browser",
+    "refresh": "30s",
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "panels": [
+      {
+        "id": 1,
+        "title": "Request Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(traefik_service_requests_total[5m])",
+            "legendFormat": "{{ service }}"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "reqps",
+            "min": 0,
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 50},
+                {"color": "red", "value": 100}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 0, "y": 0}
+      },
+      {
+        "id": 2,
+        "title": "Error Rate",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "rate(traefik_service_requests_total{code=~\"5..\"}[5m]) / rate(traefik_service_requests_total[5m]) * 100",
+            "legendFormat": "Error Rate %"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "percent",
+            "min": 0,
+            "max": 100,
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 5}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 6, "y": 0}
+      },
+      {
+        "id": 3,
+        "title": "Response Time P95",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, rate(traefik_service_request_duration_seconds_bucket[5m]))",
+            "legendFormat": "P95 Latency"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "s",
+            "min": 0,
+            "thresholds": {
+              "steps": [
+                {"color": "green", "value": null},
+                {"color": "yellow", "value": 1},
+                {"color": "red", "value": 2}
+              ]
+            }
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 12, "y": 0}
+      },
+      {
+        "id": 4,
+        "title": "Active Sessions",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "grill_stats_active_sessions",
+            "legendFormat": "Active Sessions"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "unit": "short",
+            "min": 0
+          }
+        },
+        "gridPos": {"h": 6, "w": 6, "x": 18, "y": 0}
+      },
+      {
+        "id": 5,
+        "title": "Request Volume by Service",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(traefik_service_requests_total[5m])",
+            "legendFormat": "{{ service }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 6}
+      },
+      {
+        "id": 6,
+        "title": "HTTP Status Codes",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(traefik_service_requests_total[5m])",
+            "legendFormat": "{{ code }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Requests/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 6}
+      },
+      {
+        "id": 7,
+        "title": "Rate Limiting",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(traefik_service_requests_total{code=\"429\"}[5m])",
+            "legendFormat": "Rate Limited Requests"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Rate Limited/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {"h": 6, "w": 8, "x": 0, "y": 14}
+      },
+      {
+        "id": 8,
+        "title": "WAF Blocks",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(grill_stats_waf_blocks_total[5m])",
+            "legendFormat": "WAF Blocks/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Blocks/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {"h": 6, "w": 8, "x": 8, "y": 14}
+      },
+      {
+        "id": 9,
+        "title": "Authentication Failures",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(grill_stats_auth_failures_total[5m])",
+            "legendFormat": "Auth Failures/sec"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Failures/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {"h": 6, "w": 8, "x": 16, "y": 14}
+      },
+      {
+        "id": 10,
+        "title": "Top Blocked IPs",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "topk(10, rate(grill_stats_waf_blocks_total[5m]) by (client_ip))",
+            "format": "table"
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 0, "y": 20}
+      },
+      {
+        "id": 11,
+        "title": "Security Events Timeline",
+        "type": "graph",
+        "targets": [
+          {
+            "expr": "rate(grill_stats_security_events_total[5m])",
+            "legendFormat": "{{ event_type }}"
+          }
+        ],
+        "yAxes": [
+          {
+            "label": "Events/sec",
+            "min": 0
+          }
+        ],
+        "gridPos": {"h": 8, "w": 12, "x": 12, "y": 20}
+      }
+    ],
+    "templating": {
+      "list": [
+        {
+          "name": "service",
+          "type": "query",
+          "query": "label_values(traefik_service_requests_total, service)",
+          "refresh": "on_time_range_changed"
+        }
+      ]
+    }
+  }
+}

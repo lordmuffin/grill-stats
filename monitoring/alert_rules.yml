@@ -1,0 +1,187 @@
+# Prometheus Alert Rules for Grill Stats API Gateway
+groups:
+  - name: api_gateway_alerts
+    rules:
+      # High error rate
+      - alert: HighErrorRate
+        expr: rate(traefik_service_requests_total{code=~"5.."}[5m]) / rate(traefik_service_requests_total[5m]) > 0.05
+        for: 2m
+        labels:
+          severity: critical
+          component: api_gateway
+        annotations:
+          summary: "High error rate detected"
+          description: "Error rate is {{ $value | humanizePercentage }} for service {{ $labels.service }}"
+
+      # High request latency
+      - alert: HighRequestLatency
+        expr: histogram_quantile(0.95, rate(traefik_service_request_duration_seconds_bucket[5m])) > 2
+        for: 5m
+        labels:
+          severity: warning
+          component: api_gateway
+        annotations:
+          summary: "High request latency"
+          description: "95th percentile latency is {{ $value }}s for service {{ $labels.service }}"
+
+      # Rate limiting triggering frequently
+      - alert: HighRateLimitTriggers
+        expr: rate(traefik_service_requests_total{code="429"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: rate_limiter
+        annotations:
+          summary: "High rate limit triggers"
+          description: "Rate limiting is being triggered frequently for service {{ $labels.service }}"
+
+  - name: security_alerts
+    rules:
+      # WAF blocks
+      - alert: WAFBlocksDetected
+        expr: rate(grill_stats_waf_blocks_total[5m]) > 5
+        for: 1m
+        labels:
+          severity: warning
+          component: waf
+        annotations:
+          summary: "WAF blocking requests"
+          description: "WAF is blocking {{ $value }} requests per second"
+
+      # Authentication failures
+      - alert: HighAuthFailures
+        expr: rate(grill_stats_auth_failures_total[5m]) > 10
+        for: 2m
+        labels:
+          severity: warning
+          component: authentication
+        annotations:
+          summary: "High authentication failure rate"
+          description: "Authentication failures: {{ $value }} per second"
+
+      # JWT token issues
+      - alert: JWTTokenErrors
+        expr: rate(grill_stats_jwt_errors_total[5m]) > 5
+        for: 2m
+        labels:
+          severity: warning
+          component: jwt
+        annotations:
+          summary: "JWT token errors detected"
+          description: "JWT token validation errors: {{ $value }} per second"
+
+  - name: application_alerts
+    rules:
+      # Application down
+      - alert: ApplicationDown
+        expr: up{job="grill-stats"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: application
+        annotations:
+          summary: "Grill Stats application is down"
+          description: "The main application has been down for more than 1 minute"
+
+      # Database connection issues
+      - alert: DatabaseConnectionErrors
+        expr: rate(grill_stats_db_errors_total[5m]) > 1
+        for: 2m
+        labels:
+          severity: critical
+          component: database
+        annotations:
+          summary: "Database connection errors"
+          description: "Database connection errors: {{ $value }} per second"
+
+      # Redis connection issues
+      - alert: RedisConnectionDown
+        expr: up{job="redis"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          component: redis
+        annotations:
+          summary: "Redis connection is down"
+          description: "Redis has been unreachable for more than 1 minute"
+
+  - name: infrastructure_alerts
+    rules:
+      # High CPU usage
+      - alert: HighCPUUsage
+        expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High CPU usage"
+          description: "CPU usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # High memory usage
+      - alert: HighMemoryUsage
+        expr: (1 - (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "High memory usage"
+          description: "Memory usage is {{ $value }}% on {{ $labels.instance }}"
+
+      # Disk space low
+      - alert: LowDiskSpace
+        expr: (1 - (node_filesystem_avail_bytes / node_filesystem_size_bytes)) * 100 > 85
+        for: 5m
+        labels:
+          severity: warning
+          component: infrastructure
+        annotations:
+          summary: "Low disk space"
+          description: "Disk usage is {{ $value }}% on {{ $labels.instance }} for mount {{ $labels.mountpoint }}"
+
+      # Container restart frequency
+      - alert: ContainerRestartingFrequently
+        expr: rate(container_start_time_seconds[15m]) > 0.01
+        for: 5m
+        labels:
+          severity: warning
+          component: containers
+        annotations:
+          summary: "Container restarting frequently"
+          description: "Container {{ $labels.name }} is restarting frequently"
+
+  - name: traefik_alerts
+    rules:
+      # Traefik down
+      - alert: TraefikDown
+        expr: up{job="traefik"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: traefik
+        annotations:
+          summary: "Traefik is down"
+          description: "Traefik has been down for more than 1 minute"
+
+      # Backend service down
+      - alert: BackendServiceDown
+        expr: traefik_service_server_up == 0
+        for: 1m
+        labels:
+          severity: critical
+          component: traefik
+        annotations:
+          summary: "Backend service is down"
+          description: "Backend service {{ $labels.service }} is down"
+
+      # TLS certificate expiring soon
+      - alert: TLSCertificateExpiringSoon
+        expr: (traefik_tls_certs_not_after - time()) / 86400 < 30
+        for: 1h
+        labels:
+          severity: warning
+          component: tls
+        annotations:
+          summary: "TLS certificate expiring soon"
+          description: "TLS certificate for {{ $labels.domain }} expires in {{ $value }} days"

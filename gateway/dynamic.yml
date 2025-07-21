@@ -1,0 +1,333 @@
+# Traefik Dynamic Configuration
+# Security middlewares, TLS options, and routing rules
+
+# TLS Configuration
+tls:
+  options:
+    modern:
+      minVersion: "VersionTLS12"
+      cipherSuites:
+        - "TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_ECDHE_RSA_WITH_CHACHA20_POLY1305"
+        - "TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256"
+        - "TLS_RSA_WITH_AES_256_GCM_SHA384"
+        - "TLS_RSA_WITH_AES_128_GCM_SHA256"
+      curvePreferences:
+        - "CurveP521"
+        - "CurveP384"
+        - "CurveP256"
+      sniStrict: true
+
+# HTTP Middlewares
+http:
+  middlewares:
+    # Security Headers
+    security-headers:
+      headers:
+        # Security Headers
+        frameDeny: true
+        sslRedirect: true
+        sslForceHost: true
+        sslHost: "${SSL_HOST:-api.grillstats.local}"
+        stsSeconds: 31536000
+        stsIncludeSubdomains: true
+        stsPreload: true
+        forceSTSHeader: true
+        contentTypeNosniff: true
+        browserXssFilter: true
+        referrerPolicy: "strict-origin-when-cross-origin"
+        customRequestHeaders:
+          X-Frame-Options: "DENY"
+          X-Content-Type-Options: "nosniff"
+          X-XSS-Protection: "1; mode=block"
+          Strict-Transport-Security: "max-age=31536000; includeSubDomains; preload"
+          Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' wss: ws:; font-src 'self'; object-src 'none'; media-src 'self'; frame-src 'none';"
+          Permissions-Policy: "geolocation=(), microphone=(), camera=(), payment=(), usb=(), magnetometer=(), gyroscope=(), accelerometer=()"
+        customResponseHeaders:
+          X-Robots-Tag: "noindex, nofollow, nosnippet, noarchive"
+          Server: "GrillStats-Gateway"
+
+    # Rate Limiting - Global
+    rate-limit:
+      rateLimit:
+        average: 100
+        period: 1m
+        burst: 50
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+            excludedIPs:
+              - 127.0.0.1/32
+              - 192.168.0.0/16
+              - 10.0.0.0/8
+
+    # API Rate Limiting - More restrictive
+    api-rate-limit:
+      rateLimit:
+        average: 30
+        period: 1m
+        burst: 10
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Authentication Rate Limiting - Very restrictive
+    auth-rate-limit:
+      rateLimit:
+        average: 5
+        period: 1m
+        burst: 3
+        sourceCriterion:
+          ipStrategy:
+            depth: 1
+
+    # Admin Authentication
+    auth-admin:
+      basicAuth:
+        users:
+          - "admin:$2a$10$QjyXs3RpQoKt1LtIjQ5khu0gQVeJ8OqYv4zSXhBfKY7l9HRqvjFkW" # admin:secure_password_2024
+
+    # JWT Authentication Middleware
+    jwt-auth:
+      forwardAuth:
+        address: "http://auth-service:8082/api/auth/verify"
+        authResponseHeaders:
+          - "X-User-ID"
+          - "X-User-Email"
+          - "X-User-Roles"
+        trustForwardHeader: true
+
+    # IP Whitelist for Admin
+    admin-whitelist:
+      ipWhiteList:
+        sourceRange:
+          - "127.0.0.1/32"
+          - "192.168.0.0/16"
+          - "10.0.0.0/8"
+          - "${ADMIN_IP_RANGE:-0.0.0.0/0}"
+
+    # Request Size Limit
+    request-size-limit:
+      buffering:
+        maxRequestBodyBytes: 1048576  # 1MB
+        maxResponseBodyBytes: 10485760  # 10MB
+
+    # Compression
+    compression:
+      compress: true
+
+    # Circuit Breaker
+    circuit-breaker:
+      circuitBreaker:
+        expression: "NetworkErrorRatio() > 0.30 || ResponseCodeRatio(500, 600, 0, 600) > 0.25"
+        checkPeriod: "10s"
+        fallbackDuration: "30s"
+        recoveryDuration: "30s"
+
+    # Retry Policy
+    retry-policy:
+      retry:
+        attempts: 3
+        initialInterval: "100ms"
+
+    # CORS Configuration
+    cors:
+      headers:
+        accessControlAllowMethods:
+          - GET
+          - POST
+          - PUT
+          - DELETE
+          - OPTIONS
+        accessControlAllowOriginList:
+          - "https://${FRONTEND_DOMAIN:-localhost:3000}"
+          - "https://${API_DOMAIN:-api.grillstats.local}"
+        accessControlAllowHeaders:
+          - "Accept"
+          - "Accept-Language"
+          - "Content-Type"
+          - "Authorization"
+          - "X-Requested-With"
+        accessControlExposeHeaders:
+          - "X-Rate-Limit-Remaining"
+          - "X-Rate-Limit-Limit"
+          - "X-Rate-Limit-Reset"
+        accessControlAllowCredentials: true
+        accessControlMaxAge: 3600
+
+    # Remove Server Header
+    remove-server-header:
+      headers:
+        customResponseHeaders:
+          Server: ""
+
+    # Request ID
+    request-id:
+      headers:
+        customRequestHeaders:
+          X-Request-ID: "{{ .RequestID }}"
+
+  # Services for internal routing
+  services:
+    grill-stats-api:
+      loadBalancer:
+        servers:
+          - url: "http://grill-stats:5000"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "10s"
+          scheme: "http"
+        sticky:
+          cookie:
+            name: "grillstats-session"
+            secure: true
+            httpOnly: true
+
+    auth-service:
+      loadBalancer:
+        servers:
+          - url: "http://auth-service:8082"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+
+    device-service:
+      loadBalancer:
+        servers:
+          - url: "http://device-service:8080"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+
+    temperature-service:
+      loadBalancer:
+        servers:
+          - url: "http://temperature-service:8080"
+        healthCheck:
+          path: "/health"
+          interval: "30s"
+          timeout: "5s"
+
+    web-ui:
+      loadBalancer:
+        servers:
+          - url: "http://web-ui:3000"
+        healthCheck:
+          path: "/"
+          interval: "30s"
+          timeout: "5s"
+
+  # Routers
+  routers:
+    # API Routes
+    api-secure:
+      rule: "Host(`${API_DOMAIN:-api.grillstats.local}`) && PathPrefix(`/api/`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - api-rate-limit
+        - jwt-auth
+        - compression
+        - circuit-breaker
+        - retry-policy
+        - request-id
+        - request-size-limit
+      service: grill-stats-api
+      priority: 100
+
+    # Authentication Routes (no JWT required)
+    auth-routes:
+      rule: "Host(`${API_DOMAIN:-api.grillstats.local}`) && PathPrefix(`/api/auth/`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - auth-rate-limit
+        - compression
+        - request-id
+        - request-size-limit
+      service: grill-stats-api
+      priority: 200
+
+    # Health Check (public, limited rate)
+    health-check:
+      rule: "Host(`${API_DOMAIN:-api.grillstats.local}`) && Path(`/health`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - rate-limit
+        - compression
+      service: grill-stats-api
+      priority: 300
+
+    # Web UI
+    web-ui:
+      rule: "Host(`${FRONTEND_DOMAIN:-grillstats.local}`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - rate-limit
+        - compression
+        - circuit-breaker
+      service: web-ui
+      priority: 50
+
+    # Traefik Dashboard (admin only)
+    traefik-dashboard:
+      rule: "Host(`${ADMIN_DOMAIN:-admin.grillstats.local}`) && (PathPrefix(`/api`) || PathPrefix(`/dashboard`))"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - auth-admin
+        - admin-whitelist
+        - rate-limit
+      service: api@internal
+      priority: 400
+
+    # Microservices Routes (if enabled)
+    auth-service:
+      rule: "Host(`${API_DOMAIN:-api.grillstats.local}`) && PathPrefix(`/auth/`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - auth-rate-limit
+        - compression
+        - request-id
+      service: auth-service
+      priority: 150
+
+    device-service:
+      rule: "Host(`${API_DOMAIN:-api.grillstats.local}`) && PathPrefix(`/devices/`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - api-rate-limit
+        - jwt-auth
+        - compression
+        - circuit-breaker
+        - request-id
+      service: device-service
+      priority: 120
+
+    temperature-service:
+      rule: "Host(`${API_DOMAIN:-api.grillstats.local}`) && PathPrefix(`/temperature/`)"
+      tls:
+        certResolver: letsencrypt
+      middlewares:
+        - security-headers
+        - api-rate-limit
+        - jwt-auth
+        - compression
+        - circuit-breaker
+        - request-id
+      service: temperature-service
+      priority: 110

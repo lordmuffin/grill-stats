@@ -1,6 +1,44 @@
 version: '3.8'
 
 services:
+  # Traefik API Gateway
+  traefik:
+    image: traefik:v3.0
+    command:
+      - "--configFile=/etc/traefik/traefik.yml"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./gateway/traefik.yml:/etc/traefik/traefik.yml:ro
+      - ./gateway/dynamic.yml:/etc/traefik/dynamic.yml:ro
+      - ./gateway/data:/data
+      - ./gateway/logs:/var/log/traefik
+    environment:
+      - ACME_EMAIL=${ACME_EMAIL:-admin@example.com}
+      - SSL_HOST=${SSL_HOST:-api.grillstats.local}
+      - API_DOMAIN=${API_DOMAIN:-api.grillstats.local}
+      - FRONTEND_DOMAIN=${FRONTEND_DOMAIN:-grillstats.local}
+      - ADMIN_DOMAIN=${ADMIN_DOMAIN:-admin.grillstats.local}
+      - ADMIN_IP_RANGE=${ADMIN_IP_RANGE:-0.0.0.0/0}
+      - CLOUDFLARE_EMAIL=${CLOUDFLARE_EMAIL}
+      - CLOUDFLARE_API_KEY=${CLOUDFLARE_API_KEY}
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.dashboard.rule=Host(`${ADMIN_DOMAIN:-admin.grillstats.local}`)"
+      - "traefik.http.routers.dashboard.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.dashboard.service=api@internal"
+    networks:
+      - grill-stats-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   # PostgreSQL for device management
   postgres:
     image: postgres:15-alpine
@@ -69,8 +107,8 @@ services:
   # Main Grill Stats Service
   grill-stats:
     build: .
-    ports:
-      - "5000:5000"
+    expose:
+      - "5000"
     environment:
       # ThermoWorks API
       - THERMOWORKS_API_KEY=${THERMOWORKS_API_KEY}
@@ -109,6 +147,12 @@ services:
       - FLASK_ENV=${FLASK_ENV:-development}
       - DEBUG=${DEBUG:-true}
       - PYTHONUNBUFFERED=1
+
+      # Security
+      - JWT_SECRET=${JWT_SECRET:-default-dev-jwt-secret}
+      - WAF_ENABLED=${WAF_ENABLED:-true}
+      - RATE_LIMIT_ENABLED=${RATE_LIMIT_ENABLED:-true}
+      - SECURITY_HEADERS_ENABLED=${SECURITY_HEADERS_ENABLED:-true}
     volumes:
       - ./:/app
       - /app/venv
@@ -130,35 +174,45 @@ services:
       start_period: 45s
     networks:
       - grill-stats-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grill-stats.rule=Host(`${API_DOMAIN:-api.grillstats.local}`)"
+      - "traefik.http.routers.grill-stats.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grill-stats.loadbalancer.server.port=5000"
+      - "traefik.http.routers.grill-stats.middlewares=security-headers@file,api-rate-limit@file,compression@file"
 
   # Microservices (optional components, can be enabled/disabled as needed)
 
-  # Auth Service
+  # Auth Service (Standalone JWT verification service)
   auth-service:
     build:
-      context: ./services/auth-service
+      context: ./auth
       dockerfile: Dockerfile
+    expose:
+      - "8082"
     environment:
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_NAME=grill_stats
-      - DB_USER=postgres
-      - DB_PASSWORD=postgres
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - JWT_SECRET=${JWT_SECRET:-default-dev-jwt-secret}
       - SECRET_KEY=${SECRET_KEY:-default-dev-secret-key}
-    ports:
-      - "8082:8082"
+      - AUTH_SERVICE_PORT=8082
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
     profiles:
-      - microservices
+      - gateway
     networks:
       - grill-stats-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.auth-service.rule=Host(`${API_DOMAIN:-api.grillstats.local}`) && PathPrefix(`/auth/verify`)"
+      - "traefik.http.routers.auth-service.tls.certresolver=letsencrypt"
+      - "traefik.http.services.auth-service.loadbalancer.server.port=8082"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/api/auth/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
 
   # Device Service
   device-service:
@@ -278,11 +332,78 @@ services:
     networks:
       - grill-stats-network
 
+  # Monitoring Stack
+  prometheus:
+    image: prom/prometheus:v2.47.0
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/alert_rules.yml:/etc/prometheus/alert_rules.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    profiles:
+      - monitoring
+    networks:
+      - grill-stats-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`${ADMIN_DOMAIN:-admin.grillstats.local}`) && PathPrefix(`/prometheus`)"
+      - "traefik.http.routers.prometheus.tls.certresolver=letsencrypt"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  grafana:
+    image: grafana/grafana:10.1.0
+    ports:
+      - "3001:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    profiles:
+      - monitoring
+    networks:
+      - grill-stats-network
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`${ADMIN_DOMAIN:-admin.grillstats.local}`) && PathPrefix(`/grafana`)"
+      - "traefik.http.routers.grafana.tls.certresolver=letsencrypt"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
+  alertmanager:
+    image: prom/alertmanager:v0.26.0
+    ports:
+      - "9093:9093"
+    volumes:
+      - ./monitoring/alertmanager.yml:/etc/alertmanager/alertmanager.yml
+      - alertmanager_data:/alertmanager
+    command:
+      - '--config.file=/etc/alertmanager/alertmanager.yml'
+      - '--storage.path=/alertmanager'
+    profiles:
+      - monitoring
+    networks:
+      - grill-stats-network
+
 volumes:
   postgres_data:
   influxdb_data:
   redis_data:
   backups_volume:
+  prometheus_data:
+  grafana_data:
+  alertmanager_data:
 
 networks:
   grill-stats-network:
