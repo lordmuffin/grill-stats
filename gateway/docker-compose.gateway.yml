@@ -9,39 +9,39 @@ services:
       # Global configuration
       - --global.checknewversion=false
       - --global.sendanonymoususage=false
-      
+
       # API and Dashboard
       - --api.dashboard=true
       - --api.insecure=true
-      
+
       # Entrypoints
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
       - --entrypoints.traefik.address=:8080
-      
+
       # Certificate resolver
       - --certificatesresolvers.letsencrypt.acme.email=admin@grillstats.local
       - --certificatesresolvers.letsencrypt.acme.storage=/acme.json
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
-      
+
       # Providers
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
       - --providers.docker.network=grill-stats-gateway
       - --providers.file.directory=/config
       - --providers.file.watch=true
-      
+
       # Logging
       - --log.level=INFO
       - --log.filepath=/var/log/traefik.log
       - --accesslog=true
       - --accesslog.filepath=/var/log/access.log
-      
+
       # Metrics
       - --metrics.prometheus=true
       - --metrics.prometheus.addentrypointslabels=true
       - --metrics.prometheus.addserviceslabels=true
-      
+
       # Tracing
       - --tracing.jaeger=true
       - --tracing.jaeger.samplingparam=1.0
@@ -104,18 +104,18 @@ services:
       - "traefik.http.routers.auth.tls.certresolver=letsencrypt"
       - "traefik.http.routers.auth.middlewares=auth-ratelimit,auth-cors,security-headers"
       - "traefik.http.services.auth.loadbalancer.server.port=8000"
-      
+
       # Rate limiting
       - "traefik.http.middlewares.auth-ratelimit.ratelimit.average=100"
       - "traefik.http.middlewares.auth-ratelimit.ratelimit.burst=200"
       - "traefik.http.middlewares.auth-ratelimit.ratelimit.period=1m"
-      
+
       # CORS
       - "traefik.http.middlewares.auth-cors.headers.accesscontrolallowmethods=GET,POST,PUT,DELETE,OPTIONS"
       - "traefik.http.middlewares.auth-cors.headers.accesscontrolallowheaders=*"
       - "traefik.http.middlewares.auth-cors.headers.accesscontrolalloworiginlist=http://localhost:3000,https://grillstats.local"
       - "traefik.http.middlewares.auth-cors.headers.accesscontrolmaxage=86400"
-      
+
       # Security headers
       - "traefik.http.middlewares.security-headers.headers.framedeny=true"
       - "traefik.http.middlewares.security-headers.headers.sslredirect=true"

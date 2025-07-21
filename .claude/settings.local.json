@@ -78,7 +78,7 @@
   },
   "permissions": {
     "allow": [
-      "Bash(ls:*)"
+      "Bash(git commit:*)"
     ],
     "deny": []
   }

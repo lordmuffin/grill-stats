@@ -15,7 +15,7 @@ http:
         - api-cors
         - security-headers
         - waf-protection
-    
+
     # Auth Service Router
     auth-service:
       rule: "Host(`api.grillstats.local`) && PathPrefix(`/auth`)"
@@ -28,7 +28,7 @@ http:
         - auth-ratelimit
         - auth-cors
         - security-headers
-    
+
     # Device Service Router
     device-service:
       rule: "Host(`api.grillstats.local`) && PathPrefix(`/devices`)"
@@ -43,7 +43,7 @@ http:
         - api-cors
         - security-headers
         - waf-protection
-    
+
     # Temperature Service Router
     temperature-service:
       rule: "Host(`api.grillstats.local`) && PathPrefix(`/temperature`)"
@@ -57,7 +57,7 @@ http:
         - api-ratelimit
         - api-cors
         - security-headers
-    
+
     # Home Assistant Service Router
     homeassistant-service:
       rule: "Host(`api.grillstats.local`) && PathPrefix(`/homeassistant`)"
@@ -71,7 +71,7 @@ http:
         - api-ratelimit
         - api-cors
         - security-headers
-    
+
     # Web UI Router
     web-ui:
       rule: "Host(`grillstats.local`)"
@@ -95,7 +95,7 @@ http:
           path: "/health"
           interval: "30s"
           timeout: "10s"
-    
+
     # Auth Service
     auth-service:
       loadBalancer:
@@ -105,7 +105,7 @@ http:
           path: "/auth/health"
           interval: "30s"
           timeout: "10s"
-    
+
     # Device Service
     device-service:
       loadBalancer:
@@ -115,7 +115,7 @@ http:
           path: "/health"
           interval: "30s"
           timeout: "10s"
-    
+
     # Temperature Service
     temperature-service:
       loadBalancer:
@@ -125,7 +125,7 @@ http:
           path: "/health"
           interval: "30s"
           timeout: "10s"
-    
+
     # Home Assistant Service
     homeassistant-service:
       loadBalancer:
@@ -135,7 +135,7 @@ http:
           path: "/health"
           interval: "30s"
           timeout: "10s"
-    
+
     # Web UI Service
     web-ui:
       loadBalancer:
@@ -156,7 +156,7 @@ http:
           - "X-User-Email"
           - "X-User-Permissions"
         trustForwardHeader: true
-    
+
     # Rate Limiting Middlewares
     api-ratelimit:
       rateLimit:
@@ -166,7 +166,7 @@ http:
         sourceCriterion:
           ipStrategy:
             depth: 1
-    
+
     auth-ratelimit:
       rateLimit:
         average: 100
@@ -175,7 +175,7 @@ http:
         sourceCriterion:
           ipStrategy:
             depth: 1
-    
+
     web-ratelimit:
       rateLimit:
         average: 1000
@@ -184,7 +184,7 @@ http:
         sourceCriterion:
           ipStrategy:
             depth: 1
-    
+
     # CORS Middlewares
     api-cors:
       headers:
@@ -205,7 +205,7 @@ http:
           - "http://localhost:3000"
         accessControlMaxAge: 86400
         accessControlAllowCredentials: true
-    
+
     auth-cors:
       headers:
         accessControlAllowMethods:
@@ -222,7 +222,7 @@ http:
           - "http://localhost:3000"
         accessControlMaxAge: 86400
         accessControlAllowCredentials: true
-    
+
     web-cors:
       headers:
         accessControlAllowMethods:
@@ -236,7 +236,7 @@ http:
           - "https://grillstats.local"
           - "https://www.grillstats.local"
         accessControlMaxAge: 86400
-    
+
     # Security Headers
     security-headers:
       headers:
@@ -257,7 +257,7 @@ http:
           Referrer-Policy: "strict-origin-when-cross-origin"
           Permissions-Policy: "camera=(), microphone=(), geolocation=()"
           Content-Security-Policy: "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' https:; connect-src 'self' wss: https:;"
-    
+
     # WAF Protection
     waf-protection:
       forwardAuth:
@@ -268,25 +268,25 @@ http:
           - "User-Agent"
           - "Content-Type"
         trustForwardHeader: true
-    
+
     # Circuit Breaker
     circuit-breaker:
       circuitBreaker:
         expression: "ResponseCodeRatio(500, 600, 0, 600) > 0.30"
-    
+
     # Request Size Limit
     request-limit:
       buffering:
         maxRequestBodyBytes: 10485760  # 10MB
         memRequestBodyBytes: 2097152   # 2MB
         retryExpression: "IsNetworkError() && Attempts() <= 2"
-    
+
     # Retry Middleware
     retry:
       retry:
         attempts: 3
         initialInterval: "100ms"
-    
+
     # IP Whitelist for Admin
     admin-whitelist:
       ipWhiteList:
@@ -295,7 +295,7 @@ http:
           - "10.0.0.0/8"
           - "172.16.0.0/12"
           - "192.168.0.0/16"
-    
+
     # Basic Auth for Admin
     admin-auth:
       basicAuth:

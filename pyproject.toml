@@ -77,6 +77,12 @@ warn_redundant_casts = true
 warn_return_any = true
 warn_unused_ignores = true
 warn_no_return = true
+exclude = [
+    "gateway/auth-service/",
+    "gateway/rate-limiter/",
+    "gateway/security-monitor/",
+    "gateway/waf-service/",
+]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

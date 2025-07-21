@@ -95,13 +95,14 @@ def client(app):
 
 # API Gateway Security Test Fixtures
 
+
 @pytest.fixture
 def mock_redis():
     """Mock Redis client for testing"""
-    with patch('redis.Redis') as mock_redis_class:
+    with patch("redis.Redis") as mock_redis_class:
         mock_redis_instance = MagicMock()
         mock_redis_class.return_value = mock_redis_instance
-        
+
         # Configure common Redis operations
         mock_redis_instance.ping.return_value = True
         mock_redis_instance.get.return_value = None
@@ -111,7 +112,7 @@ def mock_redis():
         mock_redis_instance.exists.return_value = False
         mock_redis_instance.keys.return_value = []
         mock_redis_instance.eval.return_value = [1, 5, 1]  # allowed, remaining, current
-        
+
         yield mock_redis_instance
 
 
@@ -126,14 +127,10 @@ def sample_request_data():
         "user_agent": "test-agent/1.0",
         "referer": "https://example.com",
         "content_type": "application/json",
-        "headers": {
-            "Content-Type": "application/json",
-            "User-Agent": "test-agent/1.0",
-            "Authorization": "Bearer test-token"
-        },
+        "headers": {"Content-Type": "application/json", "User-Agent": "test-agent/1.0", "Authorization": "Bearer test-token"},
         "cookies": {"session": "test-session"},
         "body": '{"test": "data"}',
-        "remote_addr": "192.168.1.100"
+        "remote_addr": "192.168.1.100",
     }
 
 
@@ -148,36 +145,23 @@ def malicious_request_data():
         "user_agent": "sqlmap/1.4.12",
         "referer": "",
         "content_type": "application/json",
-        "headers": {
-            "Content-Type": "application/json",
-            "User-Agent": "sqlmap/1.4.12"
-        },
+        "headers": {"Content-Type": "application/json", "User-Agent": "sqlmap/1.4.12"},
         "cookies": {},
         "body": '<script>alert("xss")</script>',
-        "remote_addr": "10.0.0.1"
+        "remote_addr": "10.0.0.1",
     }
 
 
 @pytest.fixture
 def valid_user_data():
     """Valid user data for JWT testing"""
-    return {
-        "id": "12345",
-        "email": "test@example.com",
-        "roles": ["user"],
-        "name": "Test User"
-    }
+    return {"id": "12345", "email": "test@example.com", "roles": ["user"], "name": "Test User"}
 
 
 @pytest.fixture
 def admin_user_data():
     """Admin user data for JWT testing"""
-    return {
-        "id": "67890",
-        "email": "admin@example.com",
-        "roles": ["admin", "user"],
-        "name": "Admin User"
-    }
+    return {"id": "67890", "email": "admin@example.com", "roles": ["admin", "user"], "name": "Admin User"}
 
 
 # Pytest configuration
@@ -194,11 +178,11 @@ def pytest_collection_modifyitems(config, items):
         # Mark all tests in security modules
         if "security" in str(item.fspath):
             item.add_marker(pytest.mark.security)
-        
+
         # Mark integration tests
         if "integration" in item.name or "test_end_to_end" in item.name:
             item.add_marker(pytest.mark.integration)
-        
+
         # Mark performance tests as slow
         if "performance" in item.name or "test_.*_performance" in item.name:
             item.add_marker(pytest.mark.slow)
